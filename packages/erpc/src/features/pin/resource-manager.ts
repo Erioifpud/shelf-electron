@@ -1,5 +1,10 @@
-import { v4 as uuid } from 'uuid';
-import { PIN_FREE_KEY, PIN_ID_KEY, PIN_REQUEST_KEY, type Pin } from '../../types/pin';
+import { v4 as uuid } from "uuid";
+import {
+  PIN_FREE_KEY,
+  PIN_ID_KEY,
+  PIN_REQUEST_KEY,
+  type Pin,
+} from "../../types/pin";
 
 /**
  * Represents a resource that has been pinned, along with its reference count.
@@ -111,7 +116,7 @@ export class ResourceManager {
  *
  * When an object wrapped with `pin()` is included in procedure arguments or
  * return values, the erpc serializer will not serialize its content. Instead,
-* it will "pin" the object on the local peer and send a remote proxy to the
+ * it will "pin" the object on the local peer and send a remote proxy to the
  * other peer. All interactions with this proxy will be forwarded back to the
  * original object.
  *
@@ -139,7 +144,11 @@ export function pin<T extends object>(obj: T): Pin<T> {
     return obj as Pin<T>;
   }
   // Attach a temporary, non-enumerable property that the serializer will detect.
-  Object.defineProperty(obj, PIN_REQUEST_KEY, { value: true, configurable: true, enumerable: false });
+  Object.defineProperty(obj, PIN_REQUEST_KEY, {
+    value: true,
+    configurable: true,
+    enumerable: false,
+  });
   return obj as Pin<T>;
 }
 
@@ -156,7 +165,7 @@ export function pin<T extends object>(obj: T): Pin<T> {
  */
 export async function free(pinnedProxy: Pin<any>): Promise<void> {
   const freeMethod = (pinnedProxy as any)[PIN_FREE_KEY];
-  if (typeof freeMethod !== 'function') {
+  if (typeof freeMethod !== "function") {
     // This object is not a valid remote proxy.
     return;
   }

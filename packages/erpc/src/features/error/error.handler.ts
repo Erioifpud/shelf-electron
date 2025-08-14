@@ -1,12 +1,15 @@
-import type { Placeholder } from '../../types/protocol';
-import { IllegalTypeError } from '../../types/errors.js';
-import type { SerializerContext, TypeHandler } from '../serialization/type.handler';
+import type { Placeholder } from "../../types/protocol";
+import { IllegalTypeError } from "../../types/errors.js";
+import type {
+  SerializerContext,
+  TypeHandler,
+} from "../serialization/type.handler";
 
 /**
  * The placeholder structure for a serialized standard `Error` object.
  */
 export interface ErrorPlaceholder extends Placeholder {
-  _erpc_type: 'error_placeholder';
+  _erpc_type: "error_placeholder";
   name: string;
   message: string;
   stack?: string;
@@ -21,7 +24,7 @@ export interface ErrorPlaceholder extends Placeholder {
  * be registered before more specific error handlers if they also extend `Error`.
  */
 export const errorHandler: TypeHandler<Error, ErrorPlaceholder> = {
-  name: 'error_placeholder',
+  name: "error_placeholder",
 
   /**
    * Checks if a value is an `Error` instance but not a more specific
@@ -37,7 +40,7 @@ export const errorHandler: TypeHandler<Error, ErrorPlaceholder> = {
    */
   serialize(value: Error, _context: SerializerContext): ErrorPlaceholder {
     return {
-      _erpc_type: 'error_placeholder',
+      _erpc_type: "error_placeholder",
       name: value.name,
       message: value.message,
       stack: value.stack,
@@ -47,7 +50,10 @@ export const errorHandler: TypeHandler<Error, ErrorPlaceholder> = {
   /**
    * Deserializes a placeholder back into a standard `Error` instance.
    */
-  deserialize(placeholder: ErrorPlaceholder, _context: SerializerContext): Error {
+  deserialize(
+    placeholder: ErrorPlaceholder,
+    _context: SerializerContext
+  ): Error {
     const error = new Error(placeholder.message);
     error.name = placeholder.name;
     error.stack = placeholder.stack;

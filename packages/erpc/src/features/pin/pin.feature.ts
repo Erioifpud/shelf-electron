@@ -1,18 +1,17 @@
-import type { Feature } from '../../runtime/framework/feature';
-import type { ResourceManager } from './resource-manager';
-import { createPinHandler } from './pin.handler';
-import type { ProtocolHandlerContribution } from '../protocol/protocol.handler.feature';
-import type { SerializationContribution } from '../serialization/serialization.feature';
-import type { TransportAdapterContribution } from '../transport/transport.adapter.feature';
-import type { CallManagerContribution } from '../call/call-manager.feature';
-import type { RpcRequestMessage } from '../../types/protocol';
+import type { Feature } from "../../runtime/framework/feature";
+import type { ResourceManager } from "./resource-manager";
+import { createPinHandler } from "./pin.handler";
+import type { ProtocolHandlerContribution } from "../protocol/protocol.handler.feature";
+import type { SerializationContribution } from "../serialization/serialization.feature";
+import type { TransportAdapterContribution } from "../transport/transport.adapter.feature";
+import type { CallManagerContribution } from "../call/call-manager.feature";
+import type { RpcRequestMessage } from "../../types/protocol";
 
 export interface PinContribution {
   resourceManager: ResourceManager;
 }
 
-export type PinRequires =
-  ProtocolHandlerContribution &
+export type PinRequires = ProtocolHandlerContribution &
   SerializationContribution &
   TransportAdapterContribution &
   CallManagerContribution;
@@ -46,12 +45,12 @@ export class PinFeature implements Feature<PinContribution, PinRequires> {
     capability.serializer.registerHandler(pinHandler);
 
     // Listen for 'release' messages triggered by remote `free()` calls or GC.
-    capability.semanticEmitter.on('release', (message) => {
+    capability.semanticEmitter.on("release", (message) => {
       this.resourceManager.releaseResource(message.resourceId);
     });
 
     // Listen for 'pinCall' RPC requests dispatched by the protocol handler.
-    capability.semanticEmitter.on('pinCall', (message) => {
+    capability.semanticEmitter.on("pinCall", (message) => {
       this.handlePinCall(message);
     });
   }
@@ -67,7 +66,7 @@ export class PinFeature implements Feature<PinContribution, PinRequires> {
       const { serializer, sendRawMessage } = this.capability;
 
       // 1. Deserialize the arguments array.
-      const args = serializedInput.map(arg => serializer.deserialize(arg));
+      const args = serializedInput.map((arg) => serializer.deserialize(arg));
       const [resourceId, ...callArgs] = args as [string, ...any[]];
 
       // 2. Look up the pinned resource.
@@ -78,22 +77,26 @@ export class PinFeature implements Feature<PinContribution, PinRequires> {
 
       // 3. Determine the operation and execute it.
       let result: any;
-      if (propertyName === 'apply') {
+      if (propertyName === "apply") {
         // This is a direct call to a pinned function.
-        if (typeof resource !== 'function') {
-          throw new Error(`Pinned resource with ID '${resourceId}' is not a function.`);
+        if (typeof resource !== "function") {
+          throw new Error(
+            `Pinned resource with ID '${resourceId}' is not a function.`
+          );
         }
         result = await Promise.resolve(resource(...callArgs));
       } else {
         // This is an access to a property or method on a pinned object.
         const target = (resource as any)[propertyName];
-        if (typeof target === 'function') {
+        if (typeof target === "function") {
           // Method call.
           result = await Promise.resolve(target.apply(resource, callArgs));
         } else {
           // Property access (getter or setter).
           if (callArgs.length > 1) {
-            throw new Error(`Property '${propertyName}' on resource '${resourceId}' is not a function.`);
+            throw new Error(
+              `Property '${propertyName}' on resource '${resourceId}' is not a function.`
+            );
           }
           if (callArgs.length === 1) {
             // Setter: `remote.prop = value`
@@ -108,13 +111,22 @@ export class PinFeature implements Feature<PinContribution, PinRequires> {
 
       // 4. Serialize the result and send a success response.
       const serializedOutput = serializer.serialize(result);
-      await sendRawMessage({ type: 'rpc-response', callId, success: true, output: serializedOutput });
-
+      await sendRawMessage({
+        type: "rpc-response",
+        callId,
+        success: true,
+        output: serializedOutput,
+      });
     } catch (err: any) {
       // 5. If any error occurs, serialize it and send a failure response.
       const { serializer, sendRawMessage } = this.capability;
       const serializedError = serializer.serialize(err);
-      await sendRawMessage({ type: 'rpc-response', callId, success: false, output: serializedError });
+      await sendRawMessage({
+        type: "rpc-response",
+        callId,
+        success: false,
+        output: serializedError,
+      });
     }
   }
 

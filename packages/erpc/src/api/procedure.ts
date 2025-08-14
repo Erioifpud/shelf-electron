@@ -8,7 +8,7 @@ import { mark, type PhantomData } from "../types/common";
  * This allows for reliable runtime type checking via `isProcedure`.
  * @internal
  */
-export const __procedure_brand: unique symbol = Symbol('__procedure_brand');
+export const __procedure_brand: unique symbol = Symbol("__procedure_brand");
 
 /**
  * The base type for all erpc procedures.
@@ -19,9 +19,7 @@ export const __procedure_brand: unique symbol = Symbol('__procedure_brand');
  * @template Input The tuple type of the procedure's input arguments.
  * @template Output The return type of the procedure.
  */
-export type Procedure<
-  Ctx, Input extends Array<unknown>, Output
-> = {
+export type Procedure<Ctx, Input extends Array<unknown>, Output> = {
   /** @internal */
   [__procedure_brand]: void;
   /** A phantom type carrying the procedure's expected context type. */
@@ -40,10 +38,12 @@ export type Procedure<
  * A procedure for request-response (RPC) style communication.
  * It expects a handler that returns a value.
  */
-export type AskProcedure<
-  Ctx, Input extends Array<unknown>, Output
-> = Procedure<Ctx, Input, Output> & {
-  type: 'ask';
+export type AskProcedure<Ctx, Input extends Array<unknown>, Output> = Procedure<
+  Ctx,
+  Input,
+  Output
+> & {
+  type: "ask";
   /** @internal The internal handler function for this procedure. */
   _handler: (env: Env<Ctx>, ...args: Input) => MaybePromise<Output>;
 };
@@ -52,10 +52,12 @@ export type AskProcedure<
  * A procedure for fire-and-forget (notification) style communication.
  * It does not return a value to the caller.
  */
-export type TellProcedure<
-  Ctx, Input extends Array<unknown>
-> = Procedure<Ctx, Input, void> & {
-  type: 'tell';
+export type TellProcedure<Ctx, Input extends Array<unknown>> = Procedure<
+  Ctx,
+  Input,
+  void
+> & {
+  type: "tell";
   /** @internal The internal handler function for this procedure. */
   _handler: (env: Env<Ctx>, ...args: Input) => MaybePromise<void>;
 };
@@ -65,12 +67,19 @@ export type TellProcedure<
  * Useful for implementing dynamic routing or forwarding.
  */
 export type DynamicProcedure<
-  Ctx, TInput extends Array<unknown>, TOutput
+  Ctx,
+  TInput extends Array<unknown>,
+  TOutput,
 > = Procedure<Ctx, TInput, TOutput> & {
-  type: 'dynamic';
+  type: "dynamic";
   /** @internal The internal handler function for this procedure. */
-  _handler: (env: Env<Ctx>, path: string[], args: TInput, type: 'ask' | 'tell') => Promise<TOutput>;
-}
+  _handler: (
+    env: Env<Ctx>,
+    path: string[],
+    args: TInput,
+    type: "ask" | "tell"
+  ) => Promise<TOutput>;
+};
 
 /**
  * Creates a new 'ask' (request-response) procedure.
@@ -79,9 +88,7 @@ export type DynamicProcedure<
  * @returns An `AskProcedure` object.
  * @internal
  */
-export function createAskProcedure<
-  Ctx, Input extends Array<unknown>, Output
->(
+export function createAskProcedure<Ctx, Input extends Array<unknown>, Output>(
   handler: (env: Env<Ctx>, ...args: Input) => MaybePromise<Output>,
   middlewares: Middleware<any>[] = []
 ): AskProcedure<Ctx, Input, Output> {
@@ -91,7 +98,7 @@ export function createAskProcedure<
     input: mark<Input>(),
     output: mark<Output>(),
     middlewares,
-    type: 'ask',
+    type: "ask",
     _handler: handler,
   };
 }
@@ -103,9 +110,7 @@ export function createAskProcedure<
  * @returns A `TellProcedure` object.
  * @internal
  */
-export function createTellProcedure<
-  Ctx, Input extends Array<unknown>
->(
+export function createTellProcedure<Ctx, Input extends Array<unknown>>(
   handler: (env: Env<Ctx>, ...args: Input) => MaybePromise<void>,
   middlewares: Middleware<any>[] = []
 ): TellProcedure<Ctx, Input> {
@@ -115,7 +120,7 @@ export function createTellProcedure<
     input: mark<Input>(),
     output: mark<void>(),
     middlewares,
-    type: 'tell',
+    type: "tell",
     _handler: handler,
   };
 }
@@ -128,9 +133,16 @@ export function createTellProcedure<
  * @internal
  */
 export function createDynamicProcedure<
-  Ctx, TInput extends Array<unknown>, TOutput
+  Ctx,
+  TInput extends Array<unknown>,
+  TOutput,
 >(
-  handler: (env: Env<Ctx>, path: string[], args: TInput, type: 'ask' | 'tell') => Promise<TOutput>,
+  handler: (
+    env: Env<Ctx>,
+    path: string[],
+    args: TInput,
+    type: "ask" | "tell"
+  ) => Promise<TOutput>,
   middlewares: Middleware<any>[] = []
 ): DynamicProcedure<Ctx, TInput, TOutput> {
   return {
@@ -139,7 +151,7 @@ export function createDynamicProcedure<
     input: mark<TInput>(),
     output: mark<TOutput>(),
     middlewares,
-    type: 'dynamic', 
+    type: "dynamic",
     _handler: handler,
   };
 }

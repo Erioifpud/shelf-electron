@@ -2,27 +2,25 @@ import type { JsonValue, Transport } from "@eleplug/transport";
 
 // A unique, non-enumerable symbol to store the pin ID on a resource or proxy.
 /** @internal */
-export const PIN_ID_KEY = Symbol('__erpc_pin_id__');
+export const PIN_ID_KEY = Symbol("__erpc_pin_id__");
 // The property key for the manual release function on a remote proxy.
 /** @internal */
-export const PIN_FREE_KEY = Symbol('__erpc_pin_free__');
+export const PIN_FREE_KEY = Symbol("__erpc_pin_free__");
 // A temporary symbol that marks a local object as needing to be pinned on serialization.
 /** @internal */
-export const PIN_REQUEST_KEY = Symbol('__erpc_pin_request__');
+export const PIN_REQUEST_KEY = Symbol("__erpc_pin_request__");
 // The brand symbol to make the Pin<T> type unique.
 /** @internal */
 export declare const __pin_brand: unique symbol;
-
 
 // =================================================================
 // SECTION 1: Pinning Type System
 // =================================================================
 
 /** Transforms a function into an async version that returns a Promise. @internal */
-type PromisifyFunction<F> =
-  F extends (...args: infer TArgs) => infer TReturn
-    ? (...args: TArgs) => Promise<Awaited<TReturn>>
-    : F;
+type PromisifyFunction<F> = F extends (...args: infer TArgs) => infer TReturn
+  ? (...args: TArgs) => Promise<Awaited<TReturn>>
+  : F;
 
 /**
  * Transforms a property into an overloaded function for remote access.
@@ -33,7 +31,7 @@ type PromisifyFunction<F> =
 type OverloadedProperty<TProp> = {
   (): Promise<Awaited<TProp>>; // Getter
   (newValue: TProp): Promise<void>; // Setter
-}
+};
 
 /**
  * Recursively transforms an object type `T` into its remote proxy representation.
@@ -64,13 +62,13 @@ type PinSpecialProperties<T extends object> = {
  * Constructs the final remote proxy type from a validated object type `T`.
  * @internal
  */
-type _BuildPinProxy<T extends object> =
-  T extends (...args: infer TArgs) => infer TReturn
-    // Handle functions passed directly to pin().
-    ? ((...args: TArgs) => Promise<Awaited<TReturn>>) & PinSpecialProperties<T>
-    // Handle objects.
-    : PromisifyObject<T> & PinSpecialProperties<T>;
-
+type _BuildPinProxy<T extends object> = T extends (
+  ...args: infer TArgs
+) => infer TReturn
+  ? // Handle functions passed directly to pin().
+    ((...args: TArgs) => Promise<Awaited<TReturn>>) & PinSpecialProperties<T>
+  : // Handle objects.
+    PromisifyObject<T> & PinSpecialProperties<T>;
 
 /**
  * Represents a remote proxy for a local object or function of type `T`.
@@ -84,9 +82,7 @@ type _BuildPinProxy<T extends object> =
  * descriptive error message, providing immediate feedback in the IDE.
  */
 export type Pin<T> =
-  Pinable<T> extends T
-    ? _BuildPinProxy<T & object>
-    : Pinable<T>;
+  Pinable<T> extends T ? _BuildPinProxy<T & object> : Pinable<T>;
 
 // =================================================================
 // SECTION 2: Internal Pinning Validation System
@@ -94,50 +90,60 @@ export type Pin<T> =
 
 /** A marker for properties that are not transferable, used for validation. @internal */
 export interface _InvalidProperty {
-  readonly __invalid_property_brand: unique symbol
+  readonly __invalid_property_brand: unique symbol;
 }
 
 /** Recursively checks if a type is composed entirely of `Transferable` types. @internal */
-type _IsTransferable<T> =
-  T extends void ? true :
-  T extends JsonValue ? true :
-  T extends Uint8Array ? true :
-  T extends Transport ? true :
-  T extends { [__pin_brand]: any } ? true : // A Pin<T> is transferable.
-  T extends ReadableStream<infer U> ? _IsTransferable<U> :
-  T extends WritableStream<infer U> ? _IsTransferable<U> :
-  T extends { [key: string]: infer V } ? _IsTransferable<V> :
-  T extends (infer E)[] ? _IsTransferable<E> :
-  false;
+type _IsTransferable<T> = T extends void
+  ? true
+  : T extends JsonValue
+    ? true
+    : T extends Uint8Array
+      ? true
+      : T extends Transport
+        ? true
+        : T extends { [__pin_brand]: any }
+          ? true // A Pin<T> is transferable.
+          : T extends ReadableStream<infer U>
+            ? _IsTransferable<U>
+            : T extends WritableStream<infer U>
+              ? _IsTransferable<U>
+              : T extends { [key: string]: infer V }
+                ? _IsTransferable<V>
+                : T extends (infer E)[]
+                  ? _IsTransferable<E>
+                  : false;
 
 /** Checks if a function's arguments and return value are transferable. @internal */
 type _IsPinableFunction<T> = T extends (...args: infer TArgs) => infer TReturn
-  ? [
-      _IsTransferable<Awaited<TReturn>>,
-      _IsTransferable<TArgs>
-    ] extends [true, true]
+  ? [_IsTransferable<Awaited<TReturn>>, _IsTransferable<TArgs>] extends [
+      true,
+      true,
+    ]
     ? true
     : false
   : false;
 
 /** Recursively marks properties of an object that are not transferable. @internal */
-type _MarkInvalidProperties<T> = _IsPinableFunction<T> extends true
-  ? T
-  : T extends Function
-    ? _InvalidProperty
-    : T extends object
-      ? {
-          [K in keyof T]: _IsTransferable<T[K]> extends true
-            ? T[K]
-            : _MarkInvalidProperties<T[K]>;
-        }
-      : _InvalidProperty;
+type _MarkInvalidProperties<T> =
+  _IsPinableFunction<T> extends true
+    ? T
+    : T extends Function
+      ? _InvalidProperty
+      : T extends object
+        ? {
+            [K in keyof T]: _IsTransferable<T[K]> extends true
+              ? T[K]
+              : _MarkInvalidProperties<T[K]>;
+          }
+        : _InvalidProperty;
 
 /** Checks if a type, after marking, contains any invalid properties. @internal */
-type _HasInvalidProperties<T> =
-  { [K in keyof T]: T[K] extends _InvalidProperty ? true : never }[keyof T] extends never
-    ? false
-    : true;
+type _HasInvalidProperties<T> = {
+  [K in keyof T]: T[K] extends _InvalidProperty ? true : never;
+}[keyof T] extends never
+  ? false
+  : true;
 
 /** A utility to make optional properties explicitly `T | undefined`. @internal */
 type OptionalToUndefined<T> = {
@@ -148,8 +154,8 @@ type OptionalToUndefined<T> = {
 
 /** A branded type to represent a pin constraint violation with an error message. @internal */
 export interface PinConstraintViolation<_ extends string> {
-  readonly brand: unique symbol
-};
+  readonly brand: unique symbol;
+}
 
 /**
  * A type constraint that validates if a type `T` can be safely "pinned".
@@ -160,6 +166,8 @@ export interface PinConstraintViolation<_ extends string> {
  * to a `PinConstraintViolation` with a descriptive error message.
  */
 export type Pinable<T> =
-  _HasInvalidProperties<_MarkInvalidProperties<OptionalToUndefined<T>>> extends true
+  _HasInvalidProperties<
+    _MarkInvalidProperties<OptionalToUndefined<T>>
+  > extends true
     ? PinConstraintViolation<"Error: The provided type is not 'pin-able'. It may contain non-serializable values (like Date or RegExp) or functions with non-transferable arguments/return types.">
     : T;

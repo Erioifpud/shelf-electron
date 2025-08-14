@@ -1,7 +1,7 @@
-import type { JsonValue } from '@eleplug/transport';
-import type { Feature } from '../../runtime/framework/feature';
-import type { TypeHandler } from './type.handler';
-import { Serializer } from './serializer';
+import type { JsonValue } from "@eleplug/transport";
+import type { Feature } from "../../runtime/framework/feature";
+import type { TypeHandler } from "./type.handler";
+import { Serializer } from "./serializer";
 
 /**
  * The capabilities contributed by the `SerializationFeature`.
@@ -15,7 +15,7 @@ export interface SerializationContribution {
     deserialize: (value: JsonValue) => any;
     /** Registers a custom `TypeHandler` to support a new data type. */
     registerHandler: (handler: TypeHandler<any, any>) => void;
-  }
+  };
 }
 
 /**
@@ -29,7 +29,9 @@ export interface SerializationContribution {
  * 1. `contribute`: Provides a proxy interface. `registerHandler` collects handlers.
  * 2. `init`: Instantiates the real `Serializer` with all collected handlers.
  */
-export class SerializationFeature implements Feature<SerializationContribution> {
+export class SerializationFeature
+  implements Feature<SerializationContribution>
+{
   // A temporary store for handlers registered before the serializer is initialized.
   private handlersToRegister: TypeHandler<any, any>[] = [];
   // The real serializer instance, created during the `init` phase.
@@ -43,14 +45,18 @@ export class SerializationFeature implements Feature<SerializationContribution> 
          */
         serialize: (value) => {
           if (!this.serializerInstance) {
-            throw new Error("SerializationFeature not initialized. Cannot call 'serialize'.");
+            throw new Error(
+              "SerializationFeature not initialized. Cannot call 'serialize'."
+            );
           }
           return this.serializerInstance.serialize(value);
         },
 
         deserialize: (value) => {
           if (!this.serializerInstance) {
-            throw new Error("SerializationFeature not initialized. Cannot call 'deserialize'.");
+            throw new Error(
+              "SerializationFeature not initialized. Cannot call 'deserialize'."
+            );
           }
           return this.serializerInstance.deserialize(value);
         },
@@ -62,7 +68,7 @@ export class SerializationFeature implements Feature<SerializationContribution> 
         registerHandler: (handler) => {
           this.handlersToRegister.push(handler);
         },
-      }
+      },
     };
   }
 

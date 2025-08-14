@@ -13,7 +13,7 @@ export type PhantomData<_> = {};
  * A utility type to extract the inner "phantom" type from a `PhantomData` object.
  * @template T The `PhantomData` object.
  */
-export type InferPhantomData<T> = T extends PhantomData<infer R> ? R: never;
+export type InferPhantomData<T> = T extends PhantomData<infer R> ? R : never;
 
 /**
  * A factory function to create a `PhantomData` object.
@@ -73,7 +73,9 @@ export interface Schema<T = any> {
  */
 export type InferSchemaTuple<TSchemas extends readonly Schema[]> = {
   [K in keyof TSchemas]: TSchemas[K] extends Schema<infer T> ? T : never;
-} extends infer T ? T & unknown[] : never;
+} extends infer T
+  ? T & unknown[]
+  : never;
 
 /**
  * A utility type representing a function that may return `void` or `Promise<void>`.

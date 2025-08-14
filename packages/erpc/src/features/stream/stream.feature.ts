@@ -1,12 +1,20 @@
-import type { OutgoingStreamChannel, ChannelId, JsonValue, IncomingStreamChannel } from '@eleplug/transport';
-import type { Feature } from '../../runtime/framework/feature.js';
-import { StreamManager, type StreamProcessingContext } from './stream-manager';
-import { createStreamHandler } from './stream.handler';
-import type { TransportAdapterContribution } from '../transport/transport.adapter.feature.js';
-import type { SerializationContribution } from '../serialization/serialization.feature.js';
-import type { ProtocolHandlerContribution } from '../protocol/protocol.handler.feature.js';
-import type { TunnelContribution } from '../tunnel/tunnel.feature.js';
-import type { StreamAckMessage, StreamTunnelMessage } from '../../types/protocol.js';
+import type {
+  OutgoingStreamChannel,
+  ChannelId,
+  JsonValue,
+  IncomingStreamChannel,
+} from "@eleplug/transport";
+import type { Feature } from "../../runtime/framework/feature.js";
+import { StreamManager, type StreamProcessingContext } from "./stream-manager";
+import { createStreamHandler } from "./stream.handler";
+import type { TransportAdapterContribution } from "../transport/transport.adapter.feature.js";
+import type { SerializationContribution } from "../serialization/serialization.feature.js";
+import type { ProtocolHandlerContribution } from "../protocol/protocol.handler.feature.js";
+import type { TunnelContribution } from "../tunnel/tunnel.feature.js";
+import type {
+  StreamAckMessage,
+  StreamTunnelMessage,
+} from "../../types/protocol.js";
 
 export interface StreamContribution {
   streamManager: StreamManager;
@@ -14,11 +22,17 @@ export interface StreamContribution {
   openPullReader: (handshakeId: string) => ReadableStream<JsonValue>;
 }
 
-type StreamCapability = TransportAdapterContribution & SerializationContribution & ProtocolHandlerContribution & TunnelContribution;
+type StreamCapability = TransportAdapterContribution &
+  SerializationContribution &
+  ProtocolHandlerContribution &
+  TunnelContribution;
 
 /** A simple manager for tracking streams awaiting acknowledgment. @internal */
 class AckManager {
-  private pendingAcks = new Map<ChannelId, { resolve: () => void; reject: (reason?: any) => void }>();
+  private pendingAcks = new Map<
+    ChannelId,
+    { resolve: () => void; reject: (reason?: any) => void }
+  >();
 
   public waitForAck(channelId: ChannelId): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -47,7 +61,9 @@ class AckManager {
  * for creating push-based writers and pull-based readers. It also routes
  * streams to the `TunnelFeature` when necessary.
  */
-export class StreamFeature implements Feature<StreamContribution, StreamCapability> {
+export class StreamFeature
+  implements Feature<StreamContribution, StreamCapability>
+{
   private streamManager: StreamManager;
   private capability!: StreamCapability;
   private readonly ackManager = new AckManager();
@@ -61,7 +77,8 @@ export class StreamFeature implements Feature<StreamContribution, StreamCapabili
     return {
       streamManager: this.streamManager,
       createPushWriter: this.createPushWriter.bind(this),
-      openPullReader: (handshakeId) => this.streamManager.createPullReader(handshakeId),
+      openPullReader: (handshakeId) =>
+        this.streamManager.createPullReader(handshakeId),
     };
   }
 
@@ -69,19 +86,28 @@ export class StreamFeature implements Feature<StreamContribution, StreamCapabili
     this.capability = capability;
 
     // Listen for new incoming stream channels from the transport layer.
-    capability.rawEmitter.on('incomingStreamChannel', (channel: IncomingStreamChannel) => {
-      // Assemble the context required by the StreamManager for processing.
-      const streamProcessingContext: StreamProcessingContext = {
-        serializer: capability.serializer,
-        sendRawMessage: capability.sendRawMessage,
-        routeTunneledStream: (chan: IncomingStreamChannel, msg: StreamTunnelMessage) => capability.routeIncomingStream(chan, msg),
-      };
-      // Delegate routing to the manager.
-      this.streamManager.routeIncomingStreamChannel(channel, streamProcessingContext);
-    });
+    capability.rawEmitter.on(
+      "incomingStreamChannel",
+      (channel: IncomingStreamChannel) => {
+        // Assemble the context required by the StreamManager for processing.
+        const streamProcessingContext: StreamProcessingContext = {
+          serializer: capability.serializer,
+          sendRawMessage: capability.sendRawMessage,
+          routeTunneledStream: (
+            chan: IncomingStreamChannel,
+            msg: StreamTunnelMessage
+          ) => capability.routeIncomingStream(chan, msg),
+        };
+        // Delegate routing to the manager.
+        this.streamManager.routeIncomingStreamChannel(
+          channel,
+          streamProcessingContext
+        );
+      }
+    );
 
     // Listen for stream acknowledgment messages.
-    capability.semanticEmitter.on('streamAck', (message: StreamAckMessage) => {
+    capability.semanticEmitter.on("streamAck", (message: StreamAckMessage) => {
       this.ackManager.handleAck(message.channelId);
     });
 
@@ -99,7 +125,7 @@ export class StreamFeature implements Feature<StreamContribution, StreamCapabili
    */
   private createPushWriter(handshakeId: string): WritableStream<JsonValue> {
     if (!this.capability) {
-      throw new Error('StreamFeature is not initialized.');
+      throw new Error("StreamFeature is not initialized.");
     }
 
     let channel: OutgoingStreamChannel | null = null;
@@ -110,22 +136,31 @@ export class StreamFeature implements Feature<StreamContribution, StreamCapabili
         if (!channel) {
           // On first write, open a new channel and send the handshake message.
           channel = await this.capability.openOutgoingStreamChannel();
-          await channel.send({ type: 'stream-data', chunk: serializedChunk, handshakeId });
+          await channel.send({
+            type: "stream-data",
+            chunk: serializedChunk,
+            handshakeId,
+          });
         } else {
-          await channel.send({ type: 'stream-data', chunk: serializedChunk });
+          await channel.send({ type: "stream-data", chunk: serializedChunk });
         }
       },
       close: async () => {
         if (channel) {
           try {
-            await channel.send({ type: 'stream-end' });
+            await channel.send({ type: "stream-end" });
             // Wait for the remote peer to acknowledge full consumption before closing.
             await this.ackManager.waitForAck(channel.id);
           } catch (err) {
-            console.error(`[StreamFeature] Graceful close failed for channel ${channel?.id}:`, err);
+            console.error(
+              `[StreamFeature] Graceful close failed for channel ${channel?.id}:`,
+              err
+            );
           } finally {
             // Always attempt to close the underlying channel.
-            await channel.close().catch(() => { /* ignore */ });
+            await channel.close().catch(() => {
+              /* ignore */
+            });
           }
         }
       },
@@ -133,12 +168,14 @@ export class StreamFeature implements Feature<StreamContribution, StreamCapabili
         if (channel) {
           try {
             // Notify the remote peer of the abortion.
-            await channel.send({ type: 'stream-abort', reason });
+            await channel.send({ type: "stream-abort", reason });
           } catch (err) {
             // Ignore send errors, as we are aborting anyway.
           } finally {
             // Immediately close the underlying channel without waiting for an ack.
-            await channel.close().catch(() => { /* ignore */ });
+            await channel.close().catch(() => {
+              /* ignore */
+            });
           }
         }
       },
@@ -147,7 +184,9 @@ export class StreamFeature implements Feature<StreamContribution, StreamCapabili
 
   public close(_contribution: StreamContribution, error?: Error): void {
     // Clean up all pending acknowledgments and release the manager.
-    this.ackManager.clearAll(error ?? new Error('Operation aborted due to StreamFeature shutdown.'));
+    this.ackManager.clearAll(
+      error ?? new Error("Operation aborted due to StreamFeature shutdown.")
+    );
     this.streamManager.release(error);
   }
 }

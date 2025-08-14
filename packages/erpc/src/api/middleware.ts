@@ -1,5 +1,5 @@
-import type { JsonValue } from '@eleplug/transport';
-import { mark, type PhantomData } from '../types/common';
+import type { JsonValue } from "@eleplug/transport";
+import { mark, type PhantomData } from "../types/common";
 
 /**
  * A unique symbol used to mark a type that should not be transformed by a
@@ -13,7 +13,7 @@ export declare const __passThrough: unique symbol;
  * passed through a middleware without modification.
  */
 export type PassThrough = {
-  [__passThrough]: void
+  [__passThrough]: void;
 };
 
 // =================================================================
@@ -48,17 +48,35 @@ export type MiddlewareDef = {
 // These helpers safely extract specific types from a MiddlewareDef, defaulting to PassThrough.
 
 /** @internal Extracts the input context type from a middleware definition. */
-export type GetCtxIn<TDef extends MiddlewareDef> = TDef extends { CtxIn: any } ? TDef['CtxIn'] : PassThrough;
+export type GetCtxIn<TDef extends MiddlewareDef> = TDef extends { CtxIn: any }
+  ? TDef["CtxIn"]
+  : PassThrough;
 /** @internal Extracts the output context type from a middleware definition. */
-export type GetCtxOut<TDef extends MiddlewareDef> = TDef extends { CtxOut: any } ? TDef['CtxOut'] : GetCtxIn<TDef>;
+export type GetCtxOut<TDef extends MiddlewareDef> = TDef extends { CtxOut: any }
+  ? TDef["CtxOut"]
+  : GetCtxIn<TDef>;
 /** @internal Extracts the input arguments type from a middleware definition. */
-export type GetEntrIn<TDef extends MiddlewareDef> = TDef extends { EntrIn: any[] } ? TDef['EntrIn'] : PassThrough[];
+export type GetEntrIn<TDef extends MiddlewareDef> = TDef extends {
+  EntrIn: any[];
+}
+  ? TDef["EntrIn"]
+  : PassThrough[];
 /** @internal Extracts the output arguments type from a middleware definition. */
-export type GetEntrOut<TDef extends MiddlewareDef> = TDef extends { EntrOut: any[] } ? TDef['EntrOut'] : GetEntrIn<TDef>;
+export type GetEntrOut<TDef extends MiddlewareDef> = TDef extends {
+  EntrOut: any[];
+}
+  ? TDef["EntrOut"]
+  : GetEntrIn<TDef>;
 /** @internal Extracts the expected return type from the next step. */
-export type GetExitIn<TDef extends MiddlewareDef> = TDef extends { ExitIn: any } ? TDef['ExitIn'] : PassThrough;
+export type GetExitIn<TDef extends MiddlewareDef> = TDef extends { ExitIn: any }
+  ? TDef["ExitIn"]
+  : PassThrough;
 /** @internal Extracts the final return type of the middleware. */
-export type GetExitOut<TDef extends MiddlewareDef> = TDef extends { ExitOut: any } ? TDef['ExitOut'] : GetExitIn<TDef>;
+export type GetExitOut<TDef extends MiddlewareDef> = TDef extends {
+  ExitOut: any;
+}
+  ? TDef["ExitOut"]
+  : GetExitIn<TDef>;
 // #endregion
 
 /**
@@ -79,7 +97,7 @@ export type MiddlewareHandler<TDef extends MiddlewareDef> = (opts: {
   input: GetEntrIn<TDef>;
   meta: JsonValue[];
   path: string;
-  type: 'ask' | 'tell';
+  type: "ask" | "tell";
   next: (opts?: {
     ctx?: GetCtxOut<TDef>;
     input?: GetEntrOut<TDef>;

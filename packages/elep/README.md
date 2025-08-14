@@ -176,7 +176,6 @@ export default definePlugin({
 
     // 3. Open a dedicated transport to the new window and start an erpc server on it.
     // This allows the renderer process to call back into this specific plugin.
-    const t = initERPC.create();
     const rendererTransport = await eWindow.openTransport('ebus-core');
     await createServer(rendererTransport, mainPluginApi);
 

@@ -1,26 +1,25 @@
-
 // =================================================================
 // SECTION 1: High-Level Factories
 // These are the main entry points for creating erpc nodes.
 // =================================================================
 
-import type { Transport } from '@eleplug/transport';
-import type { Api } from './api/api';
-import { buildFeatures } from './runtime/factory';
-import type { Client } from './api/client';
-import { ResourceManager } from './features/pin/resource-manager';
-import { StreamManager } from './features/stream/stream-manager';
-import { ErrorHandlingFeature } from './features/error/error.feature';
-import { PinFeature } from './features/pin/pin.feature';
-import { TunnelFeature } from './features/tunnel/tunnel.feature';
-import { StreamFeature } from './features/stream/stream.feature';
-import { SerializationFeature } from './features/serialization/serialization.feature';
-import { ProtocolHandlerFeature } from './features/protocol/protocol.handler.feature';
-import { CallManagerFeature } from './features/call/call-manager.feature';
-import { CallExecutorFeature } from './features/call/call-executor.feature';
-import { TransportAdapterFeature } from './features/transport/transport.adapter.feature';
-import { LifecycleFeature } from './features/lifecycle/lifecycle.feature';
-import type { Transferable, TransferableArray } from './types/common.js';
+import type { Transport } from "@eleplug/transport";
+import type { Api } from "./api/api";
+import { buildFeatures } from "./runtime/factory";
+import type { Client } from "./api/client";
+import { ResourceManager } from "./features/pin/resource-manager";
+import { StreamManager } from "./features/stream/stream-manager";
+import { ErrorHandlingFeature } from "./features/error/error.feature";
+import { PinFeature } from "./features/pin/pin.feature";
+import { TunnelFeature } from "./features/tunnel/tunnel.feature";
+import { StreamFeature } from "./features/stream/stream.feature";
+import { SerializationFeature } from "./features/serialization/serialization.feature";
+import { ProtocolHandlerFeature } from "./features/protocol/protocol.handler.feature";
+import { CallManagerFeature } from "./features/call/call-manager.feature";
+import { CallExecutorFeature } from "./features/call/call-executor.feature";
+import { TransportAdapterFeature } from "./features/transport/transport.adapter.feature";
+import { LifecycleFeature } from "./features/lifecycle/lifecycle.feature";
+import type { Transferable, TransferableArray } from "./types/common.js";
 
 /**
  * Creates a standard erpc node with both client and server capabilities.
@@ -33,10 +32,9 @@ import type { Transferable, TransferableArray } from './types/common.js';
  * @returns A promise that resolves to the fully initialized erpc node,
  *   exposing all its capabilities and a `close` function.
  */
-export async function createServer<TApi extends Api<TransferableArray, Transferable>>(
-  transport: Transport,
-  api: TApi,
-) {
+export async function createServer<
+  TApi extends Api<TransferableArray, Transferable>,
+>(transport: Transport, api: TApi) {
   const resourceManager = new ResourceManager();
   const streamManager = new StreamManager();
 
@@ -57,7 +55,7 @@ export async function createServer<TApi extends Api<TransferableArray, Transfera
   const node = await buildFeatures(features);
   return {
     ...node.capability,
-    close: node.close
+    close: node.close,
   };
 }
 
@@ -71,9 +69,9 @@ export async function createServer<TApi extends Api<TransferableArray, Transfera
  * @returns A promise that resolves to the fully initialized client node,
  *   providing the `procedure` proxy for making calls.
  */
-export async function createClient<TApi extends Api<TransferableArray, Transferable>>(
-  transport: Transport,
-) {
+export async function createClient<
+  TApi extends Api<TransferableArray, Transferable>,
+>(transport: Transport) {
   const resourceManager = new ResourceManager();
   const streamManager = new StreamManager();
 
@@ -108,10 +106,10 @@ export async function createClient<TApi extends Api<TransferableArray, Transfera
  * @param api The API that this peer will expose.
  * @returns A promise that resolves to the erpc node.
  */
-export async function createPeer<MyApi extends Api<TransferableArray, Transferable>, TheirApi extends Api<any, any> = any>(
-  transport: Transport,
-  api: MyApi,
-) {
+export async function createPeer<
+  MyApi extends Api<TransferableArray, Transferable>,
+  TheirApi extends Api<any, any> = any,
+>(transport: Transport, api: MyApi) {
   const server = await createServer<MyApi>(transport, api);
   return {
     ...server,
@@ -124,11 +122,11 @@ export async function createPeer<MyApi extends Api<TransferableArray, Transferab
 // Tools for defining your erpc API.
 // =================================================================
 
-export { initERPC } from './api/init.js';
-export { middleware } from './api/middleware.js';
-export { pin, free } from './features/pin/resource-manager.js';
-export { buildClient, type CallProcedure } from './api/client.js'; // `CallProcedure` was also missing
-export { createProcedureHandlers } from './api/router.js';
+export { initERPC } from "./api/init.js";
+export { middleware } from "./api/middleware.js";
+export { pin, free } from "./features/pin/resource-manager.js";
+export { buildClient, type CallProcedure } from "./api/client.js"; // `CallProcedure` was also missing
+export { createProcedureHandlers } from "./api/router.js";
 
 // =================================================================
 // SECTION 3: Core Types & Interfaces
@@ -136,27 +134,47 @@ export { createProcedureHandlers } from './api/router.js';
 // =================================================================
 
 // --- API Definition & Inference ---
-export type { Api, Router } from './api/api.js';
-export type { Procedure, AskProcedure, TellProcedure, DynamicProcedure } from './api/procedure.js';
-export type { Client } from './api/client.js';
-export type { ErpcInstance, ProcedureBuilder } from './api/init.js';
-export type { Middleware } from './api/middleware.js';
-export type { Env } from './api/env.js';
-export type { ProcedureHandlers, ProcedureExecutionResult } from './api/router.js';
+export type { Api, Router } from "./api/api.js";
+export type {
+  Procedure,
+  AskProcedure,
+  TellProcedure,
+  DynamicProcedure,
+} from "./api/procedure.js";
+export type { Client } from "./api/client.js";
+export type { ErpcInstance, ProcedureBuilder } from "./api/init.js";
+export type { Middleware } from "./api/middleware.js";
+export type { Env } from "./api/env.js";
+export type {
+  ProcedureHandlers,
+  ProcedureExecutionResult,
+} from "./api/router.js";
 
 // --- Data & Error Types ---
-export type { Transferable, TransferableArray, TransferableObject, Schema, InferSchemaTuple, MaybePromiseVoid } from './types/common.js';
-export type { Pin, Pinable } from './types/pin.js';
-export { ProcedureError, IllegalTypeError, IllegalParameterError, IllegalResultError } from './types/errors.js';
-export type { InferPhantomData } from './types/common.js'; // For advanced type manipulation
+export type {
+  Transferable,
+  TransferableArray,
+  TransferableObject,
+  Schema,
+  InferSchemaTuple,
+  MaybePromiseVoid,
+} from "./types/common.js";
+export type { Pin, Pinable } from "./types/pin.js";
+export {
+  ProcedureError,
+  IllegalTypeError,
+  IllegalParameterError,
+  IllegalResultError,
+} from "./types/errors.js";
+export type { InferPhantomData } from "./types/common.js"; // For advanced type manipulation
 
 // =================================================================
 // SECTION 4: Feature & Manager Classes (For Advanced Customization)
 // For users who want to build a custom erpc node.
 // =================================================================
 
-export type { Feature } from './runtime/framework/feature.js';
-export { buildFeatures } from './runtime/factory';
+export type { Feature } from "./runtime/framework/feature.js";
+export { buildFeatures } from "./runtime/factory";
 
 export {
   TransportAdapterFeature,
@@ -172,13 +190,15 @@ export {
 };
 
 export { ResourceManager, StreamManager };
-export { Serializer } from './features/serialization/serializer.js';
-export type { TypeHandler, SerializerContext } from './features/serialization/type.handler.js';
-export { createPinHandler } from './features/pin/pin.handler.js';
-export { createStreamHandler } from './features/stream/stream.handler.js';
-export { errorHandler } from './features/error/error.handler.js';
-export { illegalTypeErrorHandler } from './features/error/illegal-type-error.handler.js';
-
+export { Serializer } from "./features/serialization/serializer.js";
+export type {
+  TypeHandler,
+  SerializerContext,
+} from "./features/serialization/type.handler.js";
+export { createPinHandler } from "./features/pin/pin.handler.js";
+export { createStreamHandler } from "./features/stream/stream.handler.js";
+export { errorHandler } from "./features/error/error.handler.js";
+export { illegalTypeErrorHandler } from "./features/error/illegal-type-error.handler.js";
 
 // =================================================================
 // SECTION 5: Protocol & Low-Level Types (For Advanced Use Cases)
@@ -186,13 +206,19 @@ export { illegalTypeErrorHandler } from './features/error/illegal-type-error.han
 // =================================================================
 
 // --- Contribution & Event Types ---
-import type { CallManagerContribution } from './features/call/call-manager.feature';
-import type { PinContribution } from './features/pin/pin.feature';
-import type { ProtocolHandlerContribution, SemanticEvents } from './features/protocol/protocol.handler.feature';
-import type { SerializationContribution } from './features/serialization/serialization.feature';
-import type { StreamContribution } from './features/stream/stream.feature';
-import type { TransportAdapterContribution, RawTransportEvents } from './features/transport/transport.adapter.feature';
-import type { TunnelContribution } from './features/tunnel/tunnel.feature';
+import type { CallManagerContribution } from "./features/call/call-manager.feature";
+import type { PinContribution } from "./features/pin/pin.feature";
+import type {
+  ProtocolHandlerContribution,
+  SemanticEvents,
+} from "./features/protocol/protocol.handler.feature";
+import type { SerializationContribution } from "./features/serialization/serialization.feature";
+import type { StreamContribution } from "./features/stream/stream.feature";
+import type {
+  TransportAdapterContribution,
+  RawTransportEvents,
+} from "./features/transport/transport.adapter.feature";
+import type { TunnelContribution } from "./features/tunnel/tunnel.feature";
 
 export type {
   CallManagerContribution,
@@ -222,7 +248,7 @@ export {
   type StreamEndMessage,
   type StreamMessage,
   type StreamAckMessage,
-} from './types/protocol.js';
+} from "./types/protocol.js";
 
 // --- Transport Layer Types (re-exported) ---
 export type { Transport };
@@ -234,6 +260,6 @@ export type {
   ControlChannel,
   OutgoingStreamChannel,
   IncomingStreamChannel,
-} from '@eleplug/transport';
+} from "@eleplug/transport";
 
-export * from './types/pin.js';
+export * from "./types/pin.js";

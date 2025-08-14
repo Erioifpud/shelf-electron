@@ -1,4 +1,7 @@
-import type { JsonValue, MaybePromise } from "packages/transport/dist/index.mjs";
+import type {
+  JsonValue,
+  MaybePromise,
+} from "packages/transport/dist/index.mjs";
 import type { Api } from "./api";
 import type { BuildStub } from "./stub";
 
@@ -17,17 +20,29 @@ export type Client<TApi extends Api<any, any>> = BuildStub<TApi>;
  * The client proxy relies on this function to send requests to the remote peer.
  */
 export type CallProcedure<TInput extends Array<unknown>, TOutput> = {
-  (path: string, action: 'ask', args: TInput, meta?: JsonValue[]): Promise<TOutput>;
-  (path: string, action: 'tell', args: TInput, meta?: JsonValue[]): Promise<void>;
+  (
+    path: string,
+    action: "ask",
+    args: TInput,
+    meta?: JsonValue[]
+  ): Promise<TOutput>;
+  (
+    path: string,
+    action: "tell",
+    args: TInput,
+    meta?: JsonValue[]
+  ): Promise<void>;
 };
 
 /**
  * The handler for the dynamic proxy, processing property access and function calls.
  * @internal
  */
-export type ProxyCallHandler<
-  TInput extends Array<unknown>, TOuput
-> = (path: string[], args: TInput, meta?: JsonValue[]) => MaybePromise<TOuput>;
+export type ProxyCallHandler<TInput extends Array<unknown>, TOuput> = (
+  path: string[],
+  args: TInput,
+  meta?: JsonValue[]
+) => MaybePromise<TOuput>;
 
 /**
  * Recursively creates a proxy object to build the client's API structure.
@@ -38,16 +53,18 @@ export type ProxyCallHandler<
  * @returns A new proxy.
  * @internal
  */
-export function createProxy<
-  TInput extends Array<unknown>, TOuput
->(handler: ProxyCallHandler<TInput, TOuput>, path: string[] = [], meta?: JsonValue[]) {
+export function createProxy<TInput extends Array<unknown>, TOuput>(
+  handler: ProxyCallHandler<TInput, TOuput>,
+  path: string[] = [],
+  meta?: JsonValue[]
+) {
   // A proxy is created around a dummy function.
-  const proxy: any = new Proxy(() => { }, {
+  const proxy: any = new Proxy(() => {}, {
     get: (_target, prop: string) => {
       // Prevent the proxy from being treated as a Promise by promise-chaining libraries.
-      if (prop === 'then') return undefined;
+      if (prop === "then") return undefined;
       // Ignore symbols to prevent conflicts with runtime mechanics.
-      if (typeof prop === 'symbol') return undefined;
+      if (typeof prop === "symbol") return undefined;
       // Recursively build the path.
       return createProxy(handler, [...path, prop], meta);
     },
@@ -75,17 +92,17 @@ export function buildClient<TApi extends Api<any, any> = any>(
   const handler: ProxyCallHandler<any, any> = (path, args, meta) => {
     const action = path.at(-1);
     const procedurePathSegments = path.slice(0, -1);
-    const procedurePathString = procedurePathSegments.join('.');
+    const procedurePathString = procedurePathSegments.join(".");
 
     switch (action) {
       // Standard procedure calls.
-      case 'ask':
+      case "ask":
         return callProcedure(procedurePathString, action, args, meta);
-      case 'tell':
+      case "tell":
         return callProcedure(procedurePathString, action, args, meta);
 
       // Metadata attachment.
-      case 'meta':
+      case "meta":
         const newMetas = args;
         const existingMeta = Array.isArray(meta) ? meta : [];
         const newMetaArray = [...existingMeta, ...newMetas];
@@ -93,22 +110,31 @@ export function buildClient<TApi extends Api<any, any> = any>(
         return createProxy(handler, procedurePathSegments, newMetaArray);
 
       // Dynamic invocation.
-      case 'invoke':
+      case "invoke":
         const [subPath, invokeAction, ...procedureArgs] = args;
-        if (typeof subPath !== 'string' || !['ask', 'tell'].includes(invokeAction)) {
-          return Promise.reject(new Error(
-            `Invalid .invoke() usage on path '${procedurePathString}'. Expected: .invoke('procedure.path', 'ask' | 'tell', ...args)`
-          ));
+        if (
+          typeof subPath !== "string" ||
+          !["ask", "tell"].includes(invokeAction)
+        ) {
+          return Promise.reject(
+            new Error(
+              `Invalid .invoke() usage on path '${procedurePathString}'. Expected: .invoke('procedure.path', 'ask' | 'tell', ...args)`
+            )
+          );
         }
-        const fullPath = procedurePathString ? `${procedurePathString}.${subPath}` : subPath;
+        const fullPath = procedurePathString
+          ? `${procedurePathString}.${subPath}`
+          : subPath;
         return callProcedure(fullPath, invokeAction, procedureArgs, meta);
 
       // Invalid termination of a call chain.
       default:
-        const fullInvalidPath = path.join('.');
-        return Promise.reject(new Error(
-          `Invalid RPC call on path '${fullInvalidPath}'. A procedure path must be terminated with .ask(...), .tell(...), or manipulated with .meta(...) / .invoke(...).`
-        ));
+        const fullInvalidPath = path.join(".");
+        return Promise.reject(
+          new Error(
+            `Invalid RPC call on path '${fullInvalidPath}'. A procedure path must be terminated with .ask(...), .tell(...), or manipulated with .meta(...) / .invoke(...).`
+          )
+        );
     }
   };
 

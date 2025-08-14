@@ -1,5 +1,5 @@
-import type { JsonValue } from '@eleplug/transport';
-import type { Placeholder } from '../../types/protocol';
+import type { JsonValue } from "@eleplug/transport";
+import type { Placeholder } from "../../types/protocol";
 
 /**
  * Provides context to a `TypeHandler` during serialization and deserialization.
@@ -39,7 +39,7 @@ export interface SerializerContext {
  */
 export interface TypeHandler<
   TValue extends object = object,
-  TPlaceholder extends Placeholder = Placeholder
+  TPlaceholder extends Placeholder = Placeholder,
 > {
   /**
    * The type name(s) for the placeholder, used for quick lookups during deserialization.
@@ -47,7 +47,7 @@ export interface TypeHandler<
    * This must match the `_erpc_type` property of `TPlaceholder`. It can be a
    * single string or an array of strings if one handler supports multiple related types.
    */
-  name: TPlaceholder['_erpc_type'] | Array<TPlaceholder['_erpc_type']>;
+  name: TPlaceholder["_erpc_type"] | Array<TPlaceholder["_erpc_type"]>;
 
   /**
    * Checks if a given value should be handled by this handler.

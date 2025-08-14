@@ -1,11 +1,11 @@
-import type { Transport } from '@eleplug/transport';
-import type { TypeHandler } from '../serialization/type.handler.js';
-import type { TunnelManager } from './tunnel-manager.js';
-import type { Placeholder } from '../../types/protocol.js';
+import type { Transport } from "@eleplug/transport";
+import type { TypeHandler } from "../serialization/type.handler.js";
+import type { TunnelManager } from "./tunnel-manager.js";
+import type { Placeholder } from "../../types/protocol.js";
 
 /** The placeholder for a serialized `Transport` object. */
 export interface TransportPlaceholder extends Placeholder {
-  _erpc_type: 'transport_tunnel';
+  _erpc_type: "transport_tunnel";
   tunnelId: string;
 }
 
@@ -18,24 +18,24 @@ export interface TransportPlaceholder extends Placeholder {
  * @internal
  */
 export function createTunnelHandler(
-  tunnelManager: TunnelManager,
+  tunnelManager: TunnelManager
 ): TypeHandler<Transport, TransportPlaceholder> {
   return {
-    name: 'transport_tunnel',
+    name: "transport_tunnel",
 
     /**
      * Identifies an object as a `Transport` via duck typing.
      */
     canHandle(value: unknown): value is Transport {
-      if (typeof value !== 'object' || value === null) return false;
+      if (typeof value !== "object" || value === null) return false;
       const candidate = value as Record<string, unknown>;
       return (
-        typeof candidate.getControlChannel === 'function' &&
-        typeof candidate.openOutgoingStreamChannel === 'function' &&
-        typeof candidate.onIncomingStreamChannel === 'function' &&
-        typeof candidate.onClose === 'function' &&
-        typeof candidate.close === 'function' &&
-        typeof candidate.abort === 'function'
+        typeof candidate.getControlChannel === "function" &&
+        typeof candidate.openOutgoingStreamChannel === "function" &&
+        typeof candidate.onIncomingStreamChannel === "function" &&
+        typeof candidate.onClose === "function" &&
+        typeof candidate.close === "function" &&
+        typeof candidate.abort === "function"
       );
     },
 
@@ -45,7 +45,7 @@ export function createTunnelHandler(
     serialize(transportToBridge: Transport): TransportPlaceholder {
       const tunnelId = tunnelManager.bridgeLocalTransport(transportToBridge);
       return {
-        _erpc_type: 'transport_tunnel',
+        _erpc_type: "transport_tunnel",
         tunnelId,
       };
     },

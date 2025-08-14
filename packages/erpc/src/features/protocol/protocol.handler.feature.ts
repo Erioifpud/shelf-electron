@@ -1,6 +1,6 @@
-import { AsyncEventEmitter, type JsonValue } from '@eleplug/transport';
-import type { Feature } from '../../runtime/framework/feature';
-import type { TransportAdapterContribution } from '../transport/transport.adapter.feature';
+import { AsyncEventEmitter, type JsonValue } from "@eleplug/transport";
+import type { Feature } from "../../runtime/framework/feature";
+import type { TransportAdapterContribution } from "../transport/transport.adapter.feature";
 import type {
   ControlMessage,
   NotifyMessage,
@@ -9,7 +9,7 @@ import type {
   RpcResponseMessage,
   StreamAckMessage,
   TunnelMessage,
-} from '../../types/protocol.js';
+} from "../../types/protocol.js";
 
 /**
  * Defines the high-level semantic events emitted by the `ProtocolHandlerFeature`.
@@ -50,7 +50,9 @@ type ProtocolHandlerRequires = TransportAdapterContribution;
  * other features to listen for specific actions (like 'ask' or 'response')
  * without needing to know the low-level message structure.
  */
-export class ProtocolHandlerFeature implements Feature<ProtocolHandlerContribution, ProtocolHandlerRequires> {
+export class ProtocolHandlerFeature
+  implements Feature<ProtocolHandlerContribution, ProtocolHandlerRequires>
+{
   private readonly semanticEmitter = new AsyncEventEmitter<SemanticEvents>();
 
   public contribute(): ProtocolHandlerContribution {
@@ -61,7 +63,7 @@ export class ProtocolHandlerFeature implements Feature<ProtocolHandlerContributi
 
   public init(capability: ProtocolHandlerRequires): void {
     // Listen for raw messages from the transport adapter.
-    capability.rawEmitter.on('message', (message: JsonValue) => {
+    capability.rawEmitter.on("message", (message: JsonValue) => {
       this.processMessage(message);
     });
   }
@@ -72,8 +74,16 @@ export class ProtocolHandlerFeature implements Feature<ProtocolHandlerContributi
    * @param message The raw, un-parsed `JsonValue` from the transport.
    */
   private processMessage(message: JsonValue): void {
-    if (typeof message !== 'object' || message === null || !('type' in message) || typeof message.type !== 'string') {
-      console.error(`[erpc protocol] Received malformed message without a 'type' property:`, message);
+    if (
+      typeof message !== "object" ||
+      message === null ||
+      !("type" in message) ||
+      typeof message.type !== "string"
+    ) {
+      console.error(
+        `[erpc protocol] Received malformed message without a 'type' property:`,
+        message
+      );
       return;
     }
 
@@ -82,33 +92,37 @@ export class ProtocolHandlerFeature implements Feature<ProtocolHandlerContributi
 
       // This switch statement is the core of the protocol dispatch logic.
       switch (typedMessage.type) {
-        case 'rpc-request':
+        case "rpc-request":
           // Further dispatch based on the 'kind' of RPC call.
-          if (typedMessage.kind === 'pin') {
-            this.semanticEmitter.emit('pinCall', typedMessage);
+          if (typedMessage.kind === "pin") {
+            this.semanticEmitter.emit("pinCall", typedMessage);
           } else {
-            this.semanticEmitter.emit('ask', typedMessage);
+            this.semanticEmitter.emit("ask", typedMessage);
           }
           break;
-        case 'rpc-response':
-          this.semanticEmitter.emit('response', typedMessage);
+        case "rpc-response":
+          this.semanticEmitter.emit("response", typedMessage);
           break;
-        case 'notify':
-          this.semanticEmitter.emit('tell', typedMessage);
+        case "notify":
+          this.semanticEmitter.emit("tell", typedMessage);
           break;
-        case 'release':
-          this.semanticEmitter.emit('release', typedMessage);
+        case "release":
+          this.semanticEmitter.emit("release", typedMessage);
           break;
-        case 'stream-ack':
-          this.semanticEmitter.emit('streamAck', typedMessage);
+        case "stream-ack":
+          this.semanticEmitter.emit("streamAck", typedMessage);
           break;
-        case 'tunnel':
-          this.semanticEmitter.emit('tunnel', typedMessage);
+        case "tunnel":
+          this.semanticEmitter.emit("tunnel", typedMessage);
           break;
         // No default case needed, as unknown types are safely ignored.
       }
     } catch (error) {
-      console.error(`[erpc protocol] Error processing message:`, error, message);
+      console.error(
+        `[erpc protocol] Error processing message:`,
+        error,
+        message
+      );
     }
   }
 

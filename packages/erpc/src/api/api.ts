@@ -9,9 +9,9 @@ import type { Procedure } from "./procedure";
  * @template TInput The expected type of the input arguments array for procedures within this API.
  * @template TOutput The expected return type for procedures within this API.
  */
-export type Api<
-  TInput extends Array<unknown>, TOutput
-> = Router<TInput, TOutput> | Procedure<any, TInput, TOutput>;
+export type Api<TInput extends Array<unknown>, TOutput> =
+  | Router<TInput, TOutput>
+  | Procedure<any, TInput, TOutput>;
 
 /**
  * Represents a collection of named API endpoints, which can be other Routers
@@ -24,5 +24,5 @@ export type Api<
  * @template TOutput The expected return type for procedures within this router.
  */
 export type Router<TInput extends Array<unknown>, TOutput> = {
-  [key: string]: Api<TInput, TOutput>
-}
+  [key: string]: Api<TInput, TOutput>;
+};

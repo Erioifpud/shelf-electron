@@ -1,5 +1,5 @@
-import { circular_buffer } from 'circular_buffer_js';
-import type { JsonValue } from 'packages/transport/dist/index.mjs';
+import { circular_buffer } from "circular_buffer_js";
+import type { JsonValue } from "packages/transport/dist/index.mjs";
 
 /**
  * An error thrown when an operation is attempted on a closed or destroyed buffer.
@@ -21,7 +21,7 @@ type Resolver<T> = {
 type DrainResolver = {
   resolve: () => void;
   reject: (reason?: any) => void;
-}
+};
 
 /**
  * A robust, backpressure-aware internal buffer for incoming stream data.
@@ -35,7 +35,11 @@ type DrainResolver = {
 export class IncomingBuffer {
   private readonly buf: circular_buffer<JsonValue>;
   private readonly pendingPop: Resolver<JsonValue>[] = [];
-  private readonly pendingPush: { item: JsonValue; resolve: () => void; reject: (err: any) => void; }[] = [];
+  private readonly pendingPush: {
+    item: JsonValue;
+    resolve: () => void;
+    reject: (err: any) => void;
+  }[] = [];
   private readonly pendingDrain: DrainResolver[] = [];
 
   private isFinished = false;
@@ -53,7 +57,9 @@ export class IncomingBuffer {
    */
   public push(item: JsonValue): Promise<void> {
     if (this.isFinished || this.closeError) {
-      return Promise.reject(this.closeError ?? new BufferClosedError("Buffer is closed."));
+      return Promise.reject(
+        this.closeError ?? new BufferClosedError("Buffer is closed.")
+      );
     }
 
     // If a consumer is waiting for data, bypass the buffer and hand it over directly.
@@ -105,7 +111,9 @@ export class IncomingBuffer {
 
     // If the stream has finished and the buffer is now empty.
     if (this.isFinished) {
-      return Promise.reject(new BufferClosedError('Buffer is closed and empty.'));
+      return Promise.reject(
+        new BufferClosedError("Buffer is closed and empty.")
+      );
     }
 
     // If the buffer is empty, the consumer must wait for a producer to push data.
@@ -145,7 +153,7 @@ export class IncomingBuffer {
     }
 
     // Reject any currently waiting consumers, as no more data will arrive.
-    const error = new BufferClosedError('Buffer was closed and empty.');
+    const error = new BufferClosedError("Buffer was closed and empty.");
     while (this.pendingPop.length > 0) {
       const waiter = this.pendingPop.shift()!;
       queueMicrotask(() => waiter.reject(error));
@@ -160,7 +168,10 @@ export class IncomingBuffer {
   public destroy(err?: any) {
     if (this.closeError) return;
     this.isFinished = true;
-    this.closeError = err instanceof Error ? err : new BufferClosedError(err ? String(err) : 'Buffer was destroyed.');
+    this.closeError =
+      err instanceof Error
+        ? err
+        : new BufferClosedError(err ? String(err) : "Buffer was destroyed.");
 
     // Reject all pending operations.
     const rejectAll = (queue: { reject: (reason?: any) => void }[]) => {

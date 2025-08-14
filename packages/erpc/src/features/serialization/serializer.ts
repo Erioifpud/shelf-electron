@@ -1,6 +1,6 @@
-import type { JsonValue } from 'packages/transport/dist/index.mjs';
-import type { TypeHandler, SerializerContext } from './type.handler.js';
-import { isPlaceholder } from '../../types/protocol.js';
+import type { JsonValue } from "packages/transport/dist/index.mjs";
+import type { TypeHandler, SerializerContext } from "./type.handler.js";
+import { isPlaceholder } from "../../types/protocol.js";
 
 /**
  * The core engine for erpc's serialization system.
@@ -20,9 +20,9 @@ export class Serializer {
     this.handlerMap = new Map();
 
     // Pre-populate the handler map for quick lookups during deserialization.
-    this.handlers.forEach(h => {
+    this.handlers.forEach((h) => {
       if (Array.isArray(h.name)) {
-        h.name.forEach(name => this.handlerMap.set(name, h));
+        h.name.forEach((name) => this.handlerMap.set(name, h));
       } else {
         this.handlerMap.set(h.name, h);
       }
@@ -58,7 +58,7 @@ export class Serializer {
 
     // 2. Handle primitives that are directly JSON-serializable.
     const type = typeof value;
-    if (type !== 'object') {
+    if (type !== "object") {
       return value as JsonValue;
     }
 
@@ -76,7 +76,7 @@ export class Serializer {
     // 5. Recursively process arrays and plain objects.
     let result: JsonValue;
     if (Array.isArray(value)) {
-      result = value.map(item => this._serialize(item, seen));
+      result = value.map((item) => this._serialize(item, seen));
     } else {
       const obj: { [key: string]: JsonValue } = {};
       for (const key in value) {
@@ -103,7 +103,9 @@ export class Serializer {
       if (handler) {
         return handler.deserialize(value as any, this.context);
       }
-      console.warn(`[erpc serializer] No deserialization handler found for type: ${value._erpc_type}`);
+      console.warn(
+        `[erpc serializer] No deserialization handler found for type: ${value._erpc_type}`
+      );
       return value;
     }
 
@@ -114,11 +116,11 @@ export class Serializer {
 
     // 3. Recursively process arrays.
     if (Array.isArray(value)) {
-      return value.map(item => this.deserialize(item));
+      return value.map((item) => this.deserialize(item));
     }
 
     // 4. Recursively process plain objects.
-    if (value !== null && typeof value === 'object') {
+    if (value !== null && typeof value === "object") {
       const obj: { [key: string]: any } = {};
       for (const key in value) {
         if (Object.prototype.hasOwnProperty.call(value, key)) {

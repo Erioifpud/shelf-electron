@@ -1,7 +1,18 @@
-import type { ChannelId, IncomingStreamChannel, JsonValue } from '@eleplug/transport';
-import { IncomingBuffer, BufferClosedError } from '../../utils/incoming-buffer.js';
-import type { TypeHandler } from '../serialization/type.handler.js';
-import type { ControlMessage, StreamMessage, StreamTunnelMessage } from '../../types/protocol.js';
+import type {
+  ChannelId,
+  IncomingStreamChannel,
+  JsonValue,
+} from "@eleplug/transport";
+import {
+  IncomingBuffer,
+  BufferClosedError,
+} from "../../utils/incoming-buffer.js";
+import type { TypeHandler } from "../serialization/type.handler.js";
+import type {
+  ControlMessage,
+  StreamMessage,
+  StreamTunnelMessage,
+} from "../../types/protocol.js";
 
 /**
  * Defines the context (dependencies) required to process a single stream channel.
@@ -15,11 +26,17 @@ export interface StreamProcessingContext {
     registerHandler: (handler: TypeHandler<any, any>) => void;
   };
   sendRawMessage: (msg: ControlMessage) => Promise<void>;
-  routeTunneledStream: (channel: IncomingStreamChannel, message: StreamTunnelMessage) => Promise<void>;
+  routeTunneledStream: (
+    channel: IncomingStreamChannel,
+    message: StreamTunnelMessage
+  ) => Promise<void>;
 }
 
 /** The subset of context needed for processing a single stream message. @internal */
-type MessageProcessingContext = Pick<StreamProcessingContext, 'serializer' | 'sendRawMessage'>;
+type MessageProcessingContext = Pick<
+  StreamProcessingContext,
+  "serializer" | "sendRawMessage"
+>;
 
 /** Represents the state of a stream waiting for its handshake message. @internal */
 type PendingHandshake = {
@@ -50,7 +67,10 @@ export class StreamManager {
   public release(error?: Error): void {
     this.useCount--;
     if (this.useCount <= 0) {
-      this.destroy(error ?? new Error('StreamManager destroyed as last user has released it.'));
+      this.destroy(
+        error ??
+          new Error("StreamManager destroyed as last user has released it.")
+      );
     }
   }
 
@@ -72,7 +92,10 @@ export class StreamManager {
    * @param channel The new incoming stream channel.
    * @param context The dependencies required for processing.
    */
-  public routeIncomingStreamChannel(channel: IncomingStreamChannel, context: StreamProcessingContext): void {
+  public routeIncomingStreamChannel(
+    channel: IncomingStreamChannel,
+    context: StreamProcessingContext
+  ): void {
     let isHandled = false;
 
     const onFirstMessage = (raw_message: JsonValue) => {
@@ -81,11 +104,16 @@ export class StreamManager {
       const message = raw_message as StreamMessage;
 
       // The core routing logic: check the first message's type.
-      if (message.type === 'stream-tunnel') {
+      if (message.type === "stream-tunnel") {
         // This is a tunneled stream; delegate it to the tunneling feature.
-        context.routeTunneledStream(channel, message).catch(err => {
-          console.error(`[StreamManager] Tunneled stream routing failed for channel ${channel.id}:`, err);
-          channel.close().catch(() => { /* ignore */ });
+        context.routeTunneledStream(channel, message).catch((err) => {
+          console.error(
+            `[StreamManager] Tunneled stream routing failed for channel ${channel.id}:`,
+            err
+          );
+          channel.close().catch(() => {
+            /* ignore */
+          });
         });
       } else {
         // This is a standard stream; process it with this manager.
@@ -98,7 +126,10 @@ export class StreamManager {
       if (isHandled) return;
       isHandled = true;
       if (reason) {
-        console.debug(`[StreamManager] Channel ${channel.id} closed before first message:`, reason.message);
+        console.debug(
+          `[StreamManager] Channel ${channel.id} closed before first message:`,
+          reason.message
+        );
       }
     };
 
@@ -112,21 +143,37 @@ export class StreamManager {
    * @param firstMessage The already-read first message from the channel.
    * @param context The processing dependencies.
    */
-  private processNewStream(channel: IncomingStreamChannel, firstMessage: StreamMessage, context: MessageProcessingContext): void {
+  private processNewStream(
+    channel: IncomingStreamChannel,
+    firstMessage: StreamMessage,
+    context: MessageProcessingContext
+  ): void {
     const { id: channelId } = channel;
 
     // Immediately handle the first message that was already received.
-    this.handleIncomingMessage(channelId, firstMessage, context).catch(err => {
-      console.error(`[StreamManager] Error handling first message for channel ${channelId}:`, err);
-      this.closeIncoming(channelId, err as Error);
-    });
+    this.handleIncomingMessage(channelId, firstMessage, context).catch(
+      (err) => {
+        console.error(
+          `[StreamManager] Error handling first message for channel ${channelId}:`,
+          err
+        );
+        this.closeIncoming(channelId, err as Error);
+      }
+    );
 
     // Set up listeners for subsequent data and closure events.
     channel.onData(async (raw_message) => {
       try {
-        await this.handleIncomingMessage(channelId, raw_message as StreamMessage, context);
+        await this.handleIncomingMessage(
+          channelId,
+          raw_message as StreamMessage,
+          context
+        );
       } catch (err) {
-        console.error(`[StreamManager] Error handling subsequent message for channel ${channelId}:`, err);
+        console.error(
+          `[StreamManager] Error handling subsequent message for channel ${channelId}:`,
+          err
+        );
         this.closeIncoming(channelId, err as Error);
       }
     });
@@ -156,7 +203,9 @@ export class StreamManager {
         handshake = { buffer, resolve, reject };
         this.pendingHandshakes.set(handshakeId, handshake);
       });
-      promise.catch(() => { /* Prevent unhandled promise rejection warnings */ });
+      promise.catch(() => {
+        /* Prevent unhandled promise rejection warnings */
+      });
     }
     return handshake!;
   }
@@ -167,11 +216,15 @@ export class StreamManager {
    * @param message The stream message to process.
    * @param context The processing dependencies.
    */
-  private async handleIncomingMessage(channelId: ChannelId, message: StreamMessage, context: MessageProcessingContext): Promise<void> {
+  private async handleIncomingMessage(
+    channelId: ChannelId,
+    message: StreamMessage,
+    context: MessageProcessingContext
+  ): Promise<void> {
     let buffer = this.buffers.get(channelId);
 
     // If this is the first data message, it might complete a pending handshake.
-    if (!buffer && message.type === 'stream-data' && message.handshakeId) {
+    if (!buffer && message.type === "stream-data" && message.handshakeId) {
       const handshake = this.getOrCreateHandshake(message.handshakeId);
       buffer = handshake.buffer;
       this.buffers.set(channelId, buffer);
@@ -180,39 +233,49 @@ export class StreamManager {
 
     if (!buffer) {
       // If no handshake, create a new buffer on the fly.
-      if (message.type === 'stream-data') {
+      if (message.type === "stream-data") {
         buffer = new IncomingBuffer();
         this.buffers.set(channelId, buffer);
       } else {
         // Received a non-data message for an unknown stream.
-        console.warn(`[StreamManager] No buffer for channel ${channelId} and message is not 'stream-data'. Ignoring.`, message);
+        console.warn(
+          `[StreamManager] No buffer for channel ${channelId} and message is not 'stream-data'. Ignoring.`,
+          message
+        );
         return;
       }
     }
 
     switch (message.type) {
-      case 'stream-data':
+      case "stream-data":
         const deserializedChunk = context.serializer.deserialize(message.chunk);
         await buffer.push(deserializedChunk);
         break;
-      case 'stream-end':
+      case "stream-end":
         buffer.finish();
         try {
           await buffer.onDrained();
-          await context.sendRawMessage({ type: 'stream-ack', channelId });
+          await context.sendRawMessage({ type: "stream-ack", channelId });
         } catch (err) {
           if (!(err instanceof BufferClosedError)) {
-            console.error(`[StreamManager] Error during drain/ack for channel ${channelId}:`, err);
+            console.error(
+              `[StreamManager] Error during drain/ack for channel ${channelId}:`,
+              err
+            );
           }
         }
         break;
-      case 'stream-abort':
-        const reason = new Error(`Stream [${channelId}] aborted by remote: ${JSON.stringify(message.reason)}`);
+      case "stream-abort":
+        const reason = new Error(
+          `Stream [${channelId}] aborted by remote: ${JSON.stringify(message.reason)}`
+        );
         this.closeIncoming(channelId, reason);
         break;
-      case 'stream-tunnel':
+      case "stream-tunnel":
         // This should have been handled by the router and not reach here.
-        console.warn(`[StreamManager] StreamTunnelMessage should not reach handleIncomingMessage for channel ${channelId}.`);
+        console.warn(
+          `[StreamManager] StreamTunnelMessage should not reach handleIncomingMessage for channel ${channelId}.`
+        );
         break;
     }
   }
@@ -232,13 +295,17 @@ export class StreamManager {
       handshake.reject = reject;
     });
 
-    handshakePromise.then(
-      () => this.pendingHandshakes.delete(handshakeId),
-      (err) => {
-        this.pendingHandshakes.delete(handshakeId);
-        buffer.destroy(err);
-      }
-    ).catch(() => { /* ignore */ });
+    handshakePromise
+      .then(
+        () => this.pendingHandshakes.delete(handshakeId),
+        (err) => {
+          this.pendingHandshakes.delete(handshakeId);
+          buffer.destroy(err);
+        }
+      )
+      .catch(() => {
+        /* ignore */
+      });
 
     return new ReadableStream({
       async pull(controller) {
@@ -254,12 +321,17 @@ export class StreamManager {
         }
       },
       cancel: (reason) => {
-        const error = reason instanceof Error ? reason : new Error(String(reason));
-        handshakePromise.then(channelId => this.closeIncoming(channelId, error)).catch(() => { /* ignore */ });
+        const error =
+          reason instanceof Error ? reason : new Error(String(reason));
+        handshakePromise
+          .then((channelId) => this.closeIncoming(channelId, error))
+          .catch(() => {
+            /* ignore */
+          });
         buffer.destroy(error);
         this.pendingHandshakes.get(handshakeId)?.reject(error);
         this.pendingHandshakes.delete(handshakeId);
-      }
+      },
     });
   }
 }

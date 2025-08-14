@@ -5,8 +5,8 @@ import {
   type OutgoingStreamChannel,
   type Transport,
   type JsonValue,
-} from '@eleplug/transport';
-import type { ControlMessage } from '../../types/protocol';
+} from "@eleplug/transport";
+import type { ControlMessage } from "../../types/protocol";
 
 /**
  * A proxy implementation of a `ControlChannel`.
@@ -24,12 +24,12 @@ class ProxyControlChannel implements ControlChannel {
   }>();
 
   constructor(
-    private readonly sendToHost: (payload: ControlMessage) => Promise<void>,
+    private readonly sendToHost: (payload: ControlMessage) => Promise<void>
   ) {}
 
   public send(message: JsonValue): Promise<void> {
     if (this.isClosed) {
-      return Promise.reject(new Error('ProxyControlChannel is closed.'));
+      return Promise.reject(new Error("ProxyControlChannel is closed."));
     }
     // Forward the send operation to the host transport.
     return this.sendToHost(message as ControlMessage);
@@ -37,12 +37,12 @@ class ProxyControlChannel implements ControlChannel {
 
   // Enforces a single-listener policy by removing previous listeners.
   private _setListener(handler: (msg: JsonValue) => void, once: boolean): void {
-    this.emitter.removeAllListeners('message');
+    this.emitter.removeAllListeners("message");
     const typedHandler = handler as (msg: ControlMessage) => void;
     if (once) {
-      this.emitter.once('message', typedHandler);
+      this.emitter.once("message", typedHandler);
     } else {
-      this.emitter.on('message', typedHandler);
+      this.emitter.on("message", typedHandler);
     }
   }
 
@@ -55,7 +55,7 @@ class ProxyControlChannel implements ControlChannel {
   }
 
   public onClose(handler: (reason?: Error) => void): void {
-    this.emitter.on('close', handler);
+    this.emitter.on("close", handler);
   }
 
   public async close(): Promise<void> {
@@ -66,14 +66,14 @@ class ProxyControlChannel implements ControlChannel {
   /** Delivers an incoming message from the host. Called by `ProxyTransport`. */
   public _emitMessage(message: ControlMessage): void {
     if (this.isClosed) return;
-    this.emitter.emit('message', message);
+    this.emitter.emit("message", message);
   }
 
   /** Triggers the closure of this channel. Called by `ProxyTransport`. */
   public _emitClose(reason?: Error): void {
     if (this.isClosed) return;
     this.isClosed = true;
-    this.emitter.emit('close', reason);
+    this.emitter.emit("close", reason);
     this.emitter.removeAllListeners();
   }
 }
@@ -96,10 +96,14 @@ export class ProxyTransport implements Transport {
 
   constructor(
     public readonly tunnelId: string,
-    private readonly sendControlMessageToHost: (payload: ControlMessage) => Promise<void>,
-    private readonly openStreamChannelOnHost: () => Promise<OutgoingStreamChannel>,
+    private readonly sendControlMessageToHost: (
+      payload: ControlMessage
+    ) => Promise<void>,
+    private readonly openStreamChannelOnHost: () => Promise<OutgoingStreamChannel>
   ) {
-    this.controlChannel = new ProxyControlChannel(this.sendControlMessageToHost);
+    this.controlChannel = new ProxyControlChannel(
+      this.sendControlMessageToHost
+    );
   }
 
   public getControlChannel(): Promise<ControlChannel> {
@@ -110,12 +114,14 @@ export class ProxyTransport implements Transport {
     return this.openStreamChannelOnHost();
   }
 
-  public onIncomingStreamChannel(handler: (channel: IncomingStreamChannel) => void): void {
-    this.emitter.on('incomingStream', handler);
+  public onIncomingStreamChannel(
+    handler: (channel: IncomingStreamChannel) => void
+  ): void {
+    this.emitter.on("incomingStream", handler);
   }
 
   public onClose(handler: (reason?: Error) => void): void {
-    this.emitter.on('close', handler);
+    this.emitter.on("close", handler);
   }
 
   public async close(): Promise<void> {
@@ -135,13 +141,13 @@ export class ProxyTransport implements Transport {
 
   /** Called by `TunnelManager` when a stream for this tunnel arrives. */
   public _handleIncomingStream(channel: IncomingStreamChannel): void {
-    this.emitter.emit('incomingStream', channel);
+    this.emitter.emit("incomingStream", channel);
   }
 
   /** Called by `TunnelManager` to shut down this proxy transport. */
   public _handleClose(reason?: Error): void {
     this.controlChannel._emitClose(reason);
-    this.emitter.emit('close', reason);
+    this.emitter.emit("close", reason);
     this.emitter.removeAllListeners();
   }
 }

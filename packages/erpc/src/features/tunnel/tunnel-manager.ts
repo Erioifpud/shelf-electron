@@ -1,7 +1,17 @@
-import { v4 as uuid } from 'uuid';
-import type { ControlChannel, IncomingStreamChannel, JsonValue, MaybePromise, OutgoingStreamChannel, Transport } from '@eleplug/transport';
-import { ProxyTransport } from './proxy-transport.js';
-import type { ControlMessage, StreamTunnelMessage } from '../../types/protocol.js';
+import { v4 as uuid } from "uuid";
+import type {
+  ControlChannel,
+  IncomingStreamChannel,
+  JsonValue,
+  MaybePromise,
+  OutgoingStreamChannel,
+  Transport,
+} from "@eleplug/transport";
+import { ProxyTransport } from "./proxy-transport.js";
+import type {
+  ControlMessage,
+  StreamTunnelMessage,
+} from "../../types/protocol.js";
 
 /** Represents a "bridged" local transport, holding its state. @internal */
 type BridgeEntry = {
@@ -45,38 +55,61 @@ export class TunnelManager {
    */
   public bridgeLocalTransport(localTransport: Transport): string {
     const tunnelId = uuid();
-    const entry: BridgeEntry = { transport: localTransport, controlChannel: null, pendingMessages: [] };
+    const entry: BridgeEntry = {
+      transport: localTransport,
+      controlChannel: null,
+      pendingMessages: [],
+    };
     this.bridges.set(tunnelId, entry);
 
     // When the local transport closes for any reason, clean up the bridge.
     localTransport.onClose(() => this.cleanupBridge(tunnelId));
 
-    localTransport.getControlChannel().then(channel => {
-      if (!this.bridges.has(tunnelId)) { channel.close().catch(() => {}); return; }
-      entry.controlChannel = channel;
-      channel.onClose(() => this.cleanupBridge(tunnelId));
+    localTransport
+      .getControlChannel()
+      .then((channel) => {
+        if (!this.bridges.has(tunnelId)) {
+          channel.close().catch(() => {});
+          return;
+        }
+        entry.controlChannel = channel;
+        channel.onClose(() => this.cleanupBridge(tunnelId));
 
-      // Forward messages from the bridged transport to the host.
-      channel.onMessage((payload: JsonValue) => {
-        this.hostSend({ type: 'tunnel', tunnelId, payload: payload as ControlMessage }).catch(err => {
-          console.error(`[TunnelManager] Failed to forward message from tunnel ${tunnelId}:`, err);
-          this.cleanupBridge(tunnelId, err as Error);
+        // Forward messages from the bridged transport to the host.
+        channel.onMessage((payload: JsonValue) => {
+          this.hostSend({
+            type: "tunnel",
+            tunnelId,
+            payload: payload as ControlMessage,
+          }).catch((err) => {
+            console.error(
+              `[TunnelManager] Failed to forward message from tunnel ${tunnelId}:`,
+              err
+            );
+            this.cleanupBridge(tunnelId, err as Error);
+          });
         });
+
+        // Send any queued messages.
+        while (entry.pendingMessages.length > 0) {
+          channel.send(entry.pendingMessages.shift()!).catch((err) => {
+            console.error(
+              `[TunnelManager] Error sending queued message to bridged transport ${tunnelId}:`,
+              err
+            );
+          });
+        }
+      })
+      .catch((err) => {
+        console.error(
+          `[TunnelManager] Failed to setup control channel for tunnel ${tunnelId}:`,
+          err
+        );
+        this.cleanupBridge(tunnelId, err);
       });
 
-      // Send any queued messages.
-      while (entry.pendingMessages.length > 0) {
-        channel.send(entry.pendingMessages.shift()!).catch(err => {
-          console.error(`[TunnelManager] Error sending queued message to bridged transport ${tunnelId}:`, err);
-        });
-      }
-    }).catch(err => {
-      console.error(`[TunnelManager] Failed to setup control channel for tunnel ${tunnelId}:`, err);
-      this.cleanupBridge(tunnelId, err);
-    });
-
     // Forward streams from the bridged transport to the host.
-    localTransport.onIncomingStreamChannel(localIncomingChannel => {
+    localTransport.onIncomingStreamChannel((localIncomingChannel) => {
       if (this.bridges.has(tunnelId)) {
         this.forwardIncomingStreamFromBridge(tunnelId, localIncomingChannel);
       }
@@ -95,10 +128,15 @@ export class TunnelManager {
     if (!proxy) {
       proxy = new ProxyTransport(
         tunnelId,
-        (payload) => this.hostSend({ type: 'tunnel', tunnelId, payload }),
+        (payload) => this.hostSend({ type: "tunnel", tunnelId, payload }),
         async () => {
           const hostOutgoingChannel = await this.hostOpenStream();
-          await hostOutgoingChannel.send({ type: 'stream-tunnel', tunnelId, streamId: uuid(), targetEndpoint: 'initiator' });
+          await hostOutgoingChannel.send({
+            type: "stream-tunnel",
+            tunnelId,
+            streamId: uuid(),
+            targetEndpoint: "initiator",
+          });
           return hostOutgoingChannel;
         }
       );
@@ -112,19 +150,23 @@ export class TunnelManager {
    * @param hostIncomingChannel The incoming stream channel from the host transport.
    * @param message The handshake message containing routing information.
    */
-  public async routeIncomingStream(hostIncomingChannel: IncomingStreamChannel, message: StreamTunnelMessage): Promise<void> {
+  public async routeIncomingStream(
+    hostIncomingChannel: IncomingStreamChannel,
+    message: StreamTunnelMessage
+  ): Promise<void> {
     const { tunnelId, targetEndpoint } = message;
 
-    if (targetEndpoint === 'initiator') {
+    if (targetEndpoint === "initiator") {
       const bridgeEntry = this.bridges.get(tunnelId);
       if (bridgeEntry) {
-        const localOutgoingChannel = await bridgeEntry.transport.openOutgoingStreamChannel();
+        const localOutgoingChannel =
+          await bridgeEntry.transport.openOutgoingStreamChannel();
         this.pumpStream(hostIncomingChannel, localOutgoingChannel);
         return;
       }
     }
 
-    if (targetEndpoint === 'receiver') {
+    if (targetEndpoint === "receiver") {
       const proxy = this.proxies.get(tunnelId);
       if (proxy) {
         proxy._handleIncomingStream(hostIncomingChannel);
@@ -132,7 +174,9 @@ export class TunnelManager {
       }
     }
 
-    console.warn(`[TunnelManager] Received stream for unknown tunnel ${tunnelId} or mismatched target ${targetEndpoint}`);
+    console.warn(
+      `[TunnelManager] Received stream for unknown tunnel ${tunnelId} or mismatched target ${targetEndpoint}`
+    );
     hostIncomingChannel.close().catch(() => {});
   }
 
@@ -145,7 +189,12 @@ export class TunnelManager {
     const bridgeEntry = this.bridges.get(tunnelId);
     if (bridgeEntry) {
       if (bridgeEntry.controlChannel) {
-        bridgeEntry.controlChannel.send(payload).catch(err => { console.error(`[TunnelManager] Error sending message to bridged transport ${tunnelId}:`, err); });
+        bridgeEntry.controlChannel.send(payload).catch((err) => {
+          console.error(
+            `[TunnelManager] Error sending message to bridged transport ${tunnelId}:`,
+            err
+          );
+        });
       } else {
         bridgeEntry.pendingMessages.push(payload);
       }
@@ -157,7 +206,9 @@ export class TunnelManager {
       proxy._handleIncomingMessage(payload);
       return;
     }
-    console.warn(`[TunnelManager] Received message for unknown tunnelId: ${tunnelId}`);
+    console.warn(
+      `[TunnelManager] Received message for unknown tunnelId: ${tunnelId}`
+    );
   }
 
   /** Destroys all bridges and proxies, typically on host connection closure. */
@@ -180,10 +231,18 @@ export class TunnelManager {
     }
   }
 
-  private forwardIncomingStreamFromBridge(tunnelId: string, localIncomingChannel: IncomingStreamChannel): void {
+  private forwardIncomingStreamFromBridge(
+    tunnelId: string,
+    localIncomingChannel: IncomingStreamChannel
+  ): void {
     const destinationProvider = (async () => {
       const hostOutgoingChannel = await this.hostOpenStream();
-      await hostOutgoingChannel.send({ type: 'stream-tunnel', tunnelId, streamId: uuid(), targetEndpoint: 'receiver' });
+      await hostOutgoingChannel.send({
+        type: "stream-tunnel",
+        tunnelId,
+        streamId: uuid(),
+        targetEndpoint: "receiver",
+      });
       return hostOutgoingChannel;
     })();
     this.pumpStream(localIncomingChannel, destinationProvider);
@@ -194,7 +253,10 @@ export class TunnelManager {
    * @param source The source channel.
    * @param destination The destination channel (or a promise for it).
    */
-  private async pumpStream(source: IncomingStreamChannel, destination: MaybePromise<OutgoingStreamChannel>): Promise<void> {
+  private async pumpStream(
+    source: IncomingStreamChannel,
+    destination: MaybePromise<OutgoingStreamChannel>
+  ): Promise<void> {
     try {
       const dest = await destination;
       let isCleanedUp = false;
@@ -218,7 +280,7 @@ export class TunnelManager {
       source.onClose(cleanup);
       dest.onClose(cleanup);
     } catch {
-      source.close().catch(()=>{});
+      source.close().catch(() => {});
     }
   }
 }

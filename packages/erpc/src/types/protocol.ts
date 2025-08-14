@@ -1,4 +1,4 @@
-import type { ChannelId, JsonObject, JsonValue } from '@eleplug/transport';
+import type { ChannelId, JsonObject, JsonValue } from "@eleplug/transport";
 
 // =================================================================
 // Control Messages
@@ -8,7 +8,7 @@ import type { ChannelId, JsonObject, JsonValue } from '@eleplug/transport';
 
 /** A request that expects a response (an 'ask' call). */
 export interface RpcRequestMessage extends JsonObject {
-  type: 'rpc-request';
+  type: "rpc-request";
   /** The kind of call, used for routing (e.g., 'erpc', 'pin'). */
   kind: string;
   /** A unique ID to correlate the request with its response. */
@@ -23,7 +23,7 @@ export interface RpcRequestMessage extends JsonObject {
 
 /** A response to an `RpcRequestMessage`. */
 export interface RpcResponseMessage extends JsonObject {
-  type: 'rpc-response';
+  type: "rpc-response";
   /** The ID of the original request this response corresponds to. */
   callId: string;
   /** Whether the procedure executed successfully. */
@@ -34,7 +34,7 @@ export interface RpcResponseMessage extends JsonObject {
 
 /** A notification that does not expect a response (a 'tell' call). */
 export interface NotifyMessage extends JsonObject {
-  type: 'notify';
+  type: "notify";
   /** The dot-separated path to the target procedure. */
   path: string;
   /** An array of serialized procedure arguments. */
@@ -45,21 +45,21 @@ export interface NotifyMessage extends JsonObject {
 
 /** A message to release a remote resource (e.g., a pinned object). */
 export interface ReleaseMessage extends JsonObject {
-  type: 'release';
+  type: "release";
   /** The unique identifier of the resource to be released. */
   resourceId: string;
 }
 
 /** A message from the stream receiver to acknowledge full consumption of a stream. */
 export interface StreamAckMessage extends JsonObject {
-  type: 'stream-ack';
+  type: "stream-ack";
   /** The ID of the stream channel being acknowledged. */
   channelId: ChannelId;
 }
 
 /** A message that encapsulates a payload for a specific virtual transport (tunnel). */
 export interface TunnelMessage extends JsonObject {
-  type: 'tunnel';
+  type: "tunnel";
   /** The unique identifier for the tunnel. */
   tunnelId: string;
   /** The actual `ControlMessage` being forwarded through the tunnel. */
@@ -83,18 +83,18 @@ export type ControlMessage =
 
 /** A handshake message to establish a tunneled stream. */
 export interface StreamTunnelMessage extends JsonObject {
-  type: 'stream-tunnel';
+  type: "stream-tunnel";
   /** The ID of the tunnel this stream belongs to. */
   tunnelId: string;
   /** A unique identifier for the stream itself within the tunnel context. */
   streamId: string;
   /** Specifies which end of the tunnel this stream is being routed to. */
-  targetEndpoint: 'initiator' | 'receiver';
+  targetEndpoint: "initiator" | "receiver";
 }
 
 /** A message containing a chunk of data for a stream. */
 export interface StreamDataMessage extends JsonObject {
-  type: 'stream-data';
+  type: "stream-data";
   /**
    * An optional ID sent with the first data chunk to link this stream
    * to a placeholder created during serialization.
@@ -106,14 +106,14 @@ export interface StreamDataMessage extends JsonObject {
 
 /** A message indicating that the stream has been aborted due to an error. */
 export interface StreamAbortMessage extends JsonObject {
-  type: 'stream-abort';
+  type: "stream-abort";
   /** The reason for the stream's abortion, serialized as a `JsonValue`. */
   reason: JsonValue;
 }
 
 /** A message indicating that the stream has ended gracefully. */
 export interface StreamEndMessage extends JsonObject {
-  type: 'stream-end';
+  type: "stream-end";
 }
 
 /** A union of all possible stream-related messages used by erpc. */
@@ -142,9 +142,9 @@ export interface Placeholder extends JsonObject {
 export function isPlaceholder(value: unknown): value is Placeholder {
   return (
     value !== null &&
-    typeof value === 'object' &&
+    typeof value === "object" &&
     !Array.isArray(value) &&
-    '_erpc_type' in value &&
-    typeof (value as { _erpc_type: unknown })._erpc_type === 'string'
+    "_erpc_type" in value &&
+    typeof (value as { _erpc_type: unknown })._erpc_type === "string"
   );
 }

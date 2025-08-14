@@ -1,7 +1,7 @@
-import type { Feature } from '../../runtime/framework/feature.js';
-import type { SerializationContribution } from '../serialization/serialization.feature.js';
-import { errorHandler } from './error.handler.js';
-import { illegalTypeErrorHandler } from './illegal-type-error.handler.js';
+import type { Feature } from "../../runtime/framework/feature.js";
+import type { SerializationContribution } from "../serialization/serialization.feature.js";
+import { errorHandler } from "./error.handler.js";
+import { illegalTypeErrorHandler } from "./illegal-type-error.handler.js";
 
 type ErrorHandlingRequires = SerializationContribution;
 
@@ -12,7 +12,9 @@ type ErrorHandlingRequires = SerializationContribution;
  * (like `IllegalParameterError`) can be correctly transmitted between peers,
  * preserving their name, message, and stack trace.
  */
-export class ErrorHandlingFeature implements Feature<{}, ErrorHandlingRequires> {
+export class ErrorHandlingFeature
+  implements Feature<{}, ErrorHandlingRequires>
+{
   public contribute(): {} {
     // This feature contributes no new runtime capabilities.
     return {};

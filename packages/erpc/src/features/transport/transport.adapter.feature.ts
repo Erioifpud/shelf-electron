@@ -1,7 +1,13 @@
-import type { Transport, OutgoingStreamChannel, IncomingStreamChannel, ControlChannel, JsonValue } from '@eleplug/transport';
-import { AsyncEventEmitter } from '@eleplug/transport';
-import type { Feature } from '../../runtime/framework/feature';
-import type { ControlMessage } from '../../types/protocol';
+import type {
+  Transport,
+  OutgoingStreamChannel,
+  IncomingStreamChannel,
+  ControlChannel,
+  JsonValue,
+} from "@eleplug/transport";
+import { AsyncEventEmitter } from "@eleplug/transport";
+import type { Feature } from "../../runtime/framework/feature";
+import type { ControlMessage } from "../../types/protocol";
 
 /**
  * Defines the raw events emitted by the `TransportAdapterFeature`.
@@ -36,7 +42,9 @@ export interface TransportAdapterContribution {
  * WebRTC) and the rest of the erpc system. It normalizes events and actions into a
  * consistent, high-level API for other features to consume.
  */
-export class TransportAdapterFeature implements Feature<TransportAdapterContribution, {}> {
+export class TransportAdapterFeature
+  implements Feature<TransportAdapterContribution, {}>
+{
   private readonly transport: Transport;
   private readonly rawEmitter = new AsyncEventEmitter<RawTransportEvents>();
   private controlChannel?: ControlChannel;
@@ -50,7 +58,7 @@ export class TransportAdapterFeature implements Feature<TransportAdapterContribu
     return {
       rawEmitter: this.rawEmitter,
       sendRawMessage: this.sendRawMessage.bind(this),
-      openOutgoingStreamChannel: this.openOutgoingStreamChannel.bind(this)
+      openOutgoingStreamChannel: this.openOutgoingStreamChannel.bind(this),
     };
   }
 
@@ -59,12 +67,12 @@ export class TransportAdapterFeature implements Feature<TransportAdapterContribu
 
     // Listen for incoming messages on the control channel and emit them raw.
     this.controlChannel.onMessage((message: JsonValue) => {
-      this.rawEmitter.emit('message', message as ControlMessage);
+      this.rawEmitter.emit("message", message as ControlMessage);
     });
 
     // Listen for new incoming stream channels and emit them raw.
     this.transport.onIncomingStreamChannel((channel) => {
-      this.rawEmitter.emit('incomingStreamChannel', channel);
+      this.rawEmitter.emit("incomingStreamChannel", channel);
     });
 
     // Listen for the transport's closure event.
@@ -81,31 +89,38 @@ export class TransportAdapterFeature implements Feature<TransportAdapterContribu
   private handleClose(reason?: Error) {
     if (this.closing) return;
     this.closing = true;
-    this.rawEmitter.emit('close', reason);
+    this.rawEmitter.emit("close", reason);
   }
 
   private async sendRawMessage(message: ControlMessage): Promise<void> {
     if (this.closing) {
-      throw new Error('Transport is closing; cannot send message.');
+      throw new Error("Transport is closing; cannot send message.");
     }
     if (!this.controlChannel) {
-      throw new Error('Transport not ready, control channel is not available.');
+      throw new Error("Transport not ready, control channel is not available.");
     }
     await this.controlChannel.send(message);
   }
 
   private async openOutgoingStreamChannel(): Promise<OutgoingStreamChannel> {
     if (this.closing) {
-      throw new Error('Transport is closing; cannot open a new stream channel.');
+      throw new Error(
+        "Transport is closing; cannot open a new stream channel."
+      );
     }
     return this.transport.openOutgoingStreamChannel();
   }
 
-  public close(_contribution: TransportAdapterContribution, error?: Error): void {
+  public close(
+    _contribution: TransportAdapterContribution,
+    error?: Error
+  ): void {
     // Propagate the close signal internally.
     this.handleClose(error);
     this.rawEmitter.removeAllListeners();
     // Attempt to gracefully close the underlying transport.
-    this.transport.close().catch(() => { /* Ignore errors on close */ });
+    this.transport.close().catch(() => {
+      /* Ignore errors on close */
+    });
   }
 }

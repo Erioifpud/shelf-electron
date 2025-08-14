@@ -10,10 +10,7 @@
  * @template R The dependencies that this Feature **R**equires from other features.
  *   This is an object type that the global capabilities object must satisfy.
  */
-export interface Feature<
-  C extends object = {},
-  R extends object = {}
-> {
+export interface Feature<C extends object = {}, R extends object = {}> {
   /**
    * **Phase 1: Contribute**
    * This method is called first for all features. It should return the
@@ -46,7 +43,6 @@ export interface Feature<
   close(contribution: C, error?: Error): Promise<void> | void;
 }
 
-
 // =================================================================
 // SECTION: Type Gymnastics for Dependency Injection
 // These utility types are used to statically extract and combine types from an
@@ -65,8 +61,11 @@ export type Requires<T> = T extends Feature<any, infer R> ? R : {};
  * from multiple features into a single object type.
  * @internal
  */
-type UnionToIntersection<U> =
-  (U extends any ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never;
+type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
+  k: infer I
+) => void
+  ? I
+  : never;
 
 /**
  * Aggregates all contributed types `C` from a tuple of Features into a single
@@ -79,9 +78,8 @@ type UnionToIntersection<U> =
  *
  * @template T A `readonly` tuple of `Feature` types.
  */
-export type AllContributions<T extends readonly Feature<any, any>[]> = UnionToIntersection<
-  { [K in keyof T]: Contributes<T[K]> }[number]
->;
+export type AllContributions<T extends readonly Feature<any, any>[]> =
+  UnionToIntersection<{ [K in keyof T]: Contributes<T[K]> }[number]>;
 
 /**
  * Aggregates all required types `R` from a tuple of Features into a single
@@ -89,6 +87,5 @@ export type AllContributions<T extends readonly Feature<any, any>[]> = UnionToIn
  *
  * @template T A `readonly` tuple of `Feature` types.
  */
-export type AllRequirements<T extends readonly Feature<any, any>[]> = UnionToIntersection<
-  { [K in keyof T]: Requires<T[K]> }[number]
->;
+export type AllRequirements<T extends readonly Feature<any, any>[]> =
+  UnionToIntersection<{ [K in keyof T]: Requires<T[K]> }[number]>;

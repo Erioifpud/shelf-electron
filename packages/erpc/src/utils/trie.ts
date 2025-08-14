@@ -1,4 +1,3 @@
-
 /**
  * Represents a node in the Trie data structure.
  * @template T The type of the value stored in the node.
@@ -23,7 +22,7 @@ export class TrieNode<T> {
  * @internal
  */
 export class Trie<T> {
-  private static readonly DELIMITER = '.';
+  private static readonly DELIMITER = ".";
   private readonly root = new TrieNode<T>();
 
   /**
@@ -35,7 +34,7 @@ export class Trie<T> {
   public insert(path: string, value: T): void {
     let node = this.root;
     // An empty path corresponds to the root node itself.
-    if (path === '') {
+    if (path === "") {
       node.value = value;
       return;
     }
@@ -61,9 +60,11 @@ export class Trie<T> {
    * @param path The full path to search for a matching prefix.
    * @returns An object with the found value and the relative path, or `undefined` if no prefix matches.
    */
-  public findLongestPrefix(path: string): { value: T; relativePath: string[] } | undefined {
+  public findLongestPrefix(
+    path: string
+  ): { value: T; relativePath: string[] } | undefined {
     let node = this.root;
-    const segments = path === '' ? [] : path.split(Trie.DELIMITER);
+    const segments = path === "" ? [] : path.split(Trie.DELIMITER);
     let lastFound: { value: T; index: number } | undefined = undefined;
 
     // A dynamic procedure can be registered at the root, so check it first.

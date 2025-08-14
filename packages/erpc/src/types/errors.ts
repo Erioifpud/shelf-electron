@@ -5,7 +5,7 @@
 export class IllegalTypeError extends Error {
   constructor(message: string, cause?: unknown) {
     super(message);
-    this.name = 'IllegalTypeError';
+    this.name = "IllegalTypeError";
     this.cause = cause;
   }
 }
@@ -17,7 +17,7 @@ export class IllegalTypeError extends Error {
 export class IllegalParameterError extends IllegalTypeError {
   constructor(message: string, cause?: unknown) {
     super(message, cause);
-    this.name = 'IllegalParameterError';
+    this.name = "IllegalParameterError";
   }
 }
 
@@ -28,7 +28,7 @@ export class IllegalParameterError extends IllegalTypeError {
 export class IllegalResultError extends IllegalTypeError {
   constructor(message: string, cause?: unknown) {
     super(message, cause);
-    this.name = 'IllegalResultError';
+    this.name = "IllegalResultError";
   }
 }
 
@@ -41,7 +41,7 @@ export class ProcedureError extends Error {
   public readonly cause?: unknown;
   constructor(message: string, cause?: unknown) {
     super(message);
-    this.name = 'ProcedureError';
+    this.name = "ProcedureError";
     this.cause = cause;
   }
 }

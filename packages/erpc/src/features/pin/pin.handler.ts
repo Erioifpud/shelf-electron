@@ -1,13 +1,18 @@
-import type { TypeHandler } from '../serialization/type.handler';
-import { PIN_FREE_KEY, PIN_ID_KEY, PIN_REQUEST_KEY, type Pin } from '../../types/pin';
-import type { ResourceManager } from './resource-manager';
-import type { CallManagerContribution } from '../call/call-manager.feature';
-import type { TransportAdapterContribution } from '../transport/transport.adapter.feature';
-import type { ControlMessage, Placeholder } from '../../types/protocol';
+import type { TypeHandler } from "../serialization/type.handler";
+import {
+  PIN_FREE_KEY,
+  PIN_ID_KEY,
+  PIN_REQUEST_KEY,
+  type Pin,
+} from "../../types/pin";
+import type { ResourceManager } from "./resource-manager";
+import type { CallManagerContribution } from "../call/call-manager.feature";
+import type { TransportAdapterContribution } from "../transport/transport.adapter.feature";
+import type { ControlMessage, Placeholder } from "../../types/protocol";
 
 /** The placeholder structure for a serialized pinned object. */
 export interface PinPlaceholder extends Placeholder {
-  _erpc_type: 'pin';
+  _erpc_type: "pin";
   resourceId: string;
 }
 
@@ -27,13 +32,13 @@ interface ProxyFinalizationContext {
 const remoteProxyRegistry = new FinalizationRegistry<ProxyFinalizationContext>(
   (heldValue) => {
     const { resourceId, sendRawMessage } = heldValue;
-    sendRawMessage({ type: 'release', resourceId }).catch((err: Error) => {
+    sendRawMessage({ type: "release", resourceId }).catch((err: Error) => {
       console.error(
         `[erpc gc] Failed to send release message for GC'd resource ${resourceId}:`,
-        err,
+        err
       );
     });
-  },
+  }
 );
 
 /**
@@ -44,16 +49,19 @@ const remoteProxyRegistry = new FinalizationRegistry<ProxyFinalizationContext>(
  * @returns A fully functional, type-safe remote proxy.
  * @internal
  */
-function createPinProxy(resourceId: string, capability: TransportAdapterContribution & CallManagerContribution): Pin<any> {
+function createPinProxy(
+  resourceId: string,
+  capability: TransportAdapterContribution & CallManagerContribution
+): Pin<any> {
   const { trackAsk, sendRawMessage } = capability;
   let isFreed = false;
 
-  const proxy = new Proxy(() => { }, {
+  const proxy = new Proxy(() => {}, {
     get: (_target, prop: string | symbol) => {
       // Expose the resource ID for debugging.
       if (prop === PIN_ID_KEY) return resourceId;
       // Prevent the proxy from being treated as a Promise.
-      if (prop === 'then') return undefined;
+      if (prop === "then") return undefined;
 
       // Implement the manual `free()` method.
       if (prop === PIN_FREE_KEY) {
@@ -61,11 +69,11 @@ function createPinProxy(resourceId: string, capability: TransportAdapterContribu
           if (isFreed) return;
           isFreed = true;
           remoteProxyRegistry.unregister(proxy); // Stop tracking for GC.
-          await sendRawMessage({ type: 'release', resourceId });
+          await sendRawMessage({ type: "release", resourceId });
         };
       }
 
-      if (typeof prop === 'symbol') return undefined;
+      if (typeof prop === "symbol") return undefined;
 
       if (isFreed) {
         const errorMessage = `[erpc] Cannot access property '${String(prop)}' on a freed pin proxy (id: ${resourceId}).`;
@@ -77,18 +85,22 @@ function createPinProxy(resourceId: string, capability: TransportAdapterContribu
       // This handles both method calls (`remote.foo()`) and property getters (`await remote.prop()`).
       return (...args: any[]) => {
         const payload = [resourceId, ...args];
-        return trackAsk(String(prop), payload, undefined, 'pin');
+        return trackAsk(String(prop), payload, undefined, "pin");
       };
     },
 
     apply: (_target, _thisArg, args: any[]) => {
       // This handles direct calls to a pinned function (`remote()`).
       if (isFreed) {
-        return Promise.reject(new Error(`[erpc] Cannot call a freed pin proxy as a function (id: ${resourceId}).`));
+        return Promise.reject(
+          new Error(
+            `[erpc] Cannot call a freed pin proxy as a function (id: ${resourceId}).`
+          )
+        );
       }
       const payload = [resourceId, ...args];
       // 'apply' is the conventional path for calling the function itself.
-      return trackAsk('apply', payload, undefined, 'pin');
+      return trackAsk("apply", payload, undefined, "pin");
     },
   }) as Pin<any>;
 
@@ -96,7 +108,7 @@ function createPinProxy(resourceId: string, capability: TransportAdapterContribu
   remoteProxyRegistry.register(
     proxy,
     { resourceId, sendRawMessage }, // The context for the cleanup callback.
-    proxy, // The unregister token.
+    proxy // The unregister token.
   );
 
   return proxy;
@@ -113,21 +125,24 @@ function createPinProxy(resourceId: string, capability: TransportAdapterContribu
  */
 export function createPinHandler(
   resourceManager: ResourceManager,
-  capability: CallManagerContribution & TransportAdapterContribution,
+  capability: CallManagerContribution & TransportAdapterContribution
 ): TypeHandler<object, PinPlaceholder> {
-
   return {
-    name: 'pin',
+    name: "pin",
 
     canHandle(value: unknown): value is object {
       // An object is recognized as needing to be pinned if it has the temporary request key.
-      return typeof value === 'object' && value !== null && (value as any)[PIN_REQUEST_KEY];
+      return (
+        typeof value === "object" &&
+        value !== null &&
+        (value as any)[PIN_REQUEST_KEY]
+      );
     },
 
     serialize(value) {
       // Serialization: Pin the local object in the resource manager and get its ID.
       const resourceId = resourceManager.pin(value);
-      return { _erpc_type: 'pin', resourceId };
+      return { _erpc_type: "pin", resourceId };
     },
 
     deserialize(placeholder) {

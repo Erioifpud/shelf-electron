@@ -1,5 +1,5 @@
-import type { Feature } from '../../runtime/framework/feature';
-import type { TransportAdapterContribution } from '../transport/transport.adapter.feature';
+import type { Feature } from "../../runtime/framework/feature";
+import type { TransportAdapterContribution } from "../transport/transport.adapter.feature";
 
 /**
  * The capabilities contributed by the `LifecycleFeature`.
@@ -20,7 +20,9 @@ export interface LifecycleContribution {
  * It provides a centralized `isClosing()` method that other parts of the system
  * can query to implement graceful shutdown behavior.
  */
-export class LifecycleFeature implements Feature<LifecycleContribution, TransportAdapterContribution> {
+export class LifecycleFeature
+  implements Feature<LifecycleContribution, TransportAdapterContribution>
+{
   private _isClosing = false;
 
   public contribute(): LifecycleContribution {
@@ -32,7 +34,7 @@ export class LifecycleFeature implements Feature<LifecycleContribution, Transpor
 
   public init(capability: TransportAdapterContribution): void {
     // The shutdown process can be initiated by the underlying transport closing.
-    capability.rawEmitter.on('close', () => {
+    capability.rawEmitter.on("close", () => {
       this._isClosing = true;
     });
   }
