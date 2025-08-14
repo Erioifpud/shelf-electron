@@ -39,7 +39,7 @@ export * from './protocol.js';
  * const client = someRpcClient.createClient({ transport });
  *
  * async function main() {
- *   const result = await client.greet.query('World');
+ *   const result = await client.procedure.greet.query('World');
  *   console.log(result); // "Hello, World!"
  *   await transport.close();
  * }

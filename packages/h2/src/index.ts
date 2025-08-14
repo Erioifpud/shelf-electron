@@ -1,4 +1,3 @@
-// h2/index.ts (重构后)
 export {
   CONTROL_PATH,
   INITIATING_CHANNEL_ID_HEADER,

@@ -1,5 +1,5 @@
-import type { Link, MultiplexedPacket } from '@eleplug/muxen';
-import { AsyncEventEmitter, type MaybePromise } from '@eleplug/transport';
+import type { Link, MultiplexedPacket } from "@eleplug/muxen";
+import { AsyncEventEmitter, type MaybePromise } from "@eleplug/transport";
 
 /**
  * Internal events for the MemoryLink.
@@ -29,7 +29,7 @@ class MemoryLink implements Link {
   /** Receives a message from the linked peer. */
   public _receiveMessage(message: MultiplexedPacket): void {
     if (this._isClosed) return;
-    this.events.emitAsync('message', message).catch((err) => {
+    this.events.emitAsync("message", message).catch((err) => {
       this._destroy(err instanceof Error ? err : new Error(String(err)));
     });
   }
@@ -38,25 +38,27 @@ class MemoryLink implements Link {
   public _destroy(reason?: Error): void {
     if (this._isClosed) return;
     this._isClosed = true;
-    this.events.emit('close', reason);
+    this.events.emit("close", reason);
     this.events.removeAllListeners();
   }
 
-  public onMessage(handler: (message: MultiplexedPacket) => MaybePromise<void>): void {
+  public onMessage(
+    handler: (message: MultiplexedPacket) => MaybePromise<void>
+  ): void {
     if (this._isClosed) return;
     // Enforce a single-listener, replacement semantic.
-    const existing = this.events.listeners('message')[0];
-    if (existing) this.events.off('message', existing as any);
-    this.events.on('message', handler);
+    const existing = this.events.listeners("message")[0];
+    if (existing) this.events.off("message", existing as any);
+    this.events.on("message", handler);
   }
 
   public onClose(handler: (reason?: Error) => void): void {
-    this.events.on('close', handler);
+    this.events.on("close", handler);
   }
 
   public sendMessage(message: MultiplexedPacket): Promise<void> {
     if (this._isClosed) {
-      return Promise.reject(new Error('Link is closed.'));
+      return Promise.reject(new Error("Link is closed."));
     }
 
     // Use queueMicrotask to simulate the async nature of a real network

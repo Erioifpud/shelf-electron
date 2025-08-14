@@ -1,4 +1,4 @@
-import { v4 as uuid } from 'uuid';
+import { v4 as uuid } from "uuid";
 import type {
   ChannelId,
   ControlChannel,
@@ -7,8 +7,8 @@ import type {
   MaybePromise,
   OutgoingStreamChannel,
   Transport,
-} from '@eleplug/transport';
-import { AsyncEventEmitter } from '@eleplug/transport';
+} from "@eleplug/transport";
+import { AsyncEventEmitter } from "@eleplug/transport";
 
 // #region Event Type Definitions
 /**
@@ -44,7 +44,7 @@ class MemoryControlChannel implements ControlChannel {
 
   public send(message: JsonValue): Promise<void> {
     if (this.isClosed) {
-      return Promise.reject(new Error('Control channel is closed.'));
+      return Promise.reject(new Error("Control channel is closed."));
     }
     // Asynchronously deliver the message to the remote peer to simulate
     // network latency and prevent re-entrant calls.
@@ -61,7 +61,7 @@ class MemoryControlChannel implements ControlChannel {
     if (this.isClosed) return;
 
     if (this.hasListener) {
-      this.events.emitAsync('message', message).catch((err) => {
+      this.events.emitAsync("message", message).catch((err) => {
         this._destroy(err instanceof Error ? err : new Error(String(err)));
       });
     } else {
@@ -76,14 +76,14 @@ class MemoryControlChannel implements ControlChannel {
    */
   private _setListener(
     handler: (msg: JsonValue) => MaybePromise<void>,
-    once: boolean,
+    once: boolean
   ): void {
-    this.events.removeAllListeners('message');
+    this.events.removeAllListeners("message");
 
     const eventHandler = once
       ? this.events.once.bind(this.events)
       : this.events.on.bind(this.events);
-    eventHandler('message', handler);
+    eventHandler("message", handler);
 
     this.hasListener = true;
 
@@ -104,7 +104,7 @@ class MemoryControlChannel implements ControlChannel {
   }
 
   public onClose(handler: (reason?: Error) => MaybePromise<void>): void {
-    this.events.on('close', handler);
+    this.events.on("close", handler);
   }
 
   public close(): Promise<void> {
@@ -120,7 +120,7 @@ class MemoryControlChannel implements ControlChannel {
     if (this.isClosed) return;
     this.isClosed = true;
     this.messageQueue = [];
-    queueMicrotask(() => this.events.emitAsync('close', reason));
+    queueMicrotask(() => this.events.emitAsync("close", reason));
   }
 }
 
@@ -146,7 +146,7 @@ class MemoryStreamChannel
 
   constructor(
     public readonly id: ChannelId,
-    private remote?: MemoryTransport,
+    private remote?: MemoryTransport
   ) {
     this.isReadyPromise = new Promise((resolve) => {
       this.resolveIsReady = resolve;
@@ -167,7 +167,9 @@ class MemoryStreamChannel
       return Promise.reject(new Error(`Stream channel ${this.id} is closed.`));
     }
     if (!this.remote) {
-      return Promise.reject(new Error(`Stream channel ${this.id} is not linked.`));
+      return Promise.reject(
+        new Error(`Stream channel ${this.id} is not linked.`)
+      );
     }
 
     // Apply back-pressure: wait for the remote peer's `onData` to be called.
@@ -175,7 +177,9 @@ class MemoryStreamChannel
 
     // Check if the channel was closed while we were waiting.
     if (this.isClosed) {
-      throw new Error(`Stream channel ${this.id} closed while waiting for ready signal.`);
+      throw new Error(
+        `Stream channel ${this.id} closed while waiting for ready signal.`
+      );
     }
 
     queueMicrotask(() => this.remote!._receiveStreamMessage(this.id, message));
@@ -184,20 +188,22 @@ class MemoryStreamChannel
   /** Called by the remote transport to deliver data. @internal */
   public _receiveData(message: JsonValue): void {
     if (this.isClosed) return;
-    this.events.emitAsync('data', message).catch((err) => this._destroy(err as Error));
+    this.events
+      .emitAsync("data", message)
+      .catch((err) => this._destroy(err as Error));
   }
 
   /** Sets the data handler and manages the back-pressure signal. @internal */
   private _setListener(
     handler: (msg: JsonValue) => MaybePromise<void>,
-    once: boolean,
+    once: boolean
   ): void {
-    this.events.removeAllListeners('data');
+    this.events.removeAllListeners("data");
 
     const eventHandler = once
       ? this.events.once.bind(this.events)
       : this.events.on.bind(this.events);
-    eventHandler('data', handler);
+    eventHandler("data", handler);
 
     // Signal readiness to the remote sender if this is the first listener.
     if (!this.hasListener) {
@@ -215,7 +221,7 @@ class MemoryStreamChannel
   }
 
   public onClose(handler: (reason?: Error) => MaybePromise<void>): void {
-    this.events.on('close', handler);
+    this.events.on("close", handler);
   }
 
   public close(): Promise<void> {
@@ -238,7 +244,7 @@ class MemoryStreamChannel
       this.remote._closeStreamChannel(this.id, reason);
     }
 
-    queueMicrotask(() => this.events.emitAsync('close', reason));
+    queueMicrotask(() => this.events.emitAsync("close", reason));
   }
 }
 // #endregion
@@ -267,16 +273,13 @@ export class MemoryTransport implements Transport {
     if (this._isClosed) return;
     if (!this.controlChannel) {
       this.controlChannel = new MemoryControlChannel(this.remoteTransport);
-      this.events.emit('_internalControlChannel', this.controlChannel);
+      this.events.emit("_internalControlChannel", this.controlChannel);
     }
     this.controlChannel._receiveMessage(message);
   }
 
   /** Receives an incoming stream message from the linked peer. @internal */
-  public _receiveStreamMessage(
-    channelId: ChannelId,
-    message: JsonValue,
-  ): void {
+  public _receiveStreamMessage(channelId: ChannelId, message: JsonValue): void {
     if (this._isClosed) return;
     const channel = this._getOrCreateStreamChannel(channelId);
     channel._receiveData(message);
@@ -288,18 +291,16 @@ export class MemoryTransport implements Transport {
    */
   public _getStreamChannelReadyPromise(channelId: ChannelId): Promise<void> {
     // We access the internal promise directly for this simulation.
-    return this._getOrCreateStreamChannel(channelId)['isReadyPromise'];
+    return this._getOrCreateStreamChannel(channelId)["isReadyPromise"];
   }
 
   /** Lazily creates an incoming stream channel upon first message. @internal */
-  private _getOrCreateStreamChannel(
-    channelId: ChannelId,
-  ): MemoryStreamChannel {
+  private _getOrCreateStreamChannel(channelId: ChannelId): MemoryStreamChannel {
     let channel = this.streamChannels.get(channelId);
     if (!channel) {
       channel = new MemoryStreamChannel(channelId);
       this.streamChannels.set(channelId, channel);
-      this.events.emit('incomingStreamChannel', channel);
+      this.events.emit("incomingStreamChannel", channel);
     }
     return channel;
   }
@@ -328,18 +329,18 @@ export class MemoryTransport implements Transport {
     this.controlChannel = null;
     this.controlChannelPromise = null;
 
-    this.events.emit('close', reason);
+    this.events.emit("close", reason);
     this.events.removeAllListeners();
   }
 
   public getControlChannel(): Promise<ControlChannel> {
     if (this._isClosed)
-      return Promise.reject(new Error('Transport is closed.'));
+      return Promise.reject(new Error("Transport is closed."));
     if (this.controlChannel) return Promise.resolve(this.controlChannel);
     if (this.controlChannelPromise) return this.controlChannelPromise;
 
     this.controlChannelPromise = new Promise((resolve) => {
-      this.events.once('_internalControlChannel', resolve);
+      this.events.once("_internalControlChannel", resolve);
       // Eagerly create the channel to unblock the other side if it sends first.
       if (!this.controlChannel) {
         const newChannel = new MemoryControlChannel(this.remoteTransport);
@@ -352,7 +353,7 @@ export class MemoryTransport implements Transport {
 
   public openOutgoingStreamChannel(): Promise<OutgoingStreamChannel> {
     if (this._isClosed)
-      return Promise.reject(new Error('Transport is closed.'));
+      return Promise.reject(new Error("Transport is closed."));
     const channelId = uuid();
     const channel = new MemoryStreamChannel(channelId, this.remoteTransport);
     this.streamChannels.set(channelId, channel);
@@ -364,13 +365,13 @@ export class MemoryTransport implements Transport {
   }
 
   public onIncomingStreamChannel(
-    handler: (channel: IncomingStreamChannel) => MaybePromise<void>,
+    handler: (channel: IncomingStreamChannel) => MaybePromise<void>
   ): void {
-    this.events.on('incomingStreamChannel', handler);
+    this.events.on("incomingStreamChannel", handler);
   }
 
   public onClose(handler: (reason?: Error) => MaybePromise<void>): void {
-    this.events.on('close', handler);
+    this.events.on("close", handler);
   }
 
   public abort(reason: Error): Promise<void> {
