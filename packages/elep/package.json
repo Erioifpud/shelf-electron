@@ -1,0 +1,45 @@
+{
+  "name": "@eleplug/elep",
+  "version": "0.1.0",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./render": {
+      "types": "./dist/render.d.ts",
+      "import": "./dist/render.js"
+    },
+    "./preload": {
+      "types": "./dist/preload.d.ts",
+      "require": "./dist/preload.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@eleplug/anvil": "workspace:^",
+    "@eleplug/ebus": "workspace:^",
+    "@eleplug/erpc": "workspace:^",
+    "@eleplug/esys": "workspace:^",
+    "@eleplug/mimic": "workspace:^",
+    "@eleplug/muxen": "workspace:^",
+    "@eleplug/plexus": "workspace:^",
+    "@eleplug/transport": "workspace:^",
+    "electron": "^37.2.6",
+    "lru-cache": "^11.1.0",
+    "mime-types": "^3.0.1",
+    "tmp": "^0.2.5"
+  },
+  "devDependencies": {
+    "@types/mime-types": "^3.0.1",
+    "@types/node": "^24.0.14",
+    "@types/tmp": "^0.2.6"
+  }
+}

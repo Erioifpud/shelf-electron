@@ -1,0 +1,15 @@
+# Ignore root node_modules
+/node_modules/
+
+# Ignore VSCode settings
+.vscode/
+
+# Ignore pnpm store
+.pnpm-store/
+
+packages/*/node_modules/
+packages/*/tests/
+
+# Ignore specific sub-projects
+packages/elep-example/
+packages/elep-renderer/

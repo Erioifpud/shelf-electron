@@ -1,0 +1,21 @@
+{
+  "name": "@eleplug/muxen-mem",
+  "version": "0.1.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@eleplug/transport": "workspace:^",
+    "@eleplug/muxen": "workspace:^",
+    "tseep": "^1.3.1",
+    "uuid": "^11.1.0"
+  }
+}

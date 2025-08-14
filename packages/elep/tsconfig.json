@@ -1,0 +1,4 @@
+{
+  "extends": "../../tsconfig.shared.json",
+  "include": ["src", "../elep-example/src/preload.js", "../elep-example/src/preload.d.ts"],
+}
