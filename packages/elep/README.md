@@ -228,7 +228,7 @@ async function rendererMain() {
 
   // 3. Create a type-safe erpc client to talk to the server in the main-ui plugin.
   const client = await createClient<MainPluginApi>(transport);
-  const response = await client.ping.ask();
+  const response = await client.procedure.ping.ask();
 
   console.log(`Renderer connected and received response: ${response}`); // > "pong"
 }

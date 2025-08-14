@@ -88,14 +88,14 @@ async function main() {
   console.log('Client is ready.');
 
   // 4. Start making calls! Notice the fully-typed experience.
-  const greeting = await client.greeting.ask('erpc');
+  const greeting = await client.procedure.greeting.ask('erpc');
   console.log('Greeting from server:', greeting); // > Greeting from server: Hello, erpc!
 
-  const sum = await client.math.add.ask(5, 7);
+  const sum = await client.procedure.math.add.ask(5, 7);
   console.log('5 + 7 =', sum); // > 5 + 7 = 12
 
   // Call the 'tell' procedure, which returns void.
-  await client.math.logToServer.tell('Client is connected.');
+  await client.procedure.math.logToServer.tell('Client is connected.');
   // (The server's console will show "LOG: Client is connected.")
 
   // Attempting a call with incorrect types will result in a TypeScript error!
@@ -170,7 +170,7 @@ import { free } from '@eleplug/erpc';
 // ... create the client ...
 
 // 1. Get the remote proxy for the counter from the server.
-const remoteCounter = await client.getCounter.ask();
+const remoteCounter = await client.procedure.getCounter.ask();
 
 // 2. Calling methods on the proxy executes them on the server.
 let value = await remoteCounter.increment();
@@ -218,10 +218,10 @@ const streamRouter = e.router({
 
 // 1. Upload data via a stream.
 const myUploadStream = new ReadableStream({ /* ... */ });
-await client.upload.tell(myUploadStream);
+await client.procedure.upload.tell(myUploadStream);
 
 // 2. Download data from a stream.
-const downloadableStream = await client.download.ask();
+const downloadableStream = await client.procedure.download.ask();
 for await (const chunk of downloadableStream) {
   console.log('Downloaded chunk:', chunk);
 }
