@@ -1,6 +1,6 @@
 # `@eleplug/ebus`
 
-`ebus` is a distributed, type-safe message bus system for TypeScript, built on the solid foundation of [`erpc`](#). It extends `erpc`'s powerful point-to-point RPC capabilities with high-level communication patterns, including topic-based Publish/Subscribe, intelligent routing, and network federation, all while preserving end-to-end type safety.
+`ebus` is a type-safe message bus for TypeScript, designed for building lightweight, structured communication networks. It is built on the solid foundation of [`erpc`](#) and extends its powerful point-to-point RPC capabilities with high-level patterns like topic-based Publish/Subscribe, efficient hierarchical routing, and inter-bus connectivity, all while preserving end-to-end type safety.
 
 [![npm version](https://img.shields.io/npm/v/@eleplug/ebus.svg)](https://www.npmjs.com/package/@eleplug/ebus)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -9,7 +9,7 @@
 
 *   **Type-Safe Pub/Sub**: Define a consumer's API for a topic once, and the publisher's client (`emiter`) is automatically typed. This prevents mismatches between published messages and subscribed handlers at compile time.
 *   **Type-Safe P2P Communication**: Create logical, addressable `Node`s on the bus and establish fully-typed, point-to-point communication channels between them, leveraging `erpc`'s core strength.
-*   **Network Federation**: Connect multiple `ebus` instances together to form a larger, hierarchical network. The bus handles routing and state propagation seamlessly across the topology.
+*   **Hierarchical Networking**: Connect multiple `ebus` instances together to form a larger, tree-like network. The bus handles routing and state propagation seamlessly and efficiently up and down the topology.
 *   **Rich Data Type Broadcasting**: Thanks to its `erpc` foundation, `ebus` can broadcast complex data types like **Streams**, `Pin`'d object references, and more, not just JSON-serializable data.
 *   **Intelligent Message Dispatching**: When broadcasting, `ebus` automatically creates deep, isolated copies of messages for each downstream route, with special handling for complex types (e.g., fanning-out `ReadableStream`s, fanning-in `WritableStream`s).
 *   **Advanced Broadcast `ask`**: Publishers can broadcast a request and receive an `AsyncIterable` of results from all responding subscribers, enabling powerful patterns for data aggregation and service discovery.
@@ -177,9 +177,9 @@ for await (const result of results) {
 console.log('All bots have responded.');
 ```
 
-### Network Federation
+### Hierarchical Networking
 
-You can connect one bus to another by providing a `Transport` during creation. `ebus` handles the rest.
+You can connect one bus to another by providing a `Transport` during creation, forming a tree-like network structure.
 
 ```typescript
 import { MemoryConnector } from '@eleplug/transport-mem';
@@ -208,6 +208,8 @@ const childBus = await initEBUS.create(childTransport);
 2.  **Routing Layer**: Maintains knowledge of where nodes and topic subscribers are located across the network.
 3.  **Protocol Layer**: Handles P2P and Pub/Sub message dispatch, session management for `ask`/`all` calls, and message cloning.
 4.  **API Layer**: Provides the final, user-friendly `Node` and `emiter` abstractions.
+
+This structure creates a **hierarchical, tree-like network topology**. Messages are routed efficiently up and down the tree, making it ideal for scenarios like in-process micro-frontends, browser extension components, or any application requiring structured, lightweight inter-module communication without the overhead of a large-scale message queue.
 
 This modular, feature-based architecture ensures that each component has a clear responsibility, making the system robust and extensible.
 
