@@ -47,26 +47,21 @@ export class Registry {
    * @returns A Promise that resolves with the loaded Registry instance.
    */
   public static async createPersistent(filePath: string): Promise<Registry> {
-    const db = new Loki(filePath, {
-      adapter: new Loki.LokiFsAdapter(),
-      autoload: true,
-      autosave: true,
-      autosaveInterval: 4000, // Save every 4 seconds
-      autoloadCallback: (err) => {
-        if (err) {
-          // This is a critical error, often indicates file permission issues.
-          console.error("Failed to load persistent registry:", err);
-        }
-      },
+    return new Promise((resolve, reject) => {
+      const db = new Loki(filePath, {
+        adapter: new Loki.LokiFsAdapter(),
+        autoload: true,
+        autosave: true,
+        autosaveInterval: 4000,
+        autoloadCallback: (err) => {
+          if (err) return reject(err);
+
+          const registry = new Registry(db);
+          registry.initPlugins();
+          resolve(registry);
+        },
+      });
     });
-
-    const registry = new Registry(db);
-
-    // The autoloadCallback handles the loading, but we still need to init the collection.
-    // We can safely do this synchronously after the constructor.
-    registry.initPlugins();
-
-    return registry;
   }
 
   /**
