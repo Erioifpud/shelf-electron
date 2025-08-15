@@ -89,7 +89,7 @@ export class PluginManager {
    * @throws Throws if the installation or enabling process fails.
    */
   public async ensure(options: EnsureOptions): Promise<void> {
-    const { uri, enable = true, strict = true, reconcile = true } = options;
+    const { uri, enable, strict, reconcile } = options;
 
     let entry = this.registry.findOne({ uri });
 

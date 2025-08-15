@@ -9,6 +9,7 @@
 
 packages/*/node_modules/
 packages/*/tests/
+packages/*/dist/
 
 # Ignore specific sub-projects
 packages/elep-example/
