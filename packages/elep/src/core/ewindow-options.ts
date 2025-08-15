@@ -99,5 +99,7 @@ export interface EWindowOptions extends JsonObject {
     additionalArguments?: string[];
     /** Whether to throttle animations and timers when the page is in the background. @default true */
     backgroundThrottling?: boolean;
+    /** Whether to enable the web security feature in the renderer. @default true */
+    webSecurity?: boolean;
   };
 }
