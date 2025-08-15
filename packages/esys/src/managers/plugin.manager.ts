@@ -83,7 +83,6 @@ export class PluginManager {
   /**
    * Ensures a plugin is installed and, optionally, enabled. This is an idempotent operation.
    * If the plugin is not installed, it will be installed. If it is not enabled, it will be enabled.
-   * By default, this triggers a reconciliation to apply the changes.
    *
    * @param options The options for the ensure operation.
    * @throws Throws if the installation or enabling process fails.
