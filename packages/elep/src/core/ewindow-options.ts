@@ -90,7 +90,7 @@ export interface EWindowOptions extends JsonObject {
      * The `plugin://` URI that points to the preload script for the window.
      * This script is loaded securely from the plugin's resources before any
      * other web content.
-     * @example "plugin://my-ui-plugin/dist/preload.js"
+     * @example "plugin://container-name/my-ui-plugin/dist/preload.js"
      */
     preload?: string;
     /** Whether to open the DevTools on window creation. */
