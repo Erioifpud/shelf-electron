@@ -1,6 +1,6 @@
 # `@eleplug/ebus`
 
-`ebus` is a type-safe message bus for TypeScript, designed for building lightweight, structured communication networks. It is built on the solid foundation of [`erpc`](#) and extends its powerful point-to-point RPC capabilities with high-level patterns like topic-based Publish/Subscribe, efficient hierarchical routing, and inter-bus connectivity, all while preserving end-to-end type safety.
+`ebus` is a type-safe message bus for TypeScript, designed for building lightweight, structured, and secure communication networks. It is built on the solid foundation of [`erpc`](../erpc) and extends its powerful point-to-point RPC capabilities with high-level patterns like topic-based Publish/Subscribe, efficient hierarchical routing, and secure inter-bus connectivity—all while preserving end-to-end type safety.
 
 [![npm version](https://img.shields.io/npm/v/@eleplug/ebus.svg)](https://www.npmjs.com/package/@eleplug/ebus)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -9,14 +9,16 @@
 
 *   **Type-Safe Pub/Sub**: Define a consumer's API for a topic once, and the publisher's client (`emiter`) is automatically typed. This prevents mismatches between published messages and subscribed handlers at compile time.
 *   **Type-Safe P2P Communication**: Create logical, addressable `Node`s on the bus and establish fully-typed, point-to-point communication channels between them, leveraging `erpc`'s core strength.
+*   **Group-Based Security & Isolation**: Assign nodes to groups to enforce permissions at multiple levels:
+    *   **Connect-Time Checks**: `connectTo()` will fail-fast at connection time if the source and target nodes do not share a common group.
+    *   **Execution-Time Checks**: Enforces permissions at the last moment of message delivery, ensuring only calls from authorized groups are executed.
+    *   **Gateway Policies**: Configure `allowList` and `denyList` when bridging buses to control which groups of nodes can communicate across bus boundaries.
 *   **Hierarchical Networking**: Connect multiple `ebus` instances together to form a larger, tree-like network. The bus handles routing and state propagation seamlessly and efficiently up and down the topology.
 *   **Rich Data Type Broadcasting**: Thanks to its `erpc` foundation, `ebus` can broadcast complex data types like **Streams**, `Pin`'d object references, and more, not just JSON-serializable data.
 *   **Intelligent Message Dispatching**: When broadcasting, `ebus` automatically creates deep, isolated copies of messages for each downstream route, with special handling for complex types (e.g., fanning-out `ReadableStream`s, fanning-in `WritableStream`s).
 *   **Advanced Broadcast `ask`**: Publishers can broadcast a request and receive an `AsyncIterable` of results from all responding subscribers, enabling powerful patterns for data aggregation and service discovery.
 
 ## Installation
-
-⚠️ **Notice:** This project is in early development and has not been published to npm yet.
 
 ```bash
 npm install @eleplug/ebus @eleplug/erpc
@@ -30,19 +32,20 @@ npm install @eleplug/transport-mem
 
 ## Core Concepts
 
-| Concept        | Description                                                                                             |
-| -------------- | ------------------------------------------------------------------------------------------------------- |
-| **Bus**        | The main EBUS instance. It manages connections, routing, and all nodes.                                 |
-| **Node**       | A logical, addressable entity on the bus. Your application interacts with the bus through `Node`s.        |
-| **Topic**      | A named channel for broadcast (Pub/Sub) messages.                                                       |
-| `node.join()`  | The entry point to create a new `Node` and register it with the bus.                                    |
-| `node.subscribe()` | Subscribes a `Node` to a topic, providing an API to handle incoming messages.                       |
-| `node.emiter()`  | Creates a type-safe publisher client to send messages to a topic.                                       |
-| `node.connectTo()` | Creates a type-safe P2P client to communicate directly with another specific `Node`.                  |
+| Concept | Description |
+| :--- | :--- |
+| **Bus** | The main EBUS instance. It manages connections, routing, and all nodes. |
+| **Node** | A logical, addressable entity on the bus. Your application interacts with the bus through `Node`s. |
+| **Group** | A security label assigned to a node, used to control permission for interaction between nodes. |
+| **Topic** | A named channel for broadcast (Pub/Sub) messages. |
+| `bus.join()` | The entry point to create a new `Node` and register it with the bus. |
+| `node.subscribe()` | Subscribes a `Node` to a topic, providing an API to handle incoming messages. |
+| `node.emiter()` | Creates a type-safe publisher client to send messages to a topic. |
+| `node.connectTo()` | Creates a type-safe P2P client to communicate directly with another specific `Node`. |
 
 ## How to Use
 
-Let's build a simple multi-user environment where nodes can broadcast messages and communicate directly.
+Let's build a simple multi-user environment where nodes can broadcast messages and communicate directly based on their group permissions.
 
 ### 1. Create a Bus Instance
 
@@ -67,17 +70,17 @@ import { initERPC } from '@eleplug/erpc';
 import type { BusContext, TopicContext } from '@eleplug/ebus';
 
 // erpc instance for P2P APIs. `BusContext` is automatically injected.
-const p2p = initERPC.create<[string], string>(); 
+const p2p = initERPC.create<[string], string>();
 
 // erpc instance for Pub/Sub APIs. `TopicContext` is automatically injected.
-const pubsub = initERPC.create(); 
+const pubsub = initERPC.create();
 
 // P2P API for direct user-to-user messages
 export const userApi = p2p.router({
   sendMessage: p2p.procedure.tell(
     (env: BusContext, message: string) => {
       console.log(
-        `[Node ${env.localNodeId}] Received DM from ${env.sourceNodeId}: "${message}"`
+        `[Node ${env.localNodeId}] Received DM from ${env.sourceNodeId} (groups: ${env.sourceGroups.join(', ')}): "${message}"`
       );
     }
   ),
@@ -101,24 +104,25 @@ export type ChatApi = typeof chatApi;
 
 ### 3. Join Nodes to the Bus
 
-Create nodes that join the bus, subscribe to topics, and expose APIs.
+Create nodes, join them to the bus with assigned groups, subscribe to topics, and expose APIs.
 
 ```typescript
 // main.ts
-import { initEBUS, type Node } from '@eleplug/ebus';
+import { initEBUS, Node, GroupPermissionError } from '@eleplug/ebus';
 import { userApi, chatApi, type UserApi, type ChatApi } from './apis';
 
 async function main() {
   const bus = await initEBUS.create();
 
-  // --- Logger Node (Subscriber) ---
-  const loggerNode = await bus.join({ id: 'logger' });
+  // --- Logger Node (Subscriber, in 'system' group) ---
+  const loggerNode = await bus.join({ id: 'logger', groups: ['system'] });
   await loggerNode.subscribe('public-chat', () => chatApi);
   console.log('Logger node has subscribed to public-chat.');
 
-  // --- User Node "Alice" (Publisher & P2P Target) ---
+  // --- User Node "Alice" (Publisher & P2P Target, in 'users' group) ---
   const aliceNode = await bus.join<UserApi>({
     id: 'alice',
+    groups: ['users'],
     apiFactory: () => userApi, // Expose the P2P UserApi
   });
   console.log('Alice has joined the bus.');
@@ -128,17 +132,29 @@ async function main() {
   await chatPublisher.postMessage.tell('Alice', 'Hello everyone!');
   // > [Topic: public-chat] Alice: Hello everyone! (from node alice)
 
-  // --- User Node "Bob" (P2P Caller) ---
-  const bobNode = await bus.join({ id: 'bob' });
+  // --- User Node "Bob" (P2P Caller, in 'users' group) ---
+  const bobNode = await bus.join({ id: 'bob', groups: ['users'] });
   console.log('Bob has joined the bus.');
 
-  // Bob gets a P2P client to talk to Alice
+  // Bob gets a P2P client to talk to Alice (Succeeds, because they share the 'users' group)
   const aliceClient = await bobNode.connectTo<UserApi>('alice');
-
-  // Bob sends a direct message to Alice
   await aliceClient.sendMessage.tell("Hi Alice, it's Bob!");
-  // > [Node alice] Received DM from bob: "Hi Alice, it's Bob!"
-  
+  // > [Node alice] Received DM from bob (groups: users): "Hi Alice, it's Bob!"
+
+  // --- Admin Node "Admin" (P2P Caller, in 'admins' group) ---
+  const adminNode = await bus.join({ id: 'admin', groups: ['admins'] });
+  console.log('Admin has joined the bus.');
+
+  // Admin tries to connect to Alice (Fails, because they have no common group)
+  try {
+    await adminNode.connectTo<UserApi>('alice');
+  } catch (e) {
+    if (e instanceof GroupPermissionError) {
+      console.error(`Connection failed as expected: ${e.message}`);
+    }
+  }
+  // > Connection failed as expected: Node 'admin' (groups: [admins]) does not have permission to connect to node 'alice' (groups: [users]).
+
   // Clean up
   await bus.close();
 }
@@ -177,9 +193,9 @@ for await (const result of results) {
 console.log('All bots have responded.');
 ```
 
-### Hierarchical Networking
+### Hierarchical Networking with Gateway Policies
 
-You can connect one bus to another by providing a `Transport` during creation, forming a tree-like network structure.
+You can connect one bus to another by providing a `Transport` during creation, forming a tree-like network structure. Bridges can also be configured with security policies.
 
 ```typescript
 import { MemoryConnector } from '@eleplug/transport-mem';
@@ -190,22 +206,26 @@ const parentBus = await initEBUS.create();
 // 2. Use a connector to get a transport pair.
 const { client: childTransport, server: parentTransport } = new MemoryConnector();
 
-// 3. The parent "bridges" its side of the connection.
-parentBus.bridge(parentTransport);
+// 3. The parent "bridges" its side of the connection and sets policies.
+//    Only allow nodes from the 'public' group to be announced through this bridge.
+parentBus.bridge({
+  transport: parentTransport,
+  allowList: ['public'],
+});
 
 // 4. The child bus is created with a transport pointing to the parent.
 const childBus = await initEBUS.create(childTransport);
 
 // Now, nodes on the child bus can seamlessly communicate with nodes on the
-// parent bus, and vice-versa. Routing is handled automatically.
+// parent bus, and vice-versa. Routing and security policies are handled automatically.
 ```
 
 ## Architecture
 
 `ebus` is designed as a layered system on top of `erpc`:
 
-1.  **Bridge Layer**: Manages the physical `erpc` connections between bus instances.
-2.  **Routing Layer**: Maintains knowledge of where nodes and topic subscribers are located across the network.
+1.  **Bridge Layer**: Manages the physical `erpc` connections between bus instances. This layer also acts as a **security gateway**, enforcing group-based `allowList`/`denyList` policies for runtime messages at the boundary.
+2.  **Routing Layer**: Maintains knowledge of where nodes and topic subscribers are located across the network. It acts as an **admission controller**, validating the legitimacy of new nodes against bridge policies at registration time.
 3.  **Protocol Layer**: Handles P2P and Pub/Sub message dispatch, session management for `ask`/`all` calls, and message cloning.
 4.  **API Layer**: Provides the final, user-friendly `Node` and `emiter` abstractions.
 

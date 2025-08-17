@@ -107,6 +107,7 @@ export type StreamPayload = StreamControlPayload | StreamDataPayload;
 export type P2PMessage = {
   readonly kind: "p2p";
   readonly sourceId: NodeId | string; // Can be a system ID for error responses.
+  readonly sourceGroups: string[];
   readonly destinationId: NodeId | string;
   readonly payload: P2PAskPayload | P2PTellPayload | RpcResponsePayload;
 };
@@ -115,6 +116,7 @@ export type P2PMessage = {
 export type BroadcastMessage = {
   readonly kind: "broadcast";
   readonly sourceId: NodeId;
+  readonly sourceGroups: string[];
   readonly topic: Topic;
   readonly loopback?: boolean;
   readonly payload: BroadcastAskPayload | BroadcastTellPayload;
@@ -155,6 +157,7 @@ export type NodeAnnouncementMessage = {
   readonly announcements: Array<{
     nodeId: NodeId;
     isAvailable: boolean;
+    groups: string[];
   }>;
 };
 

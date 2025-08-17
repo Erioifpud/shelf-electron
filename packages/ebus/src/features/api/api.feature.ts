@@ -10,9 +10,7 @@ import type {
   NodeId,
   Topic,
   SubscriptionHandle,
-  ConsumerFactory,
-  ApiFactory,
-  BroadcastableArray,
+  ConsumerFactory
 } from "../../types/common.js";
 import type { LocalNodeContribution } from "../local/local-node-manager.feature.js";
 import type { P2PContribution } from "../p2p/p2p-handler.feature.js";

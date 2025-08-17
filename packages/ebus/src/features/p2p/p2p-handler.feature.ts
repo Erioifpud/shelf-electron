@@ -1,3 +1,11 @@
+/**
+ * @fileoverview
+ * This feature handles all point-to-point (P2P) communication within the EBUS
+ * system. It is responsible for creating type-safe client proxies for direct
+ * node-to-node interaction, routing P2P messages through the bus network,
+ * and managing the lifecycle of request-response calls.
+ */
+
 import { v4 as uuid } from "uuid";
 import {
   type Api,
@@ -21,20 +29,28 @@ import type { RoutingContribution } from "../route/routing.feature.js";
 import {
   deserializeError,
   NodeNotFoundError,
+  GroupPermissionError,
   serializeError,
 } from "../../types/errors.js";
 import type { PubSubContribution } from "../pubsub/pubsub-handler.feature.js";
 
 /**
- * The capabilities contributed by the `P2PHandlerFeature`.
+ * The capabilities contributed by the P2PHandlerFeature to the EBUS core.
  */
 export interface P2PContribution {
-  /** Creates a typed erpc client for P2P communication with a target node. */
+  /**
+   * Creates a typed erpc client for P2P communication with a target node.
+   * This method performs "fail-fast" validation, ensuring the target node is
+   * both reachable and accessible before returning a client.
+   */
   createP2PClient<TApi extends Api<TransferableArray, Transferable>>(
     sourceNodeId: NodeId,
     targetNodeId: NodeId
-  ): Client<TApi>;
-  /** The main entry point for routing any P2P message. */
+  ): Promise<Client<TApi>>;
+  /**
+   * The main entry point for routing any P2P message throughout the bus network.
+   * @internal
+   */
   routeP2PMessage(message: P2PMessage): void;
 }
 
@@ -44,21 +60,20 @@ type P2PRequires = RoutingContribution &
   PubSubContribution;
 
 /**
- * A feature that handles all point-to-point (P2P) communication.
- *
- * Its responsibilities include:
- * - Creating client proxies for initiating P2P calls.
- * - Routing outgoing P2P messages (requests and responses) based on the routing table.
- * - Dispatching incoming messages to the `LocalNodeManager` for execution if the
- *   destination is local.
- * - Handling responses for P2P calls, either by resolving pending promises or by
- *   delegating them to the `PubSub` session manager if they are part of a
- *   broadcast `ask` session.
+ * @class P2PHandlerFeature
+ * Orchestrates all direct node-to-node communication. It provides the user-facing
+ * `node.connectTo()` functionality by creating client proxies, and handles the
+ * underlying routing of P2P messages (both requests and responses) to their
+ * final destination, whether local or on an adjacent bus.
  */
 export class P2PHandlerFeature
   implements Feature<P2PContribution, P2PRequires>
 {
   private capability!: P2PRequires;
+  /**
+   * @internal
+   * A map of pending 'ask' calls initiated by local nodes, awaiting responses.
+   */
   private readonly pendingCalls = new Map<
     string,
     { resolve: (value: any) => void; reject: (reason?: any) => void }
@@ -68,18 +83,16 @@ export class P2PHandlerFeature
     this.capability = capability;
     capability.busEvents.on("message", ({ source, message }) => {
       if (message.kind === "p2p") {
-        // Intercept responses ('ack') and check if they belong to a Pub/Sub session.
+        // If a response is part of a Pub/Sub session, delegate it instead of handling here.
         if (
-          message.payload.type === "ack_result" ||
-          message.payload.type === "ack_fin"
+          (message.payload.type === "ack_result" ||
+            message.payload.type === "ack_fin") &&
+          this.capability.isManagingSession(message.payload.callId)
         ) {
-          if (this.capability.isManagingSession(message.payload.callId)) {
-            this.capability.delegateMessageToSession(message, source);
-            return; // The session manager will handle this message.
-          }
+          this.capability.delegateMessageToSession(message, source);
+          return;
         }
-
-        // If not part of a session, or if it's a request, handle as normal P2P.
+        // Handle all other P2P messages.
         this.routeP2PMessage(message);
       }
     });
@@ -98,12 +111,53 @@ export class P2PHandlerFeature
     this.pendingCalls.clear();
   }
 
-  public createP2PClient<TApi extends Api<TransferableArray, Transferable>>(
-    sourceNodeId: NodeId,
-    targetNodeId: NodeId
-  ): Client<TApi> {
-    const callProcedure: CallProcedure<any, any> = (path, action, args, meta) => {
-      if (action === 'ask') {
+  /**
+   * Creates a client proxy for a target node after performing validations.
+   * @description
+   * This is the implementation for `node.connectTo()`. It provides a "fail-fast"
+   * mechanism by performing two critical checks before returning a client proxy:
+   * 1. Route Existence Check: Verifies the `targetNodeId` is known to the network.
+   * 2. Group Permission Check: Verifies the source and target nodes share a common group.
+   * @param sourceNodeId - The ID of the node initiating the connection.
+   * @param targetNodeId - The ID of the node to connect to.
+   * @returns A promise that resolves with a type-safe `Client<TApi>` proxy.
+   * @throws {NodeNotFoundError} If no route to the `targetNodeId` can be found.
+   * @throws {GroupPermissionError} If the source and target nodes have no common groups.
+   */
+  public async createP2PClient<
+    TApi extends Api<TransferableArray, Transferable>,
+  >(sourceNodeId: NodeId, targetNodeId: NodeId): Promise<Client<TApi>> {
+    // 1. FAIL FAST - Route Existence Check
+    if (this.capability.getNextHop(targetNodeId) === null) {
+      throw new NodeNotFoundError(targetNodeId);
+    }
+
+    // 2. FAIL FAST - Group Permission Check
+    const sourceGroups = this.capability.getLocalNodeGroups(sourceNodeId);
+    const targetGroups = this.capability.getNodeGroups(targetNodeId);
+
+    if (sourceGroups && targetGroups) {
+      const sourceGroupArray = Array.from(sourceGroups);
+      const hasCommonGroup = sourceGroupArray.some((g) => targetGroups.has(g));
+      if (!hasCommonGroup) {
+        throw new GroupPermissionError(
+          `Node '${sourceNodeId}' (groups: [${sourceGroupArray.join(", ")}]) does not have permission to connect to node '${targetNodeId}' (groups: [${Array.from(targetGroups).join(", ")}]).`
+        );
+      }
+    } // Note: If groups are somehow undefined here, we optimistically proceed,
+    // letting the final execution-time check in LocalNodeManager be the ultimate authority.
+
+    const callProcedure: CallProcedure<any, any> = (
+      path,
+      action,
+      args,
+      meta
+    ) => {
+      const groups = Array.from(
+        this.capability.getLocalNodeGroups(sourceNodeId) ?? [""]
+      );
+
+      if (action === "ask") {
         const payload: P2PAskPayload = {
           type: "ask",
           callId: `${sourceNodeId}:${uuid()}`,
@@ -111,10 +165,10 @@ export class P2PHandlerFeature
           args,
           meta,
         };
-  
         const message: P2PMessage = {
           kind: "p2p",
           sourceId: sourceNodeId,
+          sourceGroups: groups,
           destinationId: targetNodeId,
           payload,
         };
@@ -124,21 +178,16 @@ export class P2PHandlerFeature
         });
         this.routeP2PMessage(message);
         return promise;
-      } else { // action is 'tell'
-        const payload: P2PTellPayload = { 
-            type: "tell",
-            path,
-            args,
-            meta
-        };
-
+      } else {
+        // action is 'tell'
+        const payload: P2PTellPayload = { type: "tell", path, args, meta };
         const message: P2PMessage = {
-            kind: "p2p",
-            sourceId: sourceNodeId,
-            destinationId: targetNodeId,
-            payload,
+          kind: "p2p",
+          sourceId: sourceNodeId,
+          sourceGroups: groups,
+          destinationId: targetNodeId,
+          payload,
         };
-
         this.routeP2PMessage(message);
         return Promise.resolve();
       }
@@ -147,17 +196,28 @@ export class P2PHandlerFeature
     return buildClient<TApi>(callProcedure);
   }
 
+  /**
+   * Routes a P2P message to its destination.
+   * @description
+   * This is the core runtime router for P2P messages. It determines the next hop
+   * from the routing table. If the destination is local, it executes the call.
+   * If it's remote, it forwards the message to the appropriate adjacent bus.
+   * It also handles routing responses back to their original callers.
+   * @param message - The P2P message to route.
+   * @internal
+   */
   public async routeP2PMessage(message: P2PMessage): Promise<void> {
-    const { destinationId, sourceId, payload } = message;
+    const { destinationId, sourceId, payload, sourceGroups } = message;
     const nextHop = this.capability.getNextHop(destinationId);
 
-    // Case 1: Destination is a local node.
+    // Case 1: Destination is a local node on this bus instance.
     if (nextHop?.type === "local") {
       if (payload.type === "ask" || payload.type === "tell") {
-        // Execute the procedure locally.
+        // Execute the procedure locally. This includes the final permission check.
         const result = await this.capability.executeP2PProcedure(
           destinationId,
           sourceId,
+          sourceGroups,
           payload
         );
 
@@ -175,10 +235,12 @@ export class P2PHandlerFeature
           const responseMessage: P2PMessage = {
             kind: "p2p",
             sourceId: destinationId,
+            sourceGroups: Array.from(
+              this.capability.getLocalNodeGroups(destinationId) ?? [""]
+            ),
             destinationId: sourceId,
             payload: responsePayload,
           };
-          // Route the response back to the original caller.
           this.routeP2PMessage(responseMessage);
         }
       } else if (payload.type === "ack_result" || payload.type === "ack_fin") {
@@ -193,13 +255,12 @@ export class P2PHandlerFeature
               pending.reject(deserializeError(payload.result.error));
             }
           }
-          // 'ack_fin' is only relevant to Pub/Sub sessions and is ignored here.
         }
       }
       return;
     }
 
-    // Case 2: Destination is on an adjacent bus (parent or child).
+    // Case 2: Destination is on an adjacent bus. Forward the message.
     if (nextHop) {
       if (nextHop.type === "parent") {
         await this.capability.sendToParent(message);
@@ -209,10 +270,9 @@ export class P2PHandlerFeature
       return;
     }
 
-    // Case 3: No route found.
+    // Case 3: No route found. Send a NodeNotFoundError response for 'ask' calls.
     if (payload.type === "ask") {
-      // If it was an 'ask' call, we must send an error response back.
-      const error = new NodeNotFoundError(destinationId);
+      const error = new NodeNotFoundError(destinationId as string);
       const errorResponsePayload: RpcAckResultPayload = {
         type: "ack_result",
         callId: payload.callId,
@@ -223,11 +283,11 @@ export class P2PHandlerFeature
       const responseMessage: P2PMessage = {
         kind: "p2p",
         sourceId: "ebus-system",
+        sourceGroups: [],
         destinationId: sourceId,
         payload: errorResponsePayload,
       };
       this.routeP2PMessage(responseMessage);
     }
-    // For 'tell' calls to an unknown destination, the message is simply dropped.
   }
 }

@@ -1,5 +1,13 @@
+/**
+ * @fileoverview
+ * Manages the state and lifecycle of a single broadcast `ask`/`all` call. This
+ * class acts as a state machine that collects results from numerous distributed
+ * subscribers, forwards them to the original caller, and determines when the
+ * entire operation is complete.
+ */
+
 import type { Transferable } from "@eleplug/erpc";
-import type { Result } from "../types/common.js";
+import type { NodeId, Result } from "../types/common.js";
 import { ok, err } from "../types/common.js";
 import { deserializeError } from "../types/errors.js";
 import type {
@@ -12,15 +20,18 @@ import type { ISession, MessageSource } from "./session.interface.js";
 
 /**
  * Defines the dependencies (`AskSession`'s "world view") required for it to
- * send messages back into the EBUS network.
+ * send messages back into the EBUS network and query node information.
  * @internal
  */
 export interface AskSessionCapability {
+  /** Sends a P2P message to a specific destination (parent or child bus). */
   sendTo(source: MessageSource, message: P2PMessage): void;
+  /** Queries the routing table for the groups of a known node. */
+  getNodeGroups(nodeId: NodeId): Set<string> | undefined;
 }
 
 /**
- * An internal handle to control an `AsyncIterable`.
+ * An internal handle to control an `AsyncIterable` from the producer side.
  * @internal
  */
 interface AsyncIteratorController<T> {
@@ -43,14 +54,10 @@ type DownstreamAskState = {
 };
 
 /**
- * Manages the complex lifecycle of a single broadcast `ask`/`all` call.
- *
- * Its responsibilities include:
- * - Tracking the progress of results from all downstream branches (parent/child buses)
- *   and local subscribers.
- * - Aggregating results and forwarding them to the original caller (if remote)
- *   or yielding them via an `AsyncIterable` (if local).
- * - Detecting when all branches have completed and terminating the session.
+ * @class AskSession
+ * Manages the complex lifecycle of a single broadcast `ask`/`all` call. It ensures
+ * that results from all subscribers across the bus network are correctly
+ * aggregated and delivered to the original caller, handling both local and remote origins.
  */
 export class AskSession implements ISession {
   public readonly sessionId: string;
@@ -163,6 +170,7 @@ export class AskSession implements ISession {
 
   /**
    * Creates a robust, pull-based async iterator using a producer-consumer pattern.
+   * @internal
    */
   private createAsyncIterator(): {
     controller: AsyncIteratorController<Result<Transferable>>;
@@ -224,7 +232,10 @@ export class AskSession implements ISession {
   }
 
   /**
-   * Either yields a result to the local iterator or forwards it upstream.
+   * Processes a received result. If the session was initiated locally, it yields
+   * the result to the async iterator. If initiated remotely, it forwards the
+   * result upstream as a P2P message.
+   * @internal
    */
   private processResult(payload: RpcAckResultPayload): void {
     if (this.source.type === "local") {
@@ -233,10 +244,14 @@ export class AskSession implements ISession {
         : err(deserializeError(payload.result.error));
       this.iteratorController.yield(result);
     } else {
+      const sourceGroups = Array.from(
+        this.capability.getNodeGroups(payload.sourceId) ?? [""]
+      );
       const responseMessage: P2PMessage = {
         kind: "p2p",
-        sourceId: payload.sourceId, // Preserve the original result source
-        destinationId: "upstream", // A conceptual target
+        sourceId: payload.sourceId,
+        sourceGroups: sourceGroups,
+        destinationId: "upstream",
         payload: payload,
       };
       this.capability.sendTo(this.source, responseMessage);
@@ -266,13 +281,13 @@ export class AskSession implements ISession {
 
   /**
    * Checks if all local and remote branches have finished sending their results.
-   * If so, terminates the session.
+   * If so, terminates the session, sending a final `ack_fin` message upstream if necessary.
+   * @internal
    */
   private checkCompletion(): void {
     const isLocalDone =
       this.localDelivery.status === "fin_received" &&
       this.localDelivery.receivedResults >= this.localDelivery.expectedResults;
-
     const areDownstreamsDone = Array.from(this.downstreamState.values()).every(
       (state) =>
         state.status === "fin_received" &&
@@ -280,7 +295,6 @@ export class AskSession implements ISession {
     );
 
     if (isLocalDone && areDownstreamsDone) {
-      // If the call originated remotely, we must send a final 'fin' message upstream.
       if (this.source.type !== "local") {
         const totalResults =
           this.localDelivery.expectedResults +
@@ -288,7 +302,6 @@ export class AskSession implements ISession {
             (sum, s) => sum + s.expectedResults,
             0
           );
-
         const finPayload: RpcAckFinPayload = {
           type: "ack_fin",
           callId: this.sessionId,
@@ -296,15 +309,13 @@ export class AskSession implements ISession {
         };
         const finMessage: P2PMessage = {
           kind: "p2p",
-          sourceId: "ebus-system", // System-generated message
+          sourceId: "ebus-system",
+          sourceGroups: [],
           destinationId: "upstream",
           payload: finPayload,
         };
         this.capability.sendTo(this.source, finMessage);
       }
-
-      // This self-terminates the session, which will also clean it up
-      // from the SessionManager.
       this.terminate();
     }
   }

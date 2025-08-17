@@ -96,6 +96,7 @@ export type { PublisherClient } from "./api/publisher.js";
 export {
   EbusError,
   NodeNotFoundError,
+  GroupPermissionError,
   ProcedureNotReadyError,
 } from "./types/errors.js";
 export type {
@@ -108,7 +109,7 @@ export type {
   Ok,
   Err,
   ApiFactory,
-  ConsumerFactory, // Re-export for convenience
+  ConsumerFactory,
   BusContext,
   TopicContext,
 } from "./types/common.js";

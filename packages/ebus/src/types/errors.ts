@@ -1,11 +1,10 @@
-
 /**
  * The base class for all custom errors within the EBUS system.
  */
 export class EbusError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'EbusError';
+    this.name = "EbusError";
   }
 }
 
@@ -17,7 +16,7 @@ export class NodeNotFoundError extends EbusError {
 
   constructor(nodeId: string) {
     super(`Node '${nodeId}' not found or unreachable.`);
-    this.name = 'NodeNotFoundError';
+    this.name = "NodeNotFoundError";
     this.details = { nodeId };
   }
 }
@@ -31,8 +30,19 @@ export class ProcedureNotReadyError extends EbusError {
 
   constructor(nodeId: string) {
     super(`The API for node '${nodeId}' has not been set yet.`);
-    this.name = 'ProcedureNotReadyError';
+    this.name = "ProcedureNotReadyError";
     this.details = { nodeId };
+  }
+}
+
+/**
+ * Thrown when a node attempts an action (e.g., P2P connect, subscribe)
+ * that is forbidden by group permission rules.
+ */
+export class GroupPermissionError extends EbusError {
+  constructor(message: string) {
+    super(message);
+    this.name = "GroupPermissionError";
   }
 }
 
@@ -70,17 +80,19 @@ export function deserializeError(error: SerializableEbusError): EbusError {
   let ebusError: EbusError;
 
   // Reconstruct specific error types based on the 'name' property.
-  if (error.name === 'NodeNotFoundError' && error.details?.nodeId) {
+  if (error.name === "NodeNotFoundError" && error.details?.nodeId) {
     ebusError = new NodeNotFoundError(error.details.nodeId);
-  } else if (error.name === 'ProcedureNotReadyError' && error.details?.nodeId) {
+  } else if (error.name === "ProcedureNotReadyError" && error.details?.nodeId) {
     ebusError = new ProcedureNotReadyError(error.details.nodeId);
+  } else if (error.name === "GroupPermissionError") {
+    ebusError = new GroupPermissionError(error.message);
   } else {
     // Default to the base EbusError.
     ebusError = new EbusError(error.message);
   }
 
   // Restore common properties.
-  ebusError.name = error.name || 'EbusError';
+  ebusError.name = error.name || "EbusError";
   ebusError.stack = error.stack;
   if (error.details) {
     (ebusError as any).details = error.details;

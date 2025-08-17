@@ -13,6 +13,7 @@ import {
   NodeNotFoundError,
   EbusError,
   ProcedureNotReadyError,
+  GroupPermissionError,
 } from "../../types/errors.js";
 import type {
   NodeOptions,
@@ -51,6 +52,7 @@ type ApiProfile<TInput extends Array<unknown>, TOutput> = {
  * @internal
  */
 type NodeProfile = {
+  groups: Set<string>;
   p2pApi: ApiProfile<TransferableArray, Transferable> | null;
   subscriptions: Map<Topic, ApiProfile<BroadcastableArray, Transferable>>;
 };
@@ -71,6 +73,7 @@ export interface LocalNodeContribution {
   removeSubscription(nodeId: NodeId, topic: Topic): void;
   hasNode(nodeId: NodeId): boolean;
   getLocalNodeIds(): NodeId[];
+  getLocalNodeGroups(nodeId: NodeId): Set<string> | undefined;
   getTopicsForNode(nodeId: NodeId): Topic[];
   removeNode(nodeId: NodeId): void;
   /**
@@ -81,11 +84,13 @@ export interface LocalNodeContribution {
   executeP2PProcedure(
     destinationId: NodeId,
     sourceId: NodeId,
+    sourceGroups: string[],
     payload: P2PAskPayload | P2PTellPayload
   ): Promise<ProcedureExecutionResult<Transferable> | void>;
   executeBroadcastProcedure(
     destinationId: NodeId,
     sourceId: NodeId,
+    sourceGroups: string[],
     topic: Topic,
     payload: BroadcastAskPayload | BroadcastTellPayload
   ): Promise<ProcedureExecutionResult<Transferable> | void>;
@@ -113,6 +118,7 @@ export class LocalNodeManagerFeature
       executeP2PProcedure: this.executeP2PProcedure.bind(this),
       executeBroadcastProcedure: this.executeBroadcastProcedure.bind(this),
       getLocalNodeIds: () => Array.from(this.localNodes.keys()),
+      getLocalNodeGroups: this.getLocalNodeGroups.bind(this),
       getTopicsForNode: this.getTopicsForNode.bind(this),
       markAsClosing: this.markAsClosing.bind(this),
       removeNode: this.removeNode.bind(this),
@@ -136,7 +142,6 @@ export class LocalNodeManagerFeature
 
     let apiProfile: ApiProfile<TransferableArray, Transferable> | null = null;
     if (options.apiFactory) {
-      // Create an erpc instance pre-configured with the P2P context middleware.
       const t_p2p = initERPC.create<TransferableArray, Transferable>();
       const procedureBuilderWithMiddleware =
         t_p2p.procedure.use(p2pContextMiddleware);
@@ -154,6 +159,7 @@ export class LocalNodeManagerFeature
     }
 
     this.localNodes.set(options.id, {
+      groups: new Set(options.groups ?? [""]),
       p2pApi: apiProfile,
       subscriptions: new Map(),
     });
@@ -218,16 +224,16 @@ export class LocalNodeManagerFeature
   public executeP2PProcedure(
     destinationId: NodeId,
     sourceId: NodeId,
+    sourceGroups: string[],
     payload: P2PAskPayload | P2PTellPayload
   ): Promise<ProcedureExecutionResult<Transferable> | void> {
-    // Immediately reject calls to nodes that are shutting down.
     if (this.closingNodes.has(destinationId)) {
       const error = new EbusError(
         `Node '${destinationId}' is shutting down and cannot accept new calls.`
       );
       if (payload.type === "ask")
         return Promise.resolve({ success: false, error });
-      console.error(error.message); // Log for fire-and-forget calls.
+      console.error(error.message);
       return Promise.resolve();
     }
 
@@ -241,9 +247,22 @@ export class LocalNodeManagerFeature
       return Promise.resolve();
     }
 
-    // Prepend the EBUS context to the user's metadata array.
+    const destinationGroups = nodeProfile.groups;
+    const hasCommonGroup = sourceGroups.some((g) => destinationGroups.has(g));
+
+    if (!hasCommonGroup) {
+      const error = new GroupPermissionError(
+        `Node '${sourceId}' (groups: [${sourceGroups.join(", ")}]) does not have permission to connect to node '${destinationId}' (groups: [${Array.from(destinationGroups).join(", ")}]).`
+      );
+      if (payload.type === "ask")
+        return Promise.resolve({ success: false, error });
+      console.error(error.message);
+      return Promise.resolve();
+    }
+
     const ctx: BusContext = {
       sourceNodeId: sourceId,
+      sourceGroups: sourceGroups,
       localNodeId: destinationId,
     };
     const finalMeta = [ctx, ...(payload.meta || [])];
@@ -270,6 +289,7 @@ export class LocalNodeManagerFeature
   public executeBroadcastProcedure(
     destinationId: NodeId,
     sourceId: NodeId,
+    sourceGroups: string[],
     topic: Topic,
     payload: BroadcastAskPayload | BroadcastTellPayload
   ): Promise<ProcedureExecutionResult<Transferable> | void> {
@@ -283,16 +303,28 @@ export class LocalNodeManagerFeature
     }
 
     const nodeProfile = this.localNodes.get(destinationId);
-    const subProfile = nodeProfile?.subscriptions.get(topic);
+    if (!nodeProfile) {
+      if (payload.type === "ask") return Promise.resolve(undefined);
+      return Promise.resolve();
+    }
+
+    const subProfile = nodeProfile.subscriptions.get(topic);
     if (!subProfile) {
-      // This is not an error, as not all local nodes are expected to subscribe to all topics.
-      // For 'ask' calls, we must return undefined, which the caller (PubSubHandler) will ignore.
+      if (payload.type === "ask") return Promise.resolve(undefined);
+      return Promise.resolve();
+    }
+
+    const destinationGroups = nodeProfile.groups;
+    const hasCommonGroup = sourceGroups.some((g) => destinationGroups.has(g));
+
+    if (!hasCommonGroup) {
       if (payload.type === "ask") return Promise.resolve(undefined);
       return Promise.resolve();
     }
 
     const ctx: TopicContext = {
       sourceNodeId: sourceId,
+      sourceGroups: sourceGroups,
       localNodeId: destinationId,
       topic,
     };
@@ -315,6 +347,10 @@ export class LocalNodeManagerFeature
     }
 
     return handlers.handleAsk(env, payload.path, payload.args);
+  }
+
+  public getLocalNodeGroups(nodeId: NodeId): Set<string> | undefined {
+    return this.localNodes.get(nodeId)?.groups;
   }
 
   public getTopicsForNode(nodeId: NodeId): Topic[] {

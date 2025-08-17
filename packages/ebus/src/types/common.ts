@@ -1,11 +1,11 @@
-import type { 
-    Api, 
-    ErpcInstance, 
-    JsonValue, 
-    Pin, 
-    Transferable, 
-    TransferableArray 
-} from '@eleplug/erpc';
+import type {
+  Api,
+  ErpcInstance,
+  JsonValue,
+  Pin,
+  Transferable,
+  TransferableArray
+} from "@eleplug/erpc";
 
 // =================================================================
 // Section 1: Core Identifiers
@@ -20,14 +20,13 @@ export type Topic = string;
 /** A unique identifier for a direct child bus connection. */
 export type BusId = number;
 
-
 // =================================================================
 // Section 2: Data Transfer Constraints
 // =================================================================
 
 /**
  * Represents a value that can be safely broadcast to multiple subscribers.
- * 
+ *
  * @remarks
  * This is a stricter subset of erpc's `Transferable` type. It explicitly
  * excludes `Transport` objects, as tunneling a transport to multiple
@@ -50,7 +49,6 @@ export type BroadcastableObject = { [key: string]: Broadcastable };
 /** An array where all elements are `Broadcastable`. */
 export type BroadcastableArray = Broadcastable[];
 
-
 // =================================================================
 // Section 3: Public API & Factory Types
 // =================================================================
@@ -59,14 +57,16 @@ export type BroadcastableArray = Broadcastable[];
 export type BusContext = {
   /** The ID of the node that initiated the call. */
   readonly sourceNodeId: NodeId;
+  /** The groups of the node that initiated the call. */
+  readonly sourceGroups: string[];
   /** The ID of the local node that is executing the procedure. */
   readonly localNodeId: NodeId;
 };
 
 /** The specific context available in Pub/Sub (topic) procedure handlers. */
 export type TopicContext = BusContext & {
-    /** The topic on which the message was received. */
-    readonly topic: Topic;
+  /** The topic on which the message was received. */
+  readonly topic: Topic;
 };
 
 /**
@@ -85,16 +85,22 @@ export type ApiFactory<TApi extends Api<TransferableArray, Transferable>> = (
  *
  * @param t An erpc instance pre-configured with the `TopicContext` middleware.
  */
-export type ConsumerFactory<TApi extends Api<BroadcastableArray, Transferable>> = (
+export type ConsumerFactory<
+  TApi extends Api<BroadcastableArray, Transferable>,
+> = (
   t: ErpcInstance<TopicContext, BroadcastableArray, Transferable>
 ) => TApi | Promise<TApi>;
 
 /**
  * Configuration options for joining the EBUS network with a new node.
  */
-export interface NodeOptions<TApi extends Api<TransferableArray, Transferable>> {
+export interface NodeOptions<
+  TApi extends Api<TransferableArray, Transferable>,
+> {
   /** The unique identifier for this node. */
   id: NodeId;
+  /** Optional. Specifies the groups this node belongs to. Defaults to the default group. */
+  groups?: string[];
   /** An optional factory to define the P2P API this node exposes. */
   apiFactory?: ApiFactory<TApi>;
 }
@@ -121,7 +127,6 @@ export interface SubscriptionHandle {
    */
   cancel(): Promise<void>;
 }
-
 
 // =================================================================
 // Section 4: Result Type Utilities
