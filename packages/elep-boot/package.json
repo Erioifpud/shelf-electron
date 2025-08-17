@@ -1,0 +1,31 @@
+{
+  "name": "@eleplug/elep-boot",
+  "version": "0.1.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "run": "electron dist/main.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@eleplug/anvil": "workspace:^",
+    "@eleplug/ebus": "workspace:^",
+    "@eleplug/elep": "workspace:^",
+    "@eleplug/erpc": "workspace:^",
+    "@eleplug/esys": "workspace:^",
+    "@eleplug/mimic": "workspace:^",
+    "@eleplug/muxen": "workspace:^",
+    "@eleplug/plexus": "workspace:^",
+    "@eleplug/transport": "workspace:^",
+    "electron": "^37.2.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.14"
+  }
+}
