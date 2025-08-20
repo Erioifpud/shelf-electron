@@ -10,7 +10,7 @@ import type { BuildStub } from "./stub";
  * It takes a server-side `Api` definition and resolves to a strongly-typed
  * client-side interface via the `BuildStub` utility type.
  */
-export type Client<TApi extends Api<any, any>> = BuildStub<TApi>;
+export type Client<TApi extends Api<any, any, any>> = BuildStub<TApi>;
 
 /**
  * A function that executes a remote procedure call.
@@ -86,7 +86,7 @@ export function createProxy<TInput extends Array<unknown>, TOuput>(
  * @returns A fully-typed, runtime eRPC client proxy.
  * @internal
  */
-export function buildClient<TApi extends Api<any, any> = any>(
+export function buildClient<TApi extends Api<any, any, any> = any>(
   callProcedure: CallProcedure<any, any>
 ): Client<TApi> {
   const handler: ProxyCallHandler<any, any> = (path, args, meta) => {

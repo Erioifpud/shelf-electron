@@ -1,12 +1,12 @@
-import mimic from "@eleplug/mimic";
-import { type WebContents, ipcMain } from "electron";
+import { type WebContents } from "electron";
 import { AsyncEventEmitter } from "@eleplug/transport";
 import type { Link, MultiplexedPacket } from "@eleplug/muxen";
+import { ipcRouter } from "./global-ipc-router.js";
 
 /**
  * An implementation of the `Link` interface for the Electron main process.
  * It establishes a dedicated communication channel with a specific renderer process
- * over a given namespace.
+ * over a unique channel ID, managed entirely by the `GlobalIpcRouter`.
  */
 export class IpcLink implements Link {
   private readonly events = new AsyncEventEmitter<{
@@ -16,36 +16,30 @@ export class IpcLink implements Link {
 
   private isClosed = false;
 
-  // A reference to the specific listener function is kept for proper removal.
-  private readonly messageListener: (
-    event: Electron.IpcMainEvent,
-    message: string
-  ) => void;
-
   /**
    * @param webContents The `WebContents` object of the target renderer process.
-   * @param namespace The unique channel name for this link.
+   * @param channelId The unique, globally managed channel identifier for this link,
+   *                  provided by the `GlobalIpcRouter`.
    */
   constructor(
     private readonly webContents: WebContents,
-    public readonly namespace: string
+    private readonly channelId: string
   ) {
     if (this.webContents.isDestroyed()) {
       throw new Error("Cannot create IpcLink for a destroyed WebContents.");
     }
 
-    this.messageListener = (event: Electron.IpcMainEvent, message: string) => {
-      // Security: Ensure the message is from the WebContents we are linked to.
-      if (event.sender === this.webContents) {
-        const packet = mimic.parse(message) as MultiplexedPacket;
-        this.events.emit("message", packet);
-      }
+    const messageListener = (packet: MultiplexedPacket) => {
+      // No need to check event.sender, as the router guarantees the message
+      // is for this specific channelId.
+      this.events.emit("message", packet);
     };
 
-    // Listen for messages on the specific namespace channel.
-    ipcMain.on(this.namespace, this.messageListener);
+    // Register this link's listener with the central router.
+    ipcRouter.registerListener(this.channelId, messageListener);
 
-    // Ensure cleanup when the renderer process/window is closed.
+    // The router's cleanup mechanism will handle the 'destroyed' event,
+    // but we can also listen here to trigger our own close logic.
     this.webContents.once("destroyed", () => this.close());
   }
 
@@ -58,14 +52,15 @@ export class IpcLink implements Link {
   }
 
   /**
-   * Sends a message to the associated renderer process on the link's namespace.
+   * Sends a message to the associated renderer process via the `GlobalIpcRouter`.
    * @param packet The multiplexed packet to send.
    */
   public sendMessage(packet: MultiplexedPacket): Promise<void> {
     if (this.isClosed) {
-      return Promise.reject(new Error(`Link (${this.namespace}) is closed.`));
+      return Promise.reject(new Error(`Link (${this.channelId}) is closed.`));
     }
-    this.webContents.send(this.namespace, mimic.stringify(packet));
+    // Delegate sending to the central router.
+    ipcRouter.sendMessage(this.webContents, this.channelId, packet);
     return Promise.resolve();
   }
 
@@ -86,8 +81,7 @@ export class IpcLink implements Link {
   }
 
   /**
-   * Centralized cleanup logic for closing the link.
-   * This is idempotent and safe to call multiple times.
+   * Centralized cleanup logic for closing the link. It's idempotent.
    */
   private internalClose(reason?: Error): Promise<void> {
     if (this.isClosed) {
@@ -95,8 +89,8 @@ export class IpcLink implements Link {
     }
     this.isClosed = true;
 
-    // Remove the specific listener from the global ipcMain.
-    ipcMain.removeListener(this.namespace, this.messageListener);
+    // Unregister the listener from the central router to prevent memory leaks.
+    ipcRouter.removeListener(this.channelId);
 
     this.events.emit("close", reason);
     this.events.removeAllListeners();

@@ -1,0 +1,28 @@
+{
+  "name": "@eleplug/elep-dev",
+  "version": "0.1.0",
+  "main": "dist/main.js",
+  "bin": {
+    "elep": "dist/main.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "chalk": "^5.6.0",
+    "commander": "^14.0.0",
+    "electron": "^37.2.6",
+    "execa": "^9.6.0",
+    "find-up": "^7.0.0",
+    "fs-extra": "^11.3.1",
+    "yargs": "^18.0.0"
+  },
+  "devDependencies": {
+    "@eleplug/elep-boot": "workspace:^",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^24.0.14",
+    "@types/yargs": "^17.0.33"
+  }
+}

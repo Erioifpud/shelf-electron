@@ -24,7 +24,7 @@ type CallExecutorRequires = ProtocolHandlerContribution &
  * @template TApi The server's API definition.
  */
 export class CallExecutorFeature<
-  TApi extends Api<TransferableArray, Transferable>,
+  TApi extends Api<void, TransferableArray, Transferable>,
 > implements Feature<{}, CallExecutorRequires>
 {
   private handlers: ReturnType<

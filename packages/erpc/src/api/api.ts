@@ -2,27 +2,16 @@ import type { Procedure } from "./procedure";
 
 /**
  * Represents a composable API definition in erpc.
- *
- * An `Api` can be either a single endpoint (a `Procedure`) or a nested
- * collection of endpoints (a `Router`).
- *
- * @template TInput The expected type of the input arguments array for procedures within this API.
- * @template TOutput The expected return type for procedures within this API.
+ * @template InitCtx The initial context type required by procedures in this API.
  */
-export type Api<TInput extends Array<unknown>, TOutput> =
-  | Router<TInput, TOutput>
-  | Procedure<any, TInput, TOutput>;
+export type Api<InitCtx, TInput extends Array<unknown>, TOutput> =
+  | Router<InitCtx, TInput, TOutput>
+  | Procedure<InitCtx, any, TInput, TOutput>; // Procedure generics will be updated
 
 /**
- * Represents a collection of named API endpoints, which can be other Routers
- * or Procedures.
- *
- * This allows for creating nested, organized API structures, for example:
- * `e.router({ posts: { create: e.procedure.ask(...) } })`.
- *
- * @template TInput The expected type of the input arguments array for procedures within this router.
- * @template TOutput The expected return type for procedures within this router.
+ * Represents a collection of named API endpoints.
+ * @template InitCtx The initial context type required by procedures in this router.
  */
-export type Router<TInput extends Array<unknown>, TOutput> = {
-  [key: string]: Api<TInput, TOutput>;
+export type Router<InitCtx, TInput extends Array<unknown>, TOutput> = {
+  [key: string]: Api<InitCtx, TInput, TOutput>;
 };

@@ -10,7 +10,8 @@ import type {
   NodeId,
   Topic,
   SubscriptionHandle,
-  ConsumerFactory
+  BusContext,
+  BroadcastableArray,
 } from "../../types/common.js";
 import type { LocalNodeContribution } from "../local/local-node-manager.feature.js";
 import type { P2PContribution } from "../p2p/p2p-handler.feature.js";
@@ -29,7 +30,7 @@ export interface EbusApi {
    * @returns A promise that resolves to a `Node` instance, the main handle for
    *          interacting with the EBUS network.
    */
-  join<TApi extends Api<TransferableArray, Transferable> = any>(
+  join<TApi extends Api<BusContext, TransferableArray, Transferable> = any>(
     options: NodeOptions<TApi>
   ): Promise<Node<TApi>>;
 
@@ -37,7 +38,7 @@ export interface EbusApi {
    * An internal method used by `node.connectTo()` to create a P2P client.
    * @internal
    */
-  connectTo<TApi extends Api<TransferableArray, Transferable>>(
+  connectTo<TApi extends Api<BusContext, TransferableArray, Transferable>>(
     sourceNodeId: NodeId,
     targetNodeId: NodeId
   ): Promise<Client<TApi>>;
@@ -73,7 +74,7 @@ export class ApiFeature implements Feature<EbusApi, ApiRequires> {
     /* This feature is stateless. */
   }
 
-  public async join<TApi extends Api<TransferableArray, Transferable>>(
+  public async join<TApi extends Api<BusContext, TransferableArray, Transferable>>(
     options: NodeOptions<TApi>
   ): Promise<Node<TApi>> {
     await this.capability.registerNode(options);
@@ -115,7 +116,7 @@ export class ApiFeature implements Feature<EbusApi, ApiRequires> {
     this.capability.removeNode(nodeId);
   }
 
-  public async connectTo<TApi extends Api<TransferableArray, Transferable>>(
+  public async connectTo<TApi extends Api<BusContext, TransferableArray, Transferable>>(
     sourceNodeId: NodeId,
     targetNodeId: NodeId
   ): Promise<Client<TApi>> {
@@ -125,9 +126,9 @@ export class ApiFeature implements Feature<EbusApi, ApiRequires> {
   private async subscribe(
     nodeId: NodeId,
     topic: Topic,
-    consumerFactory: ConsumerFactory<any>
+    consumerApi: Api<Topic, BroadcastableArray, Transferable>
   ): Promise<SubscriptionHandle> {
-    await this.capability.addSubscription(nodeId, topic, consumerFactory);
+    await this.capability.addSubscription(nodeId, topic, consumerApi);
     await this.capability.updateLocalSubscription(nodeId, topic, true);
 
     return {

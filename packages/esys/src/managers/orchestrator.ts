@@ -11,7 +11,9 @@ import { parseUri } from "../utils.js";
 /**
  * The Orchestrator is the system's "execution engine".
  * It is responsible for synchronizing the desired state (enabled plugins in the Registry)
- * with the actual running state of plugins in the Containers.
+ * with the actual running state of plugins in the Containers. It operates on a
+ * declarative model: it calculates the difference between the current and target
+ * states and executes a safe plan to bridge the gap.
  */
 export class Orchestrator {
   private readonly resolver = new DependencyResolver();
@@ -23,7 +25,9 @@ export class Orchestrator {
   private containerManager!: ContainerManager;
 
   /**
-   * Initializes the Orchestrator with its dependencies.
+   * Initializes the Orchestrator with its core dependencies.
+   * This method is called by the System constructor.
+   * @internal
    */
   public init(
     registry: Registry,
@@ -34,32 +38,49 @@ export class Orchestrator {
     this.pluginManager = pluginManager;
     this.containerManager = containerManager;
 
-    // Register the primary provider for resolving dependencies from the registry.
+    // Register the system's plugin registry as a provider for the dependency resolver.
     this.resolver.register("system-registry", pluginManager.all.provider);
   }
 
   /**
-   * Checks if the system state has changed and a reconciliation is needed.
+   * Checks if there are pending state changes that require a reconciliation.
+   * @returns `true` if `markDirty()` has been called since the last reconcile.
    */
   public shouldReconcile(): boolean {
     return this.isDirty;
   }
 
   /**
-   * Marks the system state as changed, indicating a reconciliation is required.
-   * @internal
+   * Marks the system state as dirty, signaling that a reconciliation is needed.
+   * This is typically called by the PluginManager after an enable/disable operation.
    */
   public markDirty(): void {
     this.isDirty = true;
   }
 
   /**
-   * Executes a full reconciliation cycle.
-   * This is the core process for synchronizing desired and actual states.
+   * Executes a full reconciliation cycle to align the actual runtime state
+   * with the desired state defined in the registry.
+   *
+   * @workflow
+   * 1.  **Build Target Graph**: Constructs a target dependency graph based on all
+   *     plugins marked as 'enable' in the Registry.
+   * 2.  **Calculate Diff**: Compares the new target graph with the currently active
+   *     plugin graph to produce a `DiffResult` (added, removed, modified).
+   * 3.  **Generate Plan**: Topologically sorts the `DiffResult` to create a safe,
+   *     deterministic execution plan. Deactivations are ordered before activations.
+   * 4.  **Execute Plan**: Executes the plan, activating and deactivating plugins
+   *     in the correct order.
+   * 5.  **Update State**: On success, updates the active plugin graph to the new target graph.
    */
   public async reconcile(): Promise<void> {
     if (this.isReconciling) {
-      console.warn("Reconciliation is already in progress. Skipping.");
+      console.warn(
+        "[Orchestrator] Reconciliation is already in progress. Skipping."
+      );
+      return;
+    }
+    if (!this.shouldReconcile()) {
       return;
     }
 
@@ -68,40 +89,44 @@ export class Orchestrator {
 
     try {
       const targetReqs = new Requirements();
-      this.registry.find({ state: "enable" }).forEach((p) => {
+      const enabledPluginsInRegistry = this.registry.find({ state: "enable" });
+      enabledPluginsInRegistry.forEach((p) => {
         targetReqs.add(p.name, p.version);
       });
 
+      const oldGraph = this.pluginManager.enabled.graph;
       const newGraph = await this.resolver.resolve(
         targetReqs.get(),
         { includePrereleases: true },
-        this.pluginManager.enabled.graph
+        oldGraph // Pass the old graph to prefer stable versions.
       );
 
       if (!newGraph.isCompleted()) {
-        const issues = JSON.stringify(
-          {
-            missing: newGraph.missing(),
-            cycles: newGraph.cycles(),
-            disputes: newGraph.disputes(),
-          },
-          null,
-          2
+        // Here you could add more detailed diagnostics from the graph, e.g.,
+        // `newGraph.missing()`, `newGraph.cycles()`.
+        throw new Error(
+          `Reconciliation failed: The set of enabled plugins and their dependencies is not solvable. Check for missing plugins or version conflicts.`
         );
-        const errorMessage = `Reconciliation failed: Unsolvable dependency set. Issues: ${issues}`;
-        throw new Error(errorMessage);
       }
 
-      const diff = newGraph.diff(this.pluginManager.enabled.graph);
+      const diff = newGraph.diff(oldGraph);
       const plan = diff.sort();
 
       if (plan.length > 0) {
+        console.log(
+          `[Orchestrator] Executing reconciliation plan with ${plan.length} steps.`
+        );
         await this.executePlan(plan);
+        // On success, the new graph becomes the current state.
         this.pluginManager.enabled.graph = newGraph;
       }
     } catch (error) {
+      // If reconciliation fails, mark as dirty to allow a retry after the issue is fixed.
       this.isDirty = true;
-      console.error("An error occurred during reconciliation:", error);
+      console.error(
+        "[Orchestrator] An error occurred during reconciliation:",
+        error
+      );
       throw error;
     } finally {
       this.isReconciling = false;
@@ -109,8 +134,9 @@ export class Orchestrator {
   }
 
   /**
-   * Executes a topologically sorted plan to activate or deactivate plugins.
-   * @param plan An array of diff entries sorted for correct execution order.
+   * Executes a pre-computed reconciliation plan.
+   * @param plan An array of `DiffEntry` objects in a safe execution order.
+   * @internal
    */
   public async executePlan(plan: DiffEntry[]): Promise<void> {
     for (const entry of plan) {
@@ -118,15 +144,12 @@ export class Orchestrator {
         await this.#executePlanEntry(entry);
       } catch (error: any) {
         this.#handleExecutionError(entry, error);
-        throw error; // Halt the execution plan on failure.
+        // Re-throw to halt the reconciliation process on the first failure.
+        throw error;
       }
     }
   }
 
-  /**
-   * Executes a single entry from the reconciliation plan.
-   * @param entry The diff entry to execute.
-   */
   async #executePlanEntry(entry: DiffEntry): Promise<void> {
     const { type, meta } = entry;
     const registryEntry = this.registry.findOne({
@@ -136,47 +159,42 @@ export class Orchestrator {
 
     if (!registryEntry) {
       throw new Error(
-        `Consistency Error: Plugin '${meta.name}@${meta.version}' found in plan but not in registry.`
+        `[Orchestrator] Consistency Error: Plugin '${meta.name}@${meta.version}' is in the execution plan but could not be found in the registry.`
       );
     }
 
-    const { containerName, path } = parseUri(registryEntry.uri);
+    const fullPluginUri = registryEntry.uri;
+    const { containerName } = parseUri(fullPluginUri);
     const container = this.containerManager.get(containerName);
 
     if (!container) {
       throw new Error(
-        `Container '${containerName}' not found for plugin '${meta.name}'.`
+        `[Orchestrator] Container '${containerName}' required by plugin '${fullPluginUri}' is not mounted.`
       );
     }
 
+    // Execute deactivation or activation based on the plan entry type.
     if (type === "removed" || type === "replaced") {
-      await container.plugins.deactivate(path);
-      this.registry.updateStatus(registryEntry.uri, "stopped");
+      await container.plugins.deactivate(fullPluginUri);
+      this.registry.updateStatus(fullPluginUri, "stopped");
     } else if (type === "added" || type === "modified") {
-      await container.plugins.activate(containerName, path);
+      await container.plugins.activate(fullPluginUri);
       this.registry.updateStatus(registryEntry.uri, "running");
     }
   }
 
-  /**
-   * Centralized handler for errors occurring during plan execution.
-   * It logs the error and updates the plugin's status in the registry.
-   * @param entry The plan entry that failed.
-   * @param error The error that was thrown.
-   */
   #handleExecutionError(entry: DiffEntry, error: Error): void {
     const { meta } = entry;
     const registryEntry = this.registry.findOne({
       name: meta.name,
       version: meta.version,
     });
-
+    // Mark the plugin's status as 'error' in the registry for visibility.
     if (registryEntry) {
       this.registry.updateStatus(registryEntry.uri, "error", error.message);
     }
-
     console.error(
-      `Failed to execute step '${entry.type}' for plugin '${meta.name}':`,
+      `[Orchestrator] Failed to execute plan step '${entry.type}' for plugin '${meta.name}@${meta.version}':`,
       error
     );
   }

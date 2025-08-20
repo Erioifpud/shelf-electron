@@ -14,3 +14,4 @@ packages/*/dist/
 # Ignore specific sub-projects
 packages/elep-example/
 packages/elep-renderer/
+packages/create-elep/

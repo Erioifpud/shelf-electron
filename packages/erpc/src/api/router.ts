@@ -113,8 +113,8 @@ export type ProcedureHandlers<TInput extends Array<unknown>, TOutput> = {
  * @returns `true` if the object is a branded procedure.
  */
 export function isProcedure(
-  api: Api<any, any>
-): api is Procedure<any, any, any> {
+  api: Api<any, any, any>
+): api is Procedure<any, any, any, any> {
   return __procedure_brand in api;
 }
 
@@ -132,23 +132,23 @@ export function isProcedure(
 export function createProcedureHandlers<
   TInput extends Array<unknown>,
   TOutput,
-  TApi extends Api<TInput, TOutput>,
+  TApi extends Api<void, TInput, TOutput>,
 >(api: TApi): ProcedureHandlers<TInput, TOutput> {
-  const staticProcedureMap = new Map<string, Procedure<any, TInput, TOutput>>();
+  const staticProcedureMap = new Map<string, Procedure<any, any, TInput, TOutput>>();
   const dynamicProcedureTrie = new Trie<
-    DynamicProcedure<any, TInput, TOutput>
+    DynamicProcedure<any, any, TInput, TOutput>
   >();
 
   /** Recursively traverses the API tree to populate the procedure maps. */
   const buildProcedureMaps = (
-    currentApi: Api<TInput, TOutput>,
+    currentApi: Api<any, TInput, TOutput>,
     prefix = ""
   ): void => {
     if (isProcedure(currentApi)) {
       if (currentApi.type === "dynamic") {
         dynamicProcedureTrie.insert(
           prefix,
-          currentApi as DynamicProcedure<any, TInput, TOutput>
+          currentApi as DynamicProcedure<any, any, TInput, TOutput>
         );
       } else {
         staticProcedureMap.set(prefix, currentApi);
@@ -170,7 +170,7 @@ export function createProcedureHandlers<
   const findProcedure = (
     path: string
   ):
-    | { procedure: Procedure<any, any, any>; relativePath?: string[] }
+    | { procedure: Procedure<any, any, any, any>; relativePath?: string[] }
     | undefined => {
     // 1. Check for a direct match in the static map (most common and fastest).
     const staticProc = staticProcedureMap.get(path);
@@ -220,15 +220,15 @@ export function createProcedureHandlers<
           switch (procedure.type) {
             case "dynamic":
               return (
-                procedure as DynamicProcedure<any, TInput, TOutput>
+                procedure as DynamicProcedure<any, any, TInput, TOutput>
               )._handler(finalEnv, relativePath!, finalInput, type);
             case "ask":
-              return (procedure as AskProcedure<any, TInput, TOutput>)._handler(
+              return (procedure as AskProcedure<any, any, TInput, TOutput>)._handler(
                 finalEnv,
                 ...finalInput
               );
             case "tell":
-              return (procedure as TellProcedure<any, TInput>)._handler(
+              return (procedure as TellProcedure<any, any, TInput>)._handler(
                 finalEnv,
                 ...finalInput
               );

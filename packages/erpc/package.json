@@ -1,6 +1,6 @@
 {
   "name": "@eleplug/erpc",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
@@ -17,11 +17,9 @@
     "@eleplug/mimic": "workspace:^",
     "@eleplug/transport": "workspace:^",
     "circular_buffer_js": "^1.10.0",
-    "lodash-es": "^4.17.21",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "@eleplug/transport-mem": "workspace:^",
-    "@types/lodash-es": "^4.17.12"
+    "@eleplug/transport-mem": "workspace:^"
   }
 }

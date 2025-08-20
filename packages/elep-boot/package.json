@@ -1,17 +1,24 @@
 {
   "name": "@eleplug/elep-boot",
   "version": "0.1.0",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
-    }
-  },
+  "main": "dist/main.js",
   "scripts": {
     "build": "tsup",
-    "run": "electron dist/main.js",
+    "start": "electron dist/main.js",
     "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    ".": {
+      "require": "./dist/main.js"
+    },
+    "./kernel": {
+      "types": "./dist/kernel.d.js",
+      "import": "./dist/kernel.js",
+      "require": "./dist/kernel.mjs"
+    },
+    "./config": {
+      "types": "./dist/config.d.js"
+    }
   },
   "dependencies": {
     "@eleplug/anvil": "workspace:^",
@@ -19,13 +26,12 @@
     "@eleplug/elep": "workspace:^",
     "@eleplug/erpc": "workspace:^",
     "@eleplug/esys": "workspace:^",
-    "@eleplug/mimic": "workspace:^",
-    "@eleplug/muxen": "workspace:^",
-    "@eleplug/plexus": "workspace:^",
-    "@eleplug/transport": "workspace:^",
-    "electron": "^37.2.6"
+    "electron": "^37.2.6",
+    "esbuild": "^0.25.9",
+    "yargs": "^18.0.0"
   },
   "devDependencies": {
-    "@types/node": "^24.0.14"
+    "@types/node": "^24.0.14",
+    "@types/yargs": "^17.0.33"
   }
 }

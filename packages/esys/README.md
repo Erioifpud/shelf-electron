@@ -20,7 +20,7 @@ Building a truly modular application with a rich plugin ecosystem is complex. De
 
 *   **Dependency-Aware Lifecycle**: Leverages `@eleplug/plexus` to perform robust dependency resolution. It automatically calculates the correct, safe order to activate and deactivate plugins based on their declared dependencies.
 *   **State Reconciliation Engine**: Implements a "desired state" model. You declare which plugins *should* be enabled, and the `Orchestrator` automatically computes and executes the minimal set of actions (activations/deactivations) to bring the runtime into alignment.
-*   **Pluggable Plugin Sources (`Container`s)**: Plugins are loaded from `Container`s. `esys` provides a `MemoryContainer` for code-based plugins and can be extended with other sources, such as a `FileContainer` for loading from disk.
+*   **Pluggable Plugin Sources (`Container`s)**: Plugins are loaded from `Container`s. `esys` provides a `MemoryContainer` for code-based plugins and integrates with `elep`'s `FileContainer` for loading from disk.
 *   **Persistent State (`Registry`)**: Tracks the metadata and desired state of all known plugins. The `Registry` can be in-memory for testing or persisted to a file for production use.
 *   **Event-Driven Boot Process**: The system starts up through a clear, phased lifecycle managed by the `Bootloader`, allowing for clean integration and configuration at specific startup stages.
 *   **Integrated Communication Bus**: Built on top of `@eleplug/ebus`, providing a seamless and type-safe communication layer for inter-plugin and system-plugin interaction.
@@ -56,7 +56,8 @@ The boot process is divided into distinct phases. You hook into these phases to 
 
 ```typescript
 import { LifecycleEvent, Registry, MemoryContainer } from '@eleplug/esys';
-import { MyCorePlugin } from './plugins/core.ts';
+import { FileContainer } from '@eleplug/elep'; // Example file container
+import { MyCorePlugin, MyCorePluginManifest } from './plugins/core.ts';
 
 // Phase 1: BOOTSTRAP - Load or create the plugin registry.
 bootloader.on(LifecycleEvent.BOOTSTRAP, async (_ctx, registryLoader) => {
@@ -68,21 +69,24 @@ bootloader.on(LifecycleEvent.BOOTSTRAP, async (_ctx, registryLoader) => {
 // Phase 2: MOUNT_CONTAINERS - Register all your plugin sources.
 bootloader.on(LifecycleEvent.MOUNT_CONTAINERS, async (_ctx, containerManager) => {
   // Mount a container for plugins defined in code.
-  await containerManager.mount('kernel', (bus) => new MemoryContainer(bus));
+  await containerManager.mount('kernel', (bus) => new MemoryContainer('kernel', bus));
   
   // Mount a container that loads plugins from the filesystem.
-  await containerManager.mount('user-plugins', (bus) => new FileContainer(bus, './plugins'));
+  await containerManager.mount('user-plugins', (bus) => new FileContainer({ bus, rootPath: './plugins' }));
 });
 
 // Phase 3: ATTACH_CORE - The system is created but not yet running.
 // This is the ideal place to ensure core plugins are installed and enabled.
 bootloader.on(LifecycleEvent.ATTACH_CORE, async (_ctx, system) => {
   const kernel = system.containers.get('kernel') as MemoryContainer;
-  kernel.addPlugin('core-api', MyCorePlugin);
+  kernel.addPlugin('core-api', {
+    manifest: MyCorePluginManifest,
+    plugin: MyCorePlugin
+  });
 
   // Ensure the core API plugin is always installed and enabled.
   await system.plugins.ensure({
-    uri: 'plugin://kernel/core-api',
+    uri: 'plugin://kernel.core-api',
     enable: true,
   });
 });
@@ -104,7 +108,7 @@ async function main() {
     const system = await bootloader.start();
     
     // Now you can interact with the live system.
-    await system.plugins.enable({ name: 'my-feature-plugin', range: '^1.0.0' });
+    await system.plugins.enable({ name: 'my-feature-plugin', range: '^1.0.0', reconcile: true });
     
     // The system will remain running. To shut down:
     // await system.shutdown();
@@ -126,14 +130,16 @@ const system = await bootloader.start();
 
 // Enable a plugin by name and version range.
 // esys will resolve the best version and activate it and its dependencies.
-await system.plugins.enable({ name: 'dashboard-plugin', range: '*' });
+await system.plugins.enable({ name: 'dashboard-plugin', range: '*', reconcile: true });
 
 // Disable a plugin. esys will deactivate it and, if configured,
 // any plugins that depend on it.
-await system.plugins.disable({ name: 'dashboard-plugin' });
+await system.plugins.disable({ name: 'dashboard-plugin', reconcile: true });
 
-// Install a new plugin from a container.
-await system.plugins.install('plugin://user-plugins/new-downloaded-plugin');
+// Install a new plugin from a container. This only registers it.
+await system.plugins.install('plugin://user-plugins.new-downloaded-plugin');
+// You still need to enable it and reconcile.
+await system.plugins.enable({ name: 'new-downloaded-plugin', range: '*', reconcile: true });
 
 // Manually trigger a reconciliation if you've made changes
 // with `reconcile: false`.
@@ -145,8 +151,6 @@ if (system.shouldReconcile()) {
 ## Architectural Overview
 
 `esys` is composed of several key managers that work together:
-
- <!-- Placeholder for a diagram -->
 
 *   **Bootloader**: Orchestrates the startup sequence.
 *   **Registry**: The "database" or single source of truth for the desired state.

@@ -86,13 +86,6 @@ export interface EWindowOptions extends JsonObject {
    * by the Elep core. They cannot be overridden here.
    */
   webPreferences?: {
-    /**
-     * The `plugin://` URI that points to the preload script for the window.
-     * This script is loaded securely from the plugin's resources before any
-     * other web content.
-     * @example "plugin://container-name/my-ui-plugin/dist/preload.js"
-     */
-    preload?: string;
     /** Whether to open the DevTools on window creation. */
     devTools?: boolean;
     /** An array of string arguments to append to `process.argv` in the renderer process. */

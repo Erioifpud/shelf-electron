@@ -33,7 +33,7 @@ import type { Transferable, TransferableArray } from "./types/common.js";
  *   exposing all its capabilities and a `close` function.
  */
 export async function createServer<
-  TApi extends Api<TransferableArray, Transferable>,
+  TApi extends Api<void, TransferableArray, Transferable>,
 >(transport: Transport, api: TApi) {
   const resourceManager = new ResourceManager();
   const streamManager = new StreamManager();
@@ -70,7 +70,7 @@ export async function createServer<
  *   providing the `procedure` proxy for making calls.
  */
 export async function createClient<
-  TApi extends Api<TransferableArray, Transferable>,
+  TApi extends Api<void, TransferableArray, Transferable>,
 >(transport: Transport) {
   const resourceManager = new ResourceManager();
   const streamManager = new StreamManager();
@@ -107,8 +107,8 @@ export async function createClient<
  * @returns A promise that resolves to the erpc node.
  */
 export async function createPeer<
-  MyApi extends Api<TransferableArray, Transferable>,
-  TheirApi extends Api<any, any> = any,
+  MyApi extends Api<void, TransferableArray, Transferable>,
+  TheirApi extends Api<void, any, any> = any,
 >(transport: Transport, api: MyApi) {
   const server = await createServer<MyApi>(transport, api);
   return {
@@ -122,10 +122,12 @@ export async function createPeer<
 // Tools for defining your erpc API.
 // =================================================================
 
-export { initERPC } from "./api/init.js";
+export { rpc } from "./api/init.js";
 export { middleware } from "./api/middleware.js";
+export { inject, type InjectorFn } from "./api/inject.js";
 export { pin, free } from "./features/pin/resource-manager.js";
 export { buildClient, type CallProcedure } from "./api/client.js"; // `CallProcedure` was also missing
+export { createProcedureBuilder } from "./api/init.js";
 export { createProcedureHandlers } from "./api/router.js";
 
 // =================================================================
@@ -142,7 +144,7 @@ export type {
   DynamicProcedure,
 } from "./api/procedure.js";
 export type { Client } from "./api/client.js";
-export type { ErpcInstance, ProcedureBuilder } from "./api/init.js";
+export type { ProcedureBuilder } from "./api/init.js";
 export type { Middleware } from "./api/middleware.js";
 export type { Env } from "./api/env.js";
 export type {

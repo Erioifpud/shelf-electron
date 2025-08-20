@@ -1,11 +1,10 @@
 import type {
   Api,
   Client,
-  ErpcInstance,
   Transferable,
   TransferableArray,
 } from "@eleplug/erpc";
-import type { BusContext, Node as EbusNode } from "@eleplug/ebus";
+import type { BusContext, Node as EbusNode, p2p } from "@eleplug/ebus";
 
 // =================================================================
 // SECTION 1: Core Plugin Interfaces
@@ -17,25 +16,12 @@ import type { BusContext, Node as EbusNode } from "@eleplug/ebus";
  * providing a carefully designed and ergonomic API.
  */
 export interface PluginActivationContext {
-  /**
-   * A factory for creating erpc routers.
-   * This is a convenient alias for `erpc.router`.
-   */
-  readonly router: ErpcInstance<
-    BusContext,
-    TransferableArray,
-    Transferable
-  >["router"];
 
   /**
    * A builder for creating erpc procedures.
    * This is a convenient alias for `erpc.procedure`.
    */
-  readonly procedure: ErpcInstance<
-    BusContext,
-    TransferableArray,
-    Transferable
-  >["procedure"];
+  readonly procedure: typeof p2p;
 
   /**
    * Subscribes to a topic to receive broadcast messages.
@@ -51,28 +37,52 @@ export interface PluginActivationContext {
 
   /**
    * The root URI of the current plugin.
-   * e.g., "plugin://my-container/my-plugin"
+   * @example "plugin://my-container.my-plugin"
    */
   readonly pluginUri: string;
 
   /**
+   * Resolves a resource path relative to the plugin's root, applying any
+   * container-level path rewrites (e.g., from `elep.prod.ts`).
+   *
+   * **This is the recommended, context-aware way for a plugin to create a valid
+   * URI for one of its internal resources.** It allows the plugin's code to be
+   * decoupled from the build process.
+   *
+   * @param relativePath The path to the resource relative to the plugin's root.
+   * @returns A full, normalized, and potentially rewritten plugin resource URI.
+   *
+   * @example
+   * // In elep.prod.ts: rewrites: { "/": "/dist/" }
+   * // Inside the plugin:
+   * const mainScriptUri = context.resolve('index.js');
+   * // Result: "plugin://my-container.my-plugin/dist/index.js"
+   */
+  readonly resolve: (relativePath: string) => string;
+
+  /**
    * Securely connects to another plugin's API based on the dependency name
-   * declared in `manifest.json`.
+   * declared in its manifest. **This is the only recommended way for plugins
+   * to communicate directly with each other.**
    *
    * This method is type-safe and leverages the `PluginApiMap` interface. After
    * extending `PluginApiMap` in your project via declaration merging,
-   * TypeScript can infer the specific type of the client returned by `link('plugin-name')`.
+   * TypeScript can infer the specific type of the client returned by this method,
+   * providing full autocompletion and compile-time safety.
    *
    * @param pluginName The name of the plugin as declared in the `dependencies`.
-   * @returns A type-safe erpc client for the target plugin's API. Returns `Client<any>`
-   *          if no type information is available in `PluginApiMap`.
+   * @returns A promise that resolves to a type-safe erpc client for the target plugin's API.
+   *          If no type information is available in `PluginApiMap`, it returns `Client<any>`.
    */
-  link<K extends PluginApiMapKeys<M>, M extends PluginApiMap = PluginApiMap>(
+  link<
+    K extends PluginApiMapKeys<TPluginApiMap>,
+    TPluginApiMap extends PluginApiMap = PluginApiMap,
+  >(
     pluginName: K
   ): Promise<
-    K extends keyof M
-      ? M[K] extends Api<any, any>
-        ? Client<M[K]>
+    K extends keyof TPluginApiMap
+      ? TPluginApiMap[K] extends Api<any, any, any>
+        ? Client<TPluginApiMap[K]>
         : never
       : Client<any>
   >;
@@ -83,7 +93,7 @@ export interface PluginActivationContext {
  * @template TApi The type of the erpc API exposed by the plugin.
  */
 export interface Plugin<
-  TApi extends Api<TransferableArray, Transferable> = any,
+  TApi extends Api<BusContext, TransferableArray, Transferable> = any,
 > {
   /**
    * The activation function for the plugin.
@@ -107,45 +117,57 @@ export interface Plugin<
 
 /**
  * An interface for mapping plugin names to their API types.
- * It is extended via declaration merging in a project's `d.ts` file
- * to provide type-safe `context.link()` calls.
+ * This interface is meant to be extended via declaration merging in a project's
+ * global `.d.ts` file to provide type-safe `context.link()` calls.
  *
  * @example
- * ```typescript
- * // my-app/src/types/anvil.d.ts
+ * // In my-app/src/types/anvil.d.ts
+ *
+ * // Import the utility type from the anvil package.
  * import type { PluginApi } from '@eleplug/anvil';
  *
+ * // Import the plugin's main module type. Using `typeof import(...)`
+ * // is the standard way to get a module's type without creating a
+ * // runtime dependency.
+ * type DatabasePluginModule = typeof import('@my-org/database-plugin');
+ * type UiThemePluginModule = typeof import('@my-org/ui-theme-plugin');
+ *
+ * // Use declaration merging to extend the global map.
  * declare module '@eleplug/anvil' {
  *   interface PluginApiMap {
- *     'database-plugin': PluginApi<typeof import('@plugins/database')>;
- *     'ui-theme-plugin': PluginApi<typeof import('@plugins/ui-theme')>;
+ *     // The key is the plugin's name from its package.json.
+ *     // The value uses the `PluginApi` utility to extract the API type.
+ *     'database-plugin': PluginApi<DatabasePluginModule>;
+ *     'ui-theme-plugin': PluginApi<UiThemePluginModule>;
  *   }
  * }
- * ```
  */
 export interface PluginApiMap {
-  // Extended by users via `declare module '@eleplug/anvil/types'`.
+  // This interface is intentionally left empty.
+  // It is extended by users via `declare module '@eleplug/anvil'`.
 }
 
 /**
  * A type utility to extract all declared plugin names from the `PluginApiMap`.
  * @internal
  */
-export type PluginApiMapKeys<M extends PluginApiMap> =
-  | Extract<keyof M, string>
+export type PluginApiMapKeys<TPluginApiMap extends PluginApiMap> =
+  | Extract<keyof TPluginApiMap, string>
   | string;
 
 /**
- * A type utility to infer the exposed API type from a plugin's definition.
- * It correctly handles both direct exports and default exports.
+ * A type utility to infer the exposed API type from a plugin's module definition.
+ * It correctly handles plugins that use either `export default` or named exports
+ * (e.g., `export const plugin = ...`), making it robust for different coding styles.
+ *
  * @example `PluginApi<typeof import('./my-plugin')>`
  */
-export type PluginApi<T extends { default?: Plugin } | Plugin> = T extends {
+export type PluginApi<TPluginModule> = TPluginModule extends {
   default?: infer P;
 }
   ? P extends Plugin<infer TApi>
     ? TApi
     : never
-  : T extends Plugin<infer TApi>
+  : TPluginModule extends Plugin<infer TApi>
     ? TApi
     : never;

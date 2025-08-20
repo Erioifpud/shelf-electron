@@ -16,7 +16,7 @@ import {
   buildClient,
   type CallProcedure,
 } from "@eleplug/erpc";
-import type { NodeId } from "../../types/common.js";
+import type { BusContext, NodeId } from "../../types/common.js";
 import type {
   P2PMessage,
   P2PAskPayload,
@@ -43,7 +43,9 @@ export interface P2PContribution {
    * This method performs "fail-fast" validation, ensuring the target node is
    * both reachable and accessible before returning a client.
    */
-  createP2PClient<TApi extends Api<TransferableArray, Transferable>>(
+  createP2PClient<
+    TApi extends Api<BusContext, TransferableArray, Transferable>,
+  >(
     sourceNodeId: NodeId,
     targetNodeId: NodeId
   ): Promise<Client<TApi>>;
@@ -125,7 +127,7 @@ export class P2PHandlerFeature
    * @throws {GroupPermissionError} If the source and target nodes have no common groups.
    */
   public async createP2PClient<
-    TApi extends Api<TransferableArray, Transferable>,
+    TApi extends Api<BusContext, TransferableArray, Transferable>,
   >(sourceNodeId: NodeId, targetNodeId: NodeId): Promise<Client<TApi>> {
     // 1. FAIL FAST - Route Existence Check
     if (this.capability.getNextHop(targetNodeId) === null) {

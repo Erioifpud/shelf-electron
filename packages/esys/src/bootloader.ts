@@ -1,4 +1,4 @@
-import { initEBUS } from "@eleplug/ebus";
+import * as ebus from "@eleplug/ebus";
 import { System } from "./system.js";
 import { RegistryLoader } from "./registry-loader.js";
 import { ContainerManager } from "./managers/container.manager.js";
@@ -62,9 +62,8 @@ export class Bootloader<TContext extends object> {
   public async start(): Promise<System> {
     try {
       // Phase 0: Core service instantiation
-      const bus = await initEBUS.create();
+      const bus = await ebus.root();
       const registryLoader = new RegistryLoader();
-      const containerManager = new ContainerManager(bus);
 
       // Phase 1: BOOTSTRAP - Load persistent state.
       await this.emitter.emitSerial(
@@ -73,6 +72,7 @@ export class Bootloader<TContext extends object> {
         registryLoader
       );
       const registry = await registryLoader.getRegistry();
+      const containerManager = new ContainerManager(bus, registry);
 
       // Phase 2: MOUNT_CONTAINERS - Register all plugin sources.
       await this.emitter.emitSerial(
