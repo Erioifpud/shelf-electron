@@ -1,13 +1,21 @@
 import mimic from "@eleplug/mimic";
 import { AsyncEventEmitter } from "@eleplug/transport";
 import type { Link, MultiplexedPacket } from "@eleplug/muxen";
-import type { IpcShape } from "../types.js";
-import type { IpcRendererEvent } from "electron";
+
+/**
+ * Defines the abstract shape of the namespaced IPC communicator exposed by the preload script.
+ * This is the contract between the renderer and the secure preload environment.
+ */
+export interface IpcRendererAdapter {
+  send: (channelId: string, payload: string) => void;
+  on: (channelId: string, listener: (payload: string) => void) => void;
+  off: (channelId: string, listener: (payload: string) => void) => void;
+}
 
 /**
  * An implementation of the `Link` interface for the Electron renderer process.
- * It uses a pre-configured `IpcShape` adapter to communicate with a corresponding
- * `IpcLink` in the main process over a dedicated channel.
+ * It uses a pre-configured adapter (provided by the preload script) to communicate
+ * securely with the `GlobalIpcRouter` in the main process.
  */
 export class IpcRendererLink implements Link {
   private readonly events = new AsyncEventEmitter<{
@@ -16,23 +24,23 @@ export class IpcRendererLink implements Link {
   }>();
 
   private isClosed = false;
-
-  // A reference to the listener function for proper removal.
-  private readonly messageListener: (
-    event: IpcRendererEvent,
-    message: string
-  ) => void;
+  private readonly messageListener: (payload: string) => void;
 
   /**
-   * @param ipc The `IpcShape` adapter, created by `createAdapter` from the
-   *            preload script, which provides namespaced communication methods.
+   * @param channelId The unique channel identifier obtained from the handshake process.
+   * @param ipcAdapter The adapter object exposed by the preload script, providing
+   *                   sandboxed access to IPC communication.
    */
-  constructor(private readonly ipc: IpcShape) {
-    this.messageListener = (_event, message) => {
-      this.events.emit("message", mimic.parse(message));
+  constructor(
+    private readonly channelId: string,
+    private readonly ipcAdapter: IpcRendererAdapter
+  ) {
+    this.messageListener = (payload: string) => {
+      this.events.emit("message", mimic.parse(payload));
     };
 
-    this.ipc.on(this.messageListener);
+    // Use the adapter to register a listener for incoming messages on our channel.
+    this.ipcAdapter.on(this.channelId, this.messageListener);
   }
 
   public onMessage(handler: (message: MultiplexedPacket) => void): void {
@@ -41,9 +49,10 @@ export class IpcRendererLink implements Link {
 
   public sendMessage(packet: MultiplexedPacket): Promise<void> {
     if (this.isClosed) {
-      return Promise.reject(new Error(`Link is closed.`));
+      return Promise.reject(new Error(`Link (${this.channelId}) is closed.`));
     }
-    this.ipc.send(mimic.stringify(packet));
+    // Use the adapter to send the message.
+    this.ipcAdapter.send(this.channelId, mimic.stringify(packet));
     return Promise.resolve();
   }
 
@@ -65,7 +74,8 @@ export class IpcRendererLink implements Link {
     }
     this.isClosed = true;
 
-    this.ipc.off(this.messageListener);
+    // Use the adapter to remove the listener.
+    this.ipcAdapter.off(this.channelId, this.messageListener);
 
     this.events.emit("close", reason);
     this.events.removeAllListeners();

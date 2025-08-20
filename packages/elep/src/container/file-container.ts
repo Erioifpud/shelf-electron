@@ -1,282 +1,242 @@
-import { type ApiFactory, type Bus, type Node } from "@eleplug/ebus";
-import type {
-  Container,
-  PluginManifest,
-  ResourceGetResponse,
+import { type Bus } from "@eleplug/ebus";
+import {
+  type Container,
+  type PluginManifest,
+  type ResourceGetResponse,
 } from "@eleplug/esys";
-import type { Plugin, PluginActivationContext } from "@eleplug/anvil";
-import * as fs from "node:fs";
-import * as fsp from "node:fs/promises";
+import { parseUri } from "@eleplug/esys";
 import * as path from "node:path";
-import * as mime from "mime-types";
-import { Readable, Writable } from "node:stream";
-import { pathToFileURL } from "node:url";
-import { LRUCache } from "lru-cache";
+import micromatch from "micromatch";
+import { FilePluginLoader, type IPluginLoader } from "./plugin-loader.js";
+import { PluginRuntime } from "./plugin-runtime.js";
+import { FileStorage, type IResourceStorage } from "./file-storage.js";
+
+export interface FileContainerOptions {
+  bus: Bus;
+  rootPath: string;
+  devMode?: boolean;
+}
 
 /**
- * A container that loads plugins from the local file system. Each subdirectory
- * in the root path containing a `package.json` is treated as a plugin.
+ * A container that loads plugins and resources from the local file system.
+ *
+ * It acts as the primary coordinator for its plugins, responsible for:
+ * - Managing the lifecycle of each plugin's `PluginRuntime`.
+ * - Routing resource requests based on the system's operating mode (dev vs. prod).
+ * - Delegating I/O operations to a secure storage backend.
  */
 export class FileContainer implements Container {
-  private readonly rootPath: string;
   private readonly bus: Bus;
-  private readonly activeNodes = new Map<string, Node>();
-  private readonly mimeCache = new LRUCache<string, Record<string, string>>({
-    max: 500,
-    ttl: 1000 * 60 * 5,
-  });
+  private readonly rootPath: string;
+  private readonly devMode: boolean;
+  private readonly loader: IPluginLoader;
+  private readonly storage: IResourceStorage;
+  private readonly runtimes = new Map<string, PluginRuntime>();
 
-  /**
-   * @param bus A reference to the system's EBUS instance.
-   * @param rootPath The absolute path to the directory where plugins are stored.
-   */
-  constructor(bus: Bus, rootPath: string) {
-    this.rootPath = path.resolve(rootPath);
-    this.bus = bus;
-
-    if (!fs.existsSync(this.rootPath)) {
-      fs.mkdirSync(this.rootPath, { recursive: true });
-    }
+  constructor(options: FileContainerOptions) {
+    this.bus = options.bus;
+    this.rootPath = options.rootPath;
+    this.devMode = options.devMode ?? false;
+    this.loader = new FilePluginLoader(this.rootPath);
+    this.storage = new FileStorage(this.rootPath);
   }
 
-  // --- `esys` Container Interface Implementation ---
-
-  public plugins = {
-    /**
-     * Activates a plugin from the file system.
-     * @param pluginPath The relative path of the plugin directory.
-     */
-    activate: async (
-      containerName: string,
-      pluginPath: string
-    ): Promise<void> => {
-      const manifest = await this.plugins.manifest(pluginPath);
-
-      if (this.activeNodes.has(pluginPath)) {
-        return; // Already active
+  public readonly plugins = {
+    activate: async (uri: string): Promise<void> => {
+      const { containerName, pluginPathInContainer } = parseUri(uri);
+      if (this.runtimes.has(pluginPathInContainer)) {
+        return;
       }
-
-      const mainScriptPath = this.secureJoin(
-        this.rootPath,
-        pluginPath,
-        manifest.main
-      );
-      const mainScriptUrl = pathToFileURL(mainScriptPath).href;
-
-      // Use modern, async ESM import() instead of require()
-      const pluginModule = await import(mainScriptUrl);
-      const plugin: Plugin = pluginModule.default;
-      if (typeof plugin?.activate !== "function") {
-        throw new Error(
-          `Plugin at '${pluginPath}' does not have a valid default export with an 'activate' function.`
-        );
-      }
-
-      const node = await this.bus.join({ id: manifest.name });
-
-      const apiFactory: ApiFactory<any> = async (t) => {
-        const context: PluginActivationContext = {
-          router: t.router,
-          procedure: t.procedure,
-          pluginUri: `plugin://${containerName}/${pluginPath}`,
-          subscribe: node.subscribe.bind(node),
-          emiter: node.emiter.bind(node),
-          link: (pluginName: string) => {
-            return node.connectTo(pluginName) as any;
-          },
-        };
-        return plugin.activate(context);
-      };
-
-      await node.setApi(apiFactory);
-      this.activeNodes.set(pluginPath, node);
-    },
-
-    /**
-     * Deactivates a running plugin.
-     * @param pluginPath The relative path of the plugin directory.
-     */
-    deactivate: async (pluginPath: string): Promise<void> => {
-      const node = this.activeNodes.get(pluginPath);
-      if (node) {
-        try {
-          const manifest = await this.plugins.manifest(pluginPath);
-          const mainScriptPath = this.secureJoin(
-            this.rootPath,
-            pluginPath,
-            manifest.main
-          );
-          const mainScriptUrl = pathToFileURL(mainScriptPath).href;
-
-          // Re-importing might not be necessary if deactivate is stateless,
-          // but this ensures we have the plugin logic.
-          const pluginModule = await import(`${mainScriptUrl}?v=${Date.now()}`); // Bust cache
-          const plugin: Plugin = pluginModule.default;
-
-          await plugin.deactivate?.();
-        } catch (err: any) {
-          console.error(
-            `[FileContainer] Error during plugin-specific deactivation for '${pluginPath}':`,
-            err.message
-          );
-        } finally {
-          await node.close();
-          this.activeNodes.delete(pluginPath);
-        }
-      }
-    },
-
-    /**
-     * Reads and parses the package.json to construct a PluginManifest.
-     * @param pluginPath The relative path of the plugin directory.
-     * @returns A promise that resolves to the plugin's manifest.
-     */
-    manifest: async (pluginPath: string): Promise<PluginManifest> => {
-      const packageJsonPath = this.secureJoin(
-        this.rootPath,
-        pluginPath,
-        "package.json"
-      );
+      const runtime = new PluginRuntime({
+        bus: this.bus,
+        containerName: containerName,
+        pluginPath: pluginPathInContainer,
+        loader: this.loader,
+        devMode: this.devMode,
+      });
+      this.runtimes.set(pluginPathInContainer, runtime);
       try {
-        const content = await fsp.readFile(packageJsonPath, "utf-8");
-        const pkg = JSON.parse(content);
-
-        if (!pkg.name || !pkg.version || !pkg.main) {
-          throw new Error(
-            `'name', 'version', and 'main' fields are required in package.json.`
-          );
-        }
-
-        return {
-          name: pkg.name,
-          version: pkg.version,
-          main: pkg.main,
-          pluginDependencies: pkg.pluginDependencies || {},
-        };
-      } catch (error: any) {
-        if (error.code === "ENOENT") {
-          throw new Error(
-            `Plugin not found at path '${pluginPath}'. The package.json file is missing.`
-          );
-        }
-        throw new Error(
-          `Failed to read or parse package.json for plugin at '${pluginPath}': ${error.message}`
-        );
+        await runtime.activate();
+      } catch (e) {
+        this.runtimes.delete(pluginPathInContainer);
+        throw e;
       }
+    },
+    deactivate: async (uri: string): Promise<void> => {
+      const { pluginPathInContainer } = parseUri(uri);
+      const runtime = this.runtimes.get(pluginPathInContainer);
+      if (runtime) {
+        await runtime.deactivate();
+        this.runtimes.delete(pluginPathInContainer);
+      }
+    },
+    manifest: (uri: string): Promise<PluginManifest> => {
+      const { pluginPathInContainer } = parseUri(uri);
+      return this.loader.loadManifest(pluginPathInContainer);
     },
   };
 
-  public resources = {
-    get: async (resourcePath: string): Promise<ResourceGetResponse> => {
-      const absolutePath = this.secureJoin(this.rootPath, resourcePath);
-      try {
-        const stats = await fsp.stat(absolutePath);
-        if (stats.isDirectory()) {
-          throw new Error("Path is a directory, not a file.");
-        }
-
-        const mimeType = await this.getMimeType(absolutePath);
-        const nodeStream = fs.createReadStream(absolutePath);
-        const body = Readable.toWeb(nodeStream) as ReadableStream<Uint8Array>;
-
-        return { body, mimeType };
-      } catch (error: any) {
-        if (error.code === "ENOENT") {
-          throw new Error(`Resource not found: ${resourcePath}`);
-        }
+  public readonly resources = {
+    /**
+     * Retrieves a resource, implementing the core routing logic:
+     * 1. In dev mode, attempts to serve from the dev plugin (e.g., Vite), applying path rewrites.
+     * 2. On failure or in production, falls back to the physical file storage.
+     * 3. Applies any production MIME type overrides before returning.
+     */
+    get: async (uri: string): Promise<ResourceGetResponse> => {
+      const { pluginPathInContainer, subPath } = parseUri(uri);
+      if (subPath === null) {
         throw new Error(
-          `Failed to get resource '${resourcePath}': ${error.message}`
+          `[FileContainer] Invalid resource URI: Must specify a resource path. URI: "${uri}"`
         );
       }
+
+      const runtime = this.#findRuntime(pluginPathInContainer);
+
+      if (this.devMode && runtime.activeDevPlugin?.get) {
+        try {
+          return await this.#tryDevServerResource(runtime, subPath);
+        } catch (devError: any) {
+          console.debug(
+            `[FileContainer] Dev server hook for '${uri}' fell back to filesystem. Error: ${devError.message}`
+          );
+        }
+      }
+
+      return this.#getStoredResource(runtime, subPath);
     },
 
-    put: async (
-      resourcePath: string,
-      stream: ReadableStream
-    ): Promise<void> => {
-      const absolutePath = this.secureJoin(this.rootPath, resourcePath);
-      try {
-        await fsp.mkdir(path.dirname(absolutePath), { recursive: true });
-        const nodeWritable = fs.createWriteStream(absolutePath);
-        const webWritableStream = Writable.toWeb(nodeWritable);
+    put: async (uri: string, stream: ReadableStream): Promise<void> => {
+      const { pluginPathInContainer, subPath } = parseUri(uri);
+      if (subPath === null)
+        throw new Error("Resource URI must have a sub-path.");
+      const runtime = this.#findRuntime(pluginPathInContainer);
+      const absolutePath = path.resolve(
+        this.rootPath,
+        pluginPathInContainer,
+        subPath
+      );
 
-        await stream.pipeTo(webWritableStream);
-      } catch (error: any) {
-        throw new Error(
-          `Failed to write resource to '${resourcePath}': ${error.message}`
-        );
+      if (this.devMode && runtime.activeDevPlugin?.put) {
+        const pathForDevServer = await this.#applyRewrites(runtime, subPath);
+        try {
+          return await runtime.activeDevPlugin.put(pathForDevServer, stream);
+        } catch (e) {
+          /* Fallback to storage */
+        }
       }
+      return this.storage.put(absolutePath, stream);
     },
 
-    list: async (dirPath: string): Promise<string[]> => {
-      const absolutePath = this.secureJoin(this.rootPath, dirPath);
-      try {
-        const stats = await fsp.stat(absolutePath);
-        if (!stats.isDirectory()) {
-          throw new Error("Path is not a directory.");
+    list: async (uri: string): Promise<string[]> => {
+      const { pluginPathInContainer, subPath } = parseUri(uri);
+      if (subPath === null)
+        throw new Error("Resource URI must have a sub-path.");
+      const runtime = this.#findRuntime(pluginPathInContainer);
+      const absolutePath = path.resolve(
+        this.rootPath,
+        pluginPathInContainer,
+        subPath
+      );
+
+      if (this.devMode && runtime.activeDevPlugin?.list) {
+        const pathForDevServer = await this.#applyRewrites(runtime, subPath);
+        try {
+          return await runtime.activeDevPlugin.list(pathForDevServer);
+        } catch (e) {
+          /* Fallback to storage */
         }
-        return fsp.readdir(absolutePath);
-      } catch (error: any) {
-        if (error.code === "ENOENT") {
-          throw new Error(`Directory not found: ${dirPath}`);
-        }
-        throw new Error(
-          `Failed to list directory '${dirPath}': ${error.message}`
-        );
       }
+      return this.storage.list(absolutePath);
     },
   };
 
   public async close(): Promise<void> {
-    const deactivationPromises = Array.from(this.activeNodes.keys()).map(
-      (pluginPath) => this.plugins.deactivate(pluginPath)
+    const deactivationPromises = Array.from(this.runtimes.values()).map(
+      (runtime) => runtime.deactivate()
     );
     await Promise.allSettled(deactivationPromises);
+    this.runtimes.clear();
   }
 
-  private secureJoin(...segments: string[]): string {
-    const resolvedPath = path.resolve(...segments);
-    const relative = path.relative(this.rootPath, resolvedPath);
+  // --- Private Helper Methods ---
 
-    if (relative.startsWith("..") || path.isAbsolute(relative)) {
+  #findRuntime(pluginPathInContainer: string): PluginRuntime {
+    const runtime = this.runtimes.get(pluginPathInContainer);
+    if (!runtime) {
       throw new Error(
-        `Path traversal detected. Attempted to access a path outside of the container root: ${resolvedPath}`
+        `[FileContainer] Cannot access resource. Plugin at path '${pluginPathInContainer}' is not active.`
       );
     }
-
-    return resolvedPath;
+    return runtime;
   }
 
-  private async getMimeType(absolutePath: string): Promise<string | undefined> {
-    const dir = path.dirname(absolutePath);
-    const filename = path.basename(absolutePath);
+  async #applyRewrites(
+    runtime: PluginRuntime,
+    resourcePathInPlugin: string
+  ): Promise<string> {
+    const prodConfig = await runtime.getProdConfig();
+    const devConfig = this.devMode ? await runtime.getDevConfig() : null;
+    const mergedRewrites = { ...prodConfig?.rewrites, ...devConfig?.rewrites };
 
-    let mimeMap = this.mimeCache.get(dir);
-    if (!mimeMap) {
-      const mimeJsonPath = path.join(dir, "mime.json");
-      try {
-        const content = await fsp.readFile(mimeJsonPath, "utf-8");
-        mimeMap = JSON.parse(content);
-        this.mimeCache.set(dir, mimeMap!);
-      } catch (err: any) {
-        if (err.code === "ENOENT") {
-          mimeMap = {};
-          this.mimeCache.set(dir, mimeMap);
-        } else {
-          console.warn(
-            `[FileContainer] Could not read or parse mime.json in ${dir}:`,
-            err.message
-          );
-          mimeMap = {};
+    if (Object.keys(mergedRewrites).length === 0) {
+      return resourcePathInPlugin;
+    }
+
+    let rewrittenPath = resourcePathInPlugin;
+    const normalizedPath = `/${rewrittenPath.replace(/\\/g, "/")}`;
+
+    for (const [from, to] of Object.entries(mergedRewrites)) {
+      if (normalizedPath.startsWith(from)) {
+        const newPath = to + normalizedPath.slice(from.length);
+        rewrittenPath = newPath.startsWith("/") ? newPath.slice(1) : newPath;
+        break;
+      }
+    }
+    return rewrittenPath;
+  }
+
+  async #tryDevServerResource(
+    runtime: PluginRuntime,
+    resourcePathInPlugin: string
+  ): Promise<ResourceGetResponse> {
+    const pathForDevServer = await this.#applyRewrites(
+      runtime,
+      resourcePathInPlugin
+    );
+    return runtime.activeDevPlugin!.get!(pathForDevServer);
+  }
+
+  async #getStoredResource(
+    runtime: PluginRuntime,
+    resourcePathInPlugin: string
+  ): Promise<ResourceGetResponse> {
+    const absolutePath = path.resolve(
+      this.rootPath,
+      runtime.options.pluginPath,
+      resourcePathInPlugin
+    );
+    const response = await this.storage.get(absolutePath);
+    return this.#applyMimeOverrides(response, runtime, resourcePathInPlugin);
+  }
+
+  async #applyMimeOverrides(
+    response: ResourceGetResponse,
+    runtime: PluginRuntime,
+    resourcePathInPlugin: string
+  ): Promise<ResourceGetResponse> {
+    const prodConfig = await runtime.getProdConfig();
+    if (prodConfig?.mimes) {
+      for (const [pattern, mimeType] of Object.entries(prodConfig.mimes)) {
+        if (micromatch.isMatch(resourcePathInPlugin, pattern)) {
+          // CORRECTED: Ensure mimeType is a string before assignment.
+          if (typeof mimeType === "string") {
+            response.mimeType = mimeType;
+            break; // First match wins.
+          }
         }
       }
     }
-
-    if (mimeMap?.[filename]) {
-      return mimeMap[filename];
-    }
-
-    const fallbackMime = mime.lookup(filename);
-    return fallbackMime || undefined;
+    return response;
   }
 }

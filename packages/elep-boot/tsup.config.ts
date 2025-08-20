@@ -2,7 +2,7 @@ import { defineConfig } from 'tsup';
 import sharedConfig from '../../tsup.config.shared';
 
 export default defineConfig({
-  entry: ['src/main.ts'],
+  entry: ['src/main.ts', 'src/kernel.ts', 'src/config.ts'],
   ...sharedConfig,
-  format: ['cjs'],
+  external: ['esbuild']
 });

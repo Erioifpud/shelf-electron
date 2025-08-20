@@ -21,7 +21,7 @@ A modern, feature-rich, and end-to-end type-safe RPC framework for TypeScript. `
 
 ```bash
 npm install @eleplug/erpc
-````
+```
 
 You will also need a specific transport implementation. For testing and in-process communication, you can use `@eleplug/transport-mem`:
 
@@ -35,33 +35,30 @@ Let's illustrate the core functionality of `erpc` with a basic example.
 
 ### 1. Define Your API
 
-Use `initERPC` to create the building blocks for your API definition. An API consists of one or more `procedure`s, organized by a `router`.
+Use the exported `rpc` object to build procedures. An API is simply a plain JavaScript object where procedures and nested objects (routers) are defined.
 
 ```typescript
 // api-definition.ts
-import { initERPC } from '@eleplug/erpc';
+import { rpc } from '@eleplug/erpc';
 
-// 1. Create an erpc instance.
-export const e = initERPC.create();
-
-// 2. Use a router to organize your procedures.
-export const appRouter = e.router({
+// 1. Use a plain object to act as a router and organize your procedures.
+export const appRouter = {
   // A simple 'ask' (request-response) procedure.
-  greeting: e.procedure.ask(
+  greeting: rpc.ask(
     (env, name: string) => `Hello, ${name}!`
   ),
 
-  // A nested router for organization.
-  math: e.router({
-    add: e.procedure.ask((_env, a: number, b: number) => a + b),
+  // A nested object for organization.
+  math: {
+    add: rpc.ask((_env, a: number, b: number) => a + b),
     // A 'tell' (fire-and-forget) procedure with no return value.
-    logToServer: e.procedure.tell((_env, message: string) => {
+    logToServer: rpc.tell((_env, message: string) => {
       console.log(`LOG: ${message}`);
     }),
-  }),
-});
+  },
+};
 
-// 3. Export the type of the API router. This is the key to type-safety!
+// 2. Export the type of the API router. This is the key to type-safety!
 export type AppRouter = typeof appRouter;
 ```
 
@@ -99,7 +96,7 @@ async function main() {
   // (The server's console will show "LOG: Client is connected.")
 
   // Attempting a call with incorrect types will result in a TypeScript error!
-  // await client.math.add.ask('5', '7'); // ❌ Error: Argument of type 'string' is not assignable to parameter of type 'number'.
+  // await client.procedure.math.add.ask('5', '7'); // ❌ Error: Argument of type 'string' is not assignable to parameter of type 'number'.
 
   // Cleanly close the connection.
   await server.close();
@@ -117,7 +114,7 @@ Middleware allows you to run common logic before and after a procedure executes.
 
 ```typescript
 // logging-middleware.ts
-import { middleware } from '@eleplug/erpc';
+import { rpc, middleware } from '@eleplug/erpc';
 
 export const loggingMiddleware = middleware(async ({ path, input, next }) => {
   console.log(`--> Calling procedure '${path}' with input:`, input);
@@ -127,13 +124,63 @@ export const loggingMiddleware = middleware(async ({ path, input, next }) => {
 });
 
 // Apply the middleware in your API definition.
-const e = initERPC.create();
-
-const secureRouter = e.router({
-  publicAdd: e.procedure
+const secureRouter = {
+  publicAdd: rpc
     .use(loggingMiddleware) // Apply the middleware.
     .ask((_env, a: number, b: number) => a + b),
-});
+};
+```
+
+### Context Injection
+
+For tasks like authentication or providing a database connection, you need to create a context for each request. The `inject` function allows you to do this cleanly.
+
+```typescript
+// api-with-context.ts
+import { 
+  createProcedureBuilder, 
+  inject, 
+  type InjectorFn,
+  type Env
+} from '@eleplug/erpc';
+
+// 1. Define the shape of your context.
+interface MyContext {
+  userId?: string;
+  isAdmin: boolean;
+}
+
+// 2. Create a procedure builder that requires this context.
+const p = createProcedureBuilder<MyContext, any, any>();
+
+// 3. Define your API. Public routes can use the default `rpc` builder.
+//    Protected routes use the context-aware `p` builder.
+const authApi = {
+  getSecretData: p.ask((env: Env<MyContext>) => {
+    if (!env.ctx.isAdmin) {
+      throw new Error("Unauthorized");
+    }
+    return { secret: "The cake is a lie." };
+  })
+};
+
+// 4. Create an "injector" function that creates the context.
+//    It can receive metadata from the client (e.g., auth tokens).
+const authInjector: InjectorFn<MyContext> = async (meta) => {
+  const token = meta?.[0]; // Assume token is the first metadata item.
+  if (token === 'admin-token') {
+    return { context: { userId: 'user-123', isAdmin: true } };
+  }
+  return { context: { isAdmin: false } };
+};
+
+// 5. "Bake in" the injector to create a self-sufficient API for the server.
+export const serverReadyApi = inject(authApi, authInjector);
+
+// Now, `serverReadyApi` can be passed to `createServer`.
+
+// On the client side, you would use `.meta()` to attach the token:
+// await client.procedure.meta('admin-token').getSecretData.ask();
 ```
 
 ### Object Pinning
@@ -142,7 +189,7 @@ const secureRouter = e.router({
 
 ```typescript
 // server.ts
-import { pin, createServer, initERPC } from '@eleplug/erpc';
+import { rpc, pin, createServer } from '@eleplug/erpc';
 
 // A stateful local object.
 const createCounter = () => ({
@@ -153,16 +200,15 @@ const createCounter = () => ({
   },
 });
 
-const e = initERPC.create();
-const pinRouter = e.router({
+const pinRouter = {
   // This procedure returns a proxy for a "pinned" counter object.
-  getCounter: e.procedure.ask(() => {
+  getCounter: rpc.ask(() => {
     const counter = createCounter();
     return pin(counter); // <-- Use pin() here.
   }),
-});
+};
 
-// ... create the server ...
+// ... create the server with pinRouter ...
 
 // client.ts
 import { free } from '@eleplug/erpc';
@@ -189,11 +235,11 @@ Pass `ReadableStream` and `WritableStream` as arguments or return values.
 
 ```typescript
 // api-definition.ts
-const e = initERPC.create();
+import { rpc } from '@eleplug/erpc';
 
-const streamRouter = e.router({
+const streamRouter = {
   // A procedure that accepts a ReadableStream.
-  upload: e.procedure.tell(async (_env, stream: ReadableStream) => {
+  upload: rpc.tell(async (_env, stream: ReadableStream) => {
     for await (const chunk of stream) {
       console.log('Received chunk:', chunk);
     }
@@ -201,7 +247,7 @@ const streamRouter = e.router({
   }),
 
   // A procedure that returns a ReadableStream.
-  download: e.procedure.ask(() => {
+  download: rpc.ask(() => {
     return new ReadableStream({
       start(controller) {
         controller.enqueue('Here');
@@ -212,7 +258,7 @@ const streamRouter = e.router({
       },
     });
   }),
-});
+};
 
 // client.ts
 
@@ -229,17 +275,18 @@ for await (const chunk of downloadableStream) {
 
 ## Core Concepts
 
-| Concept          | Description                                                                 |
-| ---------------- | --------------------------------------------------------------------------- |
-| `initERPC`       | The entry point for creating an `erpc` instance.                            |
-| `router`         | Organizes multiple `procedure`s or other `router`s into a nested API.       |
-| `procedure`      | The basic unit of an API; a remotely callable function.                     |
-| `.ask()`         | Defines a request-response style procedure.                                 |
-| `.tell()`        | Defines a fire-and-forget style procedure.                                  |
-| `middleware`     | Adds cross-cutting logic (e.g., logging, auth) to procedures.               |
-| `pin()` / `free()` | Pass objects by reference and manually release them from the client.        |
-| `createServer`   | Creates an `erpc` node from an API definition and a transport.                |
-| `createClient`   | Creates a type-safe `erpc` client proxy from an API type and a transport.     |
+| Concept              | Description                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------- |
+| `rpc`                | The default `ProcedureBuilder` instance for creating procedures with a `void` initial context.            |
+| Router (Plain Object) | Organizes procedures into a nested API using plain JavaScript objects.                                  |
+| `procedure`          | The basic unit of an API; a remotely callable function created by a `ProcedureBuilder`.                 |
+| `.ask()`             | Defines a request-response style procedure on a builder.                                                |
+| `.tell()`            | Defines a fire-and-forget style procedure on a builder.                                                 |
+| `middleware`         | A function to create middleware for adding cross-cutting logic (e.g., logging, auth) to procedures.     |
+| `inject`             | A function to provide an initial context (e.g., for auth or DB connections) to an entire API.           |
+| `pin()` / `free()`   | Pass objects by reference and manually release them from the client.                                    |
+| `createServer`       | Creates an `erpc` node from an API definition and a transport.                                          |
+| `createClient`       | Creates a type-safe `erpc` client proxy from an API type and a transport.                               |
 
 ## Architectural Philosophy
 

@@ -9,12 +9,12 @@ import type {
 import type { InferPhantomData } from "../types/common";
 
 /** The client-side type for an 'ask' procedure. */
-export type StubAskProcedure<TProc extends AskProcedure<any, any, any>> = (
+export type StubAskProcedure<TProc extends AskProcedure<any, any, any, any>> = (
   ...args: InferPhantomData<TProc["input"]>
 ) => Promise<Awaited<InferPhantomData<TProc["output"]>>>;
 
 /** The client-side type for a 'tell' procedure. */
-export type StubTellProcedure<TProc extends TellProcedure<any, any>> = (
+export type StubTellProcedure<TProc extends TellProcedure<any, any, any>> = (
   ...args: InferPhantomData<TProc["input"]>
 ) => Promise<void>;
 
@@ -23,11 +23,11 @@ export type StubDynamicProcedure = StubDynamic;
 
 /** Maps a server-side procedure type to its corresponding client-side stub type. */
 export type StubProcedure<TProc> =
-  TProc extends AskProcedure<any, any, any>
+  TProc extends AskProcedure<any, any, any, any>
     ? { ask: StubAskProcedure<TProc> }
-    : TProc extends TellProcedure<any, any>
+    : TProc extends TellProcedure<any, any, any>
       ? { tell: StubTellProcedure<TProc> }
-      : TProc extends DynamicProcedure<any, any, any>
+      : TProc extends DynamicProcedure<any, any, any, any>
         ? StubDynamicProcedure
         : never;
 
@@ -68,17 +68,17 @@ export type BuildStub<TApi> =
   0 extends 1 & TApi
     ? StubDynamic
     : // If TApi is a single Procedure, generate its specific stub.
-      TApi extends Procedure<any, any, any>
+      TApi extends Procedure<any, any, any, any>
       ? StubProcedure<TApi>
-      : TApi extends Api<any, any>
+      : TApi extends Api<any, any, any>
         ? // If TApi is a Router, recursively build stubs for each of its properties.
           {
-            [K in string & keyof TApi as TApi[K] extends Api<any, any>
+            [K in string & keyof TApi as TApi[K] extends Api<any, any, any>
               ? K
-              : never]: TApi[K] extends Procedure<any, any, any>
+              : never]: TApi[K] extends Procedure<any, any, any, any>
               ? StubProcedure<TApi[K]>
               : // Recursion step for nested routers.
-                TApi[K] extends Router<any, any>
+                TApi[K] extends Router<any, any, any>
                 ? BuildStub<TApi[K]>
                 : never;
           } & {

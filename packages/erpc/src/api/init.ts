@@ -2,10 +2,10 @@ import type { Env } from "../api/env";
 import type {
   InferSchemaTuple,
   Schema,
+  Transferable,
   TransferableArray,
 } from "../types/common";
 import { IllegalParameterError, IllegalResultError } from "../types/errors";
-import type { Router } from "./api";
 import {
   middleware,
   type GetCtxIn,
@@ -28,23 +28,6 @@ import {
 } from "./procedure";
 
 /**
- * The core instance returned by `initERPC.create()`.
- * It provides the main building blocks for defining an API.
- */
-export type ErpcInstance<Ctx, TInput extends Array<unknown>, TOutput> = {
-  /**
-   * The procedure builder for this erpc instance.
-   * Use this to define individual RPC endpoints with middleware, validation, and handlers.
-   */
-  procedure: ProcedureBuilder<TInput, TOutput, Ctx, any[], any>;
-  /**
-   * The router factory. Use this to group procedures and other routers
-   * into a nested API structure. It's an identity function that preserves types.
-   */
-  router: <TRouter extends Router<TInput, TOutput>>(route: TRouter) => TRouter;
-};
-
-/**
  * A type-safe, fluent builder for creating procedures.
  *
  * This builder uses generic parameters to track the state of the procedure's
@@ -53,6 +36,7 @@ export type ErpcInstance<Ctx, TInput extends Array<unknown>, TOutput> = {
  * error checking.
  */
 export type ProcedureBuilder<
+  InitCtx,
   TInput extends Array<unknown>,
   TOutput,
   CurrentCtx,
@@ -101,6 +85,7 @@ export type ProcedureBuilder<
               readonly chain_expects: ExpectedExit;
             })
   ): ProcedureBuilder<
+    InitCtx,
     TInput,
     TOutput,
     // Update the builder's state with the output types of the middleware.
@@ -119,6 +104,7 @@ export type ProcedureBuilder<
   input<const TSchemas extends readonly Schema[]>(
     ...schemas: TSchemas
   ): ProcedureBuilder<
+    InitCtx,
     TInput,
     TOutput,
     CurrentCtx,
@@ -135,6 +121,7 @@ export type ProcedureBuilder<
   output<const TSchema extends Schema>(
     schema: TSchema
   ): ProcedureBuilder<
+    InitCtx,
     TInput,
     TOutput,
     CurrentCtx,
@@ -166,6 +153,7 @@ export type ProcedureBuilder<
             got: Input;
           })
   ): AskProcedure<
+    InitCtx,
     CurrentCtx,
     NextInput extends PassThrough[] | unknown[] ? Input : NextInput,
     Output extends Transferable ? Output : void
@@ -182,8 +170,8 @@ export type ProcedureBuilder<
       env: Env<CurrentCtx>,
       ...args: Input
     ) =>
-      | (void extends ExpectedExit ? void : ExpectedExit)
-      | Promise<void extends ExpectedExit ? void : ExpectedExit>) &
+      | (PassThrough extends ExpectedExit ? void : ExpectedExit)
+      | Promise<PassThrough extends ExpectedExit ? void : ExpectedExit>) &
       (Input extends NextInput
         ? unknown
         : {
@@ -192,6 +180,7 @@ export type ProcedureBuilder<
             got: Input;
           })
   ): TellProcedure<
+    InitCtx,
     CurrentCtx,
     NextInput extends PassThrough[] | unknown[] ? Input : NextInput
   >;
@@ -209,145 +198,129 @@ export type ProcedureBuilder<
       args: TInput,
       type: "ask" | "tell"
     ) => Promise<void | TOutput>
-  ): DynamicProcedure<CurrentCtx, TInput, TOutput>;
+  ): DynamicProcedure<InitCtx, CurrentCtx, TInput, TOutput>;
 };
 
 /**
- * The internal implementation of the eRPC instance and procedure builder.
+ * The internal implementation that constructs a ProcedureBuilder.
  * @internal
  */
-class ErpcInstanceBuilder<CurrentCtx, TInput extends Array<unknown>, TOutput> {
-  private readonly _middlewares: Middleware<any>[];
-  constructor(middlewares: Middleware<any>[] = []) {
-    this._middlewares = middlewares;
-  }
+export function createProcedureBuilder<InitCtx, TInput extends Array<unknown>, TOutput>(
+  initialMiddlewares: Middleware<any>[] = []
+): ProcedureBuilder<InitCtx, TInput, TOutput, InitCtx, any, any> {
+  // This is a factory function that creates a new builder object.
+  // Using a function ensures that chaining `.use()` creates a new immutable object.
+  const builderFactory = (
+    middlewares: Middleware<any>[]
+  ): ProcedureBuilder<InitCtx, TInput, TOutput, any, any, any> => {
+    return {
+      use(
+        middlewareToAdd: any
+      ): ProcedureBuilder<InitCtx, TInput, TOutput, any, any, any> {
+        return builderFactory([...middlewares, middlewareToAdd]);
+      },
 
-  public use<NextDef extends MiddlewareDef>(
-    middleware: Middleware<NextDef>
-  ): ErpcInstanceBuilder<GetCtxOut<NextDef>, TInput, TOutput> {
-    // Returns a new builder instance with the added middleware.
-    return new ErpcInstanceBuilder<GetCtxOut<NextDef>, TInput, TOutput>([
-      ...this._middlewares,
-      middleware,
-    ]);
-  }
-
-  public create(): ErpcInstance<CurrentCtx, TInput, TOutput> {
-    // The `procedure` function recursively builds a new `ProcedureBuilder`
-    // by appending middlewares to its internal list.
-    const procedure = (middlewares: Middleware<any>[]) => {
-      return {
-        use(middleware: any): ProcedureBuilder<TInput, TOutput, any, any, any> {
-          return procedure([...middlewares, middleware]);
-        },
-
-        input<const TSchemas extends readonly Schema[]>(
-          ...schemas: TSchemas
-        ): ProcedureBuilder<TInput, TOutput, any, any, any> {
-          // .input() is implemented by creating and applying a validation middleware.
-          const validationMiddleware = middleware<{
-            EntrIn: any[]; // Accepts any raw input from the transport.
-            EntrOut: InferSchemaTuple<TSchemas>; // Outputs parsed, typed input for the next step.
-          }>((opts) => {
-            const { input, next } = opts;
-            try {
-              if (schemas.length !== input.length) {
-                throw new Error(
-                  `Expected ${schemas.length} arguments, but received ${input.length}.`
-                );
-              }
-              const parsedInput = schemas.map((schema, i) =>
-                schema.parse(input[i])
-              );
-              return next({ ...opts, input: parsedInput as any });
-            } catch (error: any) {
-              throw new IllegalParameterError(
-                `Input validation failed: ${error.message}`,
-                error
+      input<const TSchemas extends readonly Schema[]>(
+        ...schemas: TSchemas
+      ): ProcedureBuilder<InitCtx, TInput, TOutput, any, any, any> {
+        const validationMiddleware = middleware<{
+          EntrIn: any[];
+          EntrOut: InferSchemaTuple<TSchemas>;
+        }>((opts) => {
+          const { input, next } = opts;
+          try {
+            if (schemas.length !== input.length) {
+              throw new Error(
+                `Expected ${schemas.length} arguments, but received ${input.length}.`
               );
             }
-          });
-          return this.use(validationMiddleware);
-        },
+            const parsedInput = schemas.map((schema, i) =>
+              schema.parse(input[i])
+            );
+            return next({ ...opts, input: parsedInput as any });
+          } catch (error: any) {
+            throw new IllegalParameterError(
+              `Input validation failed: ${error.message}`,
+              error
+            );
+          }
+        });
+        // 'this' here refers to the current builder object.
+        return this.use(validationMiddleware);
+      },
 
-        output<const TSchema extends Schema>(
-          schema: TSchema
-        ): ProcedureBuilder<TInput, TOutput, any, any, any> {
-          // .output() is also implemented via a validation middleware.
-          const validationMiddleware = middleware<{
-            ExitIn: unknown; // Accepts any raw output from the handler.
-            ExitOut: TSchema extends Schema<infer T> ? T : never; // Outputs parsed, typed output.
-          }>(async (opts) => {
-            const result = await opts.next();
-            try {
-              return schema.parse(result);
-            } catch (error: any) {
-              throw new IllegalResultError(
-                `Output validation failed: ${error.message}`,
-                error
-              );
-            }
-          });
-          return this.use(validationMiddleware);
-        },
+      output<const TSchema extends Schema>(
+        schema: TSchema
+      ): ProcedureBuilder<InitCtx, TInput, TOutput, any, any, any> {
+        const validationMiddleware = middleware<{
+          ExitIn: unknown;
+          ExitOut: TSchema extends Schema<infer T> ? T : never;
+        }>(async (opts) => {
+          const result = await opts.next();
+          try {
+            return schema.parse(result);
+          } catch (error: any) {
+            throw new IllegalResultError(
+              `Output validation failed: ${error.message}`,
+              error
+            );
+          }
+        });
+        return this.use(validationMiddleware);
+      },
 
-        ask(handler: any): AskProcedure<any, any, any> {
-          return createAskProcedure(handler, middlewares);
-        },
+      ask(handler: any): AskProcedure<InitCtx, any, any, any> {
+        return createAskProcedure(handler, middlewares);
+      },
 
-        tell(handler: any): TellProcedure<any, any> {
-          return createTellProcedure(handler, middlewares);
-        },
+      tell(handler: any): TellProcedure<InitCtx, any, any> {
+        return createTellProcedure(handler, middlewares);
+      },
 
-        dynamic(handler: any): DynamicProcedure<any, any, any> {
-          return createDynamicProcedure(handler, middlewares);
-        },
-      };
+      dynamic(handler: any): DynamicProcedure<InitCtx, any, any, any> {
+        return createDynamicProcedure(handler, middlewares);
+      },
     };
-
-    const instance: ErpcInstance<CurrentCtx, TInput, TOutput> = {
-      procedure: procedure(this._middlewares),
-      // The router is a simple identity function for type-safe grouping.
-      router: (route) => route,
-    };
-    return instance;
-  }
-}
-
-/**
- * Creates the main `initERPC` entry point.
- * @internal
- */
-function createInit() {
-  return {
-    /**
-     * Creates a new erpc instance with a default `void` context.
-     * This is the starting point for defining any eRPC API.
-     *
-     * @template TInput The default input type for procedures, defaults to `TransferableArray`.
-     * @template TOutput The default output type for procedures, defaults to `Transferable`.
-     */
-    create<
-      TInput extends Array<unknown> = TransferableArray,
-      TOutput = Transferable,
-    >() {
-      return new ErpcInstanceBuilder<void, TInput, TOutput>().create();
-    },
   };
+
+  return builderFactory(initialMiddlewares);
 }
 
 /**
- * The main entry point for creating an eRPC API definition.
+ * The main entry point for creating an eRPC procedure.
+ * This is a default, root-level procedure builder that you can use to define
+ * your API endpoints.
  *
  * @example
  * ```ts
- * const e = initERPC.create();
+ * import { p2p } from 'erpc';
  *
- * const appRouter = e.router({
- *   greeting: e.procedure.ask(
- *     (env, name: string) => `Hello, ${name}!`
- *   ),
- * });
+ * // A simple procedure
+ * const greet = p2p.ask((env, name: string) => `Hello, ${name}!`);
+ *
+ * // A procedure with input validation
+ * const createUser = p2p
+ *   .input(z.string().min(3))
+ *   .ask((env, name) => {
+ *     // ... create user logic
+ *   });
+ *
+ * // An API router definition
+ * const appRouter = {
+ *   greet,
+ *   user: {
+ *     create: createUser,
+ *   }
+ * };
+ *
+ * // This router can now be passed to `createServer`.
  * ```
  */
-export const initERPC = createInit();
+export const rpc: ProcedureBuilder<
+  void,
+  TransferableArray,
+  Transferable,
+  void, // Initial Context is void
+  any[], // Initial Input is any array before validation
+  PassThrough // Initial Expected Exit type is PassThrough
+> = createProcedureBuilder<void, TransferableArray, Transferable>();

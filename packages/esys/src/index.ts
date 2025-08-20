@@ -1,4 +1,3 @@
-
 /**
  * =================================================================
  * esys - Main Entry File
@@ -13,6 +12,8 @@
  */
 
 // --- Core Bootloader & System Classes ---
+
+export { parseUri } from "./utils.js";
 
 /**
  * The system bootloader. Use this class to configure and start a new esys instance.

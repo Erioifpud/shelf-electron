@@ -1,6 +1,5 @@
 import type {
   Api,
-  ErpcInstance,
   JsonValue,
   Pin,
   Transferable,
@@ -70,39 +69,17 @@ export type TopicContext = BusContext & {
 };
 
 /**
- * Defines a factory function for creating a node's P2P (point-to-point) API.
- * The procedures within this API can accept and return any `Transferable` type.
- *
- * @param t An erpc instance pre-configured with the `BusContext` middleware.
- */
-export type ApiFactory<TApi extends Api<TransferableArray, Transferable>> = (
-  t: ErpcInstance<BusContext, TransferableArray, Transferable>
-) => TApi | Promise<TApi>;
-
-/**
- * Defines a factory function for creating a consumer's API for a specific topic.
- * The procedures within this API are constrained to `Broadcastable` arguments.
- *
- * @param t An erpc instance pre-configured with the `TopicContext` middleware.
- */
-export type ConsumerFactory<
-  TApi extends Api<BroadcastableArray, Transferable>,
-> = (
-  t: ErpcInstance<TopicContext, BroadcastableArray, Transferable>
-) => TApi | Promise<TApi>;
-
-/**
  * Configuration options for joining the EBUS network with a new node.
  */
 export interface NodeOptions<
-  TApi extends Api<TransferableArray, Transferable>,
+  TApi extends Api<BusContext, TransferableArray, Transferable>,
 > {
   /** The unique identifier for this node. */
   id: NodeId;
   /** Optional. Specifies the groups this node belongs to. Defaults to the default group. */
   groups?: string[];
-  /** An optional factory to define the P2P API this node exposes. */
-  apiFactory?: ApiFactory<TApi>;
+  /** An optional to define the P2P API this node exposes. */
+  api?: TApi;
 }
 
 /**

@@ -16,7 +16,7 @@ import { EbusError } from "../types/errors.js";
 // =================================================================
 
 /** Transforms a server-side 'ask' procedure into its publisher client counterpart. */
-type PublisherClientAskProcedure<TProc extends AskProcedure<any, any, any>> =
+type PublisherClientAskProcedure<TProc extends AskProcedure<any, any, any, any>> =
   /**
    * Broadcasts a request and returns an async iterable of all results.
    * @param args The arguments for the procedure, matching the consumer's API.
@@ -27,7 +27,7 @@ type PublisherClientAskProcedure<TProc extends AskProcedure<any, any, any>> =
   ) => AsyncIterable<Result<Awaited<InferPhantomData<TProc["output"]>>>>;
 
 /** The 'tell' procedure signature remains the same in the publisher client. */
-type PublisherClientTellProcedure<TProc extends TellProcedure<any, any>> =
+type PublisherClientTellProcedure<TProc extends TellProcedure<any, any, any>> =
   /**
    * Broadcasts a fire-and-forget notification to all subscribers.
    * @param args The arguments for the procedure.
@@ -37,9 +37,9 @@ type PublisherClientTellProcedure<TProc extends TellProcedure<any, any>> =
 
 /** Maps a server-side procedure type to its corresponding publisher client method. */
 type PublisherClientProcedure<TProc> =
-  TProc extends AskProcedure<any, any, any>
+  TProc extends AskProcedure<any, any, any, any>
     ? { all: PublisherClientAskProcedure<TProc> } // 'ask' procedures are called via '.all()'
-    : TProc extends TellProcedure<any, any>
+    : TProc extends TellProcedure<any, any, any>
       ? { tell: PublisherClientTellProcedure<TProc> } // 'tell' procedures are called via '.tell()'
       : never;
 
@@ -53,12 +53,13 @@ type BuildPublisherClient<TApi> =
   0 extends 1 & TApi
     ? any
     : // If it's a Procedure, transform it.
-      TApi extends Procedure<any, any, any>
+      TApi extends Procedure<any, any, any, any>
       ? PublisherClientProcedure<TApi>
       : // If it's a Router, recursively transform its properties.
-        TApi extends Router<any, any>
+        TApi extends Router<any, any, any>
         ? {
             [K in string & keyof TApi as TApi[K] extends Api<
+              any,
               BroadcastableArray,
               Transferable
             >
@@ -77,7 +78,7 @@ type BuildPublisherClient<TApi> =
  * @template THandlerApi The API shape of the consumers of this topic.
  */
 export type PublisherClient<
-  THandlerApi extends Api<BroadcastableArray, Transferable>,
+  THandlerApi extends Api<any, BroadcastableArray, Transferable>,
 > = BuildPublisherClient<THandlerApi>;
 
 // =================================================================
@@ -152,7 +153,7 @@ function createPublisherProxy(
  * @internal
  */
 export function buildPublisher<
-  THandlerApi extends Api<BroadcastableArray, Transferable>,
+  THandlerApi extends Api<any, BroadcastableArray, Transferable>,
 >(
   publishProcedure: PublishProcedure,
   topic: Topic

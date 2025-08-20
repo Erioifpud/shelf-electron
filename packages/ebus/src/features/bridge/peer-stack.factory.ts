@@ -11,8 +11,8 @@ import {
   ResourceManager,
   StreamManager,
   type Transport,
-  initERPC,
   TunnelFeature,
+  rpc,
 } from "@eleplug/erpc";
 import type { ProtocolMessage } from "../../types/protocol.js";
 
@@ -55,16 +55,15 @@ export async function createPeerStack(
   streamManager: StreamManager
 ) {
   // 1. Define the handler logic for the internal API.
-  const t = initERPC.create();
-  const internalApiImpl = t.router({
-    forwardMessage: t.procedure.tell(
+  const internalApiImpl = {
+    forwardMessage: rpc.tell(
       (_env, message: ProtocolMessage, fromBusPublicId: string) => {
         // When an adjacent bus calls this procedure, report the message
         // up to the bus core via the bridge.
         bridge.onMessageReceived(message, fromBusPublicId);
       }
     ),
-  });
+  };
 
   // 2. Assemble the erpc features that constitute the peer stack.
   // This stack is self-contained and does not include a LifecycleFeature,

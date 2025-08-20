@@ -1,0 +1,39 @@
+{
+  "name": "plugin-example",
+  "version": "0.1.0",
+  "private": true,
+
+  "main": "dist/main/main.js",
+
+  "scripts": {
+    "dev": "elep dev",
+    "dts": "elep dts",
+
+    "build:main": "vite build --config vite.config.main.ts",
+    "build:renderer": "vite build --config vite.config.renderer.ts",
+
+    "build": "pnpm run build:main && pnpm run build:renderer"
+  },
+
+  "pluginDependencies": {},
+
+  "pluginGroups": [
+    "kernel",
+    "app"
+  ],
+
+  "devDependencies": {
+    "@eleplug/anvil": "workspace:^",
+    "@eleplug/elep": "workspace:^",
+    "@eleplug/elep-boot": "workspace:^",
+    "@eleplug/elep-dev": "workspace:^",
+    "@eleplug/elep-vite-adapter": "workspace:^",
+    "@types/node": "latest",
+    "typescript": "latest",
+    "vite": "^7.1.3"
+  },
+  
+  "dependencies": {
+    "uuid": "^11.1.0"
+  }
+}

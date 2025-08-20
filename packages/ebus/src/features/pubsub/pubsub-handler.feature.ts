@@ -15,6 +15,7 @@ import type {
   PublisherOptions,
   Result,
   Topic,
+  TopicContext,
 } from "../../types/common.js";
 import {
   type BroadcastMessage,
@@ -63,7 +64,7 @@ export interface PubSubContribution {
    * @param options - Configuration for the publisher, including topic and source node ID.
    * @returns A PublisherClient proxy.
    */
-  createPublisher<TApi extends Api<BroadcastableArray, Transferable>>(
+  createPublisher<TApi extends Api<TopicContext, BroadcastableArray, Transferable>>(
     options: PublisherOptions
   ): PublisherClient<TApi>;
   /**
@@ -153,7 +154,7 @@ export class PubSubHandlerFeature
     this.sessionManager.closeAll(new Error("EBUS instance is closing."));
   }
 
-  public createPublisher<TApi extends Api<BroadcastableArray, Transferable>>(
+  public createPublisher<TApi extends Api<TopicContext, BroadcastableArray, Transferable>>(
     options: PublisherOptions
   ): PublisherClient<TApi> {
     return buildPublisher((topic, path, action, args, meta) => {

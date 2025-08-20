@@ -16,7 +16,6 @@ import { PubSubHandlerFeature } from "./features/pubsub/pubsub-handler.feature.j
 import { RoutingFeature } from "./features/route/routing.feature.js";
 import { DispatchFeature } from "./features/dispatch/dispatch.feature.js";
 import { ProtocolCoordinatorFeature } from "./features/protocol/protocol-coordinator.feature.js";
-// --- EBUS Plugin Features ---
 import { StreamDispatchFeature } from "./features/stream/stream-dispatching.feature.js";
 import { PinDispatchFeature } from "./features/pin/pin-dispatch.feature.js";
 
@@ -70,27 +69,32 @@ async function createEbusInstance(parentTransport?: Transport) {
 }
 
 /**
- * The main entry point for creating an EBUS instance.
- *
- * @example
- * ```ts
- * import { initEBUS } from '@eleplug/ebus';
- *
- * // Create a standalone bus
- * const bus = await initEBUS.create();
- *
- * // Create a bus connected to a parent
- * const childBus = await initEBUS.create(someTransport);
- * ```
+ * Creates a new, standalone EBUS root instance.
+ * A root bus is the top-level entity in a bus network.
+ * @returns A promise that resolves to the fully initialized EBUS instance.
  */
-export const initEBUS = {
-  create: createEbusInstance,
-};
+export async function root() {
+  return createEbusInstance();
+}
+
+/**
+ * Creates a new EBUS instance and bridges it to a parent bus via the
+ * provided transport. This instance will act as a child in the network.
+ * @param parentTransport The erpc `Transport` to connect to the parent bus.
+ * @returns A promise that resolves to the fully initialized EBUS instance.
+ */
+export async function bridge(parentTransport: Transport) {
+  if (!parentTransport) {
+    throw new Error("A transport must be provided to bridge to a parent bus.");
+  }
+  return createEbusInstance(parentTransport);
+}
 
 /** The type of a fully initialized EBUS instance. */
 export type Bus = Awaited<ReturnType<typeof createEbusInstance>>;
 
 // --- Public API & Type Exports ---
+export { p2p, pubsub } from './api/init.js';
 export { Node } from "./api/node.js";
 export type { PublisherClient } from "./api/publisher.js";
 export {
@@ -108,8 +112,6 @@ export type {
   Result,
   Ok,
   Err,
-  ApiFactory,
-  ConsumerFactory,
   BusContext,
   TopicContext,
 } from "./types/common.js";

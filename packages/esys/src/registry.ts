@@ -15,10 +15,10 @@ export class Registry {
   }
 
   /**
-   * Initializes the 'plugins' collection within the LokiJS database.
+   * Initializes all collections within the LokiJS database.
    * Sets up unique constraints and indices for efficient querying.
    */
-  private initPlugins(): void {
+  private initCollections(): void {
     this.plugins =
       this.db.getCollection<PluginRegistryEntry>("plugins") ||
       this.db.addCollection("plugins", {
@@ -36,7 +36,7 @@ export class Registry {
   public static async createMemory(): Promise<Registry> {
     const db = new Loki("esys-registry.db", { persistenceMethod: "memory" });
     const registry = new Registry(db);
-    registry.initPlugins();
+    registry.initCollections();
     return registry;
   }
 
@@ -57,7 +57,7 @@ export class Registry {
           if (err) return reject(err);
 
           const registry = new Registry(db);
-          registry.initPlugins();
+          registry.initCollections();
           resolve(registry);
         },
       });
@@ -121,23 +121,32 @@ export class Registry {
   /**
    * Registers a new plugin or updates an existing one (upsert).
    * If an entry with the same URI exists, its metadata is updated, but its state is preserved.
-   * If it's a new entry, it's inserted with a default state of 'disable' and 'stopped'.
-   * @param entry The plugin data to register.
+   * The `groups` are always sourced from the new manifest.
+   * If it's a new entry, it's inserted with a default state of 'disable', 'stopped',
+   * and groups from its manifest.
+   * @param entry The plugin data to register, including the new `pluginGroups` field.
    */
   public register(
-    entry: Omit<PluginRegistryEntry, "state" | "status" | "error">
+    entry: Omit<PluginRegistryEntry, "state" | "status" | "error" | "groups">
   ): void {
     const existing = this.plugins.findOne({ uri: entry.uri });
     if (existing) {
-      // Update metadata but preserve existing state.
+      // Update metadata and groups, but preserve existing state.
       existing.name = entry.name;
       existing.version = entry.version;
       existing.pluginDependencies = entry.pluginDependencies;
       existing.main = entry.main;
+      existing.pluginGroups = entry.pluginGroups;
+      existing.groups = entry.pluginGroups || []; // Always sync groups from manifest
       this.plugins.update(existing);
     } else {
-      // Insert new entry with default states.
-      this.plugins.insert({ ...entry, state: "disable", status: "stopped" });
+      // Insert new entry with default states and groups from manifest.
+      this.plugins.insert({
+        ...entry,
+        groups: entry.pluginGroups || [],
+        state: "disable",
+        status: "stopped",
+      });
     }
   }
 

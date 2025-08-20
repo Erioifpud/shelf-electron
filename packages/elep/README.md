@@ -23,226 +23,170 @@ Building large-scale Electron applications often leads to monolithic codebases t
 *   **End-to-End Type-Safe Communication**: Uses `@eleplug/ebus` and `@eleplug/erpc` to provide a type-safe message bus for both Pub/Sub and direct P2P communication between plugins and between the main and renderer processes.
 *   **Secure Electron Bridge**: Provides a secure, curated API (`ECore`, `EWindow`) for plugins to interact with core Electron functionality. Dangerous APIs are sandboxed, and operations like creating windows are done through a secure, `pin`-able proxy.
 *   **Filesystem and Resource Handling**: Includes a `FileContainer` for loading plugins from the local filesystem and a custom `plugin://` protocol handler to securely serve plugin resources (like HTML, CSS, and images) to renderer processes.
+*   **Integrated Dev Experience**: The `@eleplug/elep-dev` toolkit provides commands to launch your plugin in a hot-reloading development environment, manage dependencies, and auto-generate type definitions.
 *   **"Batteries-Included" Experience**: `elep` is the top-level package that re-exports all the necessary tools from the underlying `esys`, `ebus`, `erpc`, `plexus`, and `anvil` packages, providing a single, consistent API surface.
 
 ## Architectural Overview
 
-`elep` establishes a clear structure where the `esys` System runs in the main process. Plugins running in the main process can open dedicated, namespaced communication channels to their own renderer UIs, enabling secure and isolated communication.
+`elep` establishes a secure client-server model between the main process and each renderer window. A central `GlobalIpcRouter` in the main process manages all communication, ensuring plugins and their UIs are completely isolated from one another.
 
 ```
-+-----------------------------------------------------+
-|                   Electron Main Process             |
-|-----------------------------------------------------|
-|  +-----------------------------------------------+  |
-|  |                  esys System                  |  |
-|  |     (Orchestrator, Registry, ebus, etc.)      |  |
-|  +-----------------------------------------------+  |
-|                                                     |
-|  +------------------+  +------------------------+   |
-|  | ECore (Pinned)   |  |  Plugin 'main-ui'      |   |
-|  +------------------+  |   - Creates EWindow    |   |
-|                        |   - Opens 'ebus-core'  |   |
-|                        |     transport on it    |   |
-|                        |   - Runs an erpc server|   |
-|                        +------------------------+   |
-+-----------------------------------------------------+
-        ^                |  IPC Communication via    |
-        |                |  IpcLink/IpcRendererLink  |
-        |                | ('ebus-core' namespace)   |
-        v                v                           v
-+------------------------+----------------------------+
-|                Electron Renderer Process            |  (main-ui's Window)
-|-----------------------------------------------------|
-|  +-----------------+      +----------------------+  |
-|  | Preload Script  |----->| UI (React, Vue, etc.)|  |
-|  |(exposes adapter)|      | - Creates erpc client|  |
-|  +-----------------+      | - Connects to plugin |  |
-|                           +----------------------+  |
-+-----------------------------------------------------+
++------------------------------------------------------------------+
+|                        Electron Main Process                       |
+|------------------------------------------------------------------|
+|  +---------------------------+   +-----------------------------+ |
+|  |       esys System         |   |      GlobalIpcRouter        | |
+|  | (Orchestrator, ebus, etc.)|   | (Singleton, manages all IPC)| |
+|  +---------------------------+   +-----------------------------+ |
+|                                                                    |
+|  +---------------------+    +----------------------------------+   |
+|  |   ECore (Pinned)    |    |   Plugin 'main-ui'               |   |
+|  | (Kernel API Proxy)  |    |    - Calls core.createWindow()   |   |
+|  +---------------------+    |    - `accept()`s connections     |   |
+|                             |    - Runs an erpc server         |   |
+|                             +----------------------------------+   |
++------------------------------------------------------------------+
+        ^                |           IPC Handshake & Data           |
+        |                |      (via elep-handshake channel)        |
+        |                v                                         v
++------------------------+-------------------------------------------+
+|                   Electron Renderer Process                      |
+|--------------------------------------------------------------------|
+|  +-----------------+      +------------------------------------+   |
+|  | Preload Script  |----->|      UI (React, Vue, etc.)         |   |
+|  |(exposes adapter)|      |   - Calls getService()             |   |
+|  +-----------------+      |   - Creates type-safe erpc client  |   |
+|                           +------------------------------------+   |
++--------------------------------------------------------------------+
 ```
 
-## Getting Started
+## Getting Started: Development Workflow
 
-Let's build a simple Elep application with a main plugin that creates a window and communicates with it.
+The `@eleplug/elep-dev` package is the recommended way to develop plugins. It provides a CLI that scaffolds a development environment for you.
 
-### 1. Main Process Setup (`main.ts`)
+### 1. Project Setup
 
-This is your application's entry point. Here, you'll configure and start the `esys` `Bootloader`.
-
-```typescript
-// in src/main.ts
-import { app } from 'electron';
-import * as path from 'node:path';
-import { Bootloader, Registry, ECore, pin, MemoryContainer, FileContainer } from '@eleplug/elep';
-import { LifecycleEvent, definePlugin } from '@eleplug/elep';
-
-async function main() {
-  const pluginDir = path.resolve(__dirname, '..', 'plugins');
-  const registryDbPath = path.resolve(pluginDir, 'registry.json');
-  
-  const bootloader = new Bootloader({});
-  
-  // Phase 1: Load the registry where plugin states are stored.
-  bootloader.on(LifecycleEvent.BOOTSTRAP, async (_ctx, registryLoader) => {
-    const registry = await Registry.createPersistent(registryDbPath);
-    registryLoader.load(registry);
-  });
-
-  // Phase 2: Mount containers (plugin sources).
-  bootloader.on(LifecycleEvent.MOUNT_CONTAINERS, async (_ctx, containerManager) => {
-    await containerManager.mount('user-plugins', (bus) => new FileContainer(bus, pluginDir));
-    await containerManager.mount('kernel', (bus) => new MemoryContainer(bus));
-  });
-
-  // Phase 3: Attach the core API plugin.
-  bootloader.on(LifecycleEvent.ATTACH_CORE, async (_ctx, system) => {
-    const kernel = system.containers.get('kernel') as MemoryContainer;
-    const ecoreApiPlugin = definePlugin({
-      activate({ procedure }) {
-        return { core: procedure.ask(() => pin(new ECore(system))) };
-      },
-    });
-
-    kernel.addPlugin('ecore-api', {
-      manifest: { name: 'ecore-api', version: '1.0.0', pluginDependencies: {}, main: '' },
-      plugin: ecoreApiPlugin,
-    });
-    
-    // Ensure the core API and our main UI plugin are enabled.
-    await system.plugins.ensure({ uri: 'plugin://kernel/ecore-api', enable: true });
-    await system.plugins.ensure({ uri: 'plugin://user-plugins/main-ui', enable: true, reconcile: false });
-  });
-  
-  // Start the system after Electron is ready.
-  await app.whenReady();
-  const system = await bootloader.start();
-
-  app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-      system.shutdown().then(() => app.quit());
-    }
-  });
-}
-
-main().catch(console.error);
+First, install the development toolkit:
+```bash
+npm install -D @eleplug/elep-dev
 ```
-
-### 2. Create a Plugin (`main-ui`)
-
-A plugin is a directory with a `package.json` and an entry script.
-
-**`plugins/main-ui/package.json`**
+Then, add a `dev` script to your plugin's `package.json`:
 ```json
 {
-  "name": "main-ui",
+  "name": "my-first-plugin",
   "version": "1.0.0",
-  "main": "index.js",
-  "pluginDependencies": {
-    "ecore-api": "*"
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "elep-dev dev"
   }
 }
 ```
 
-**`plugins/main-ui/index.ts`**
+### 2. Main Plugin Code (`index.ts`)
+
+This is your plugin's entry point in the main process. It defines the plugin's logic and the API it will expose to its renderer UI.
+
 ```typescript
-import { definePlugin, type EWindow, initERPC, createServer } from '@eleplug/elep';
-import { resolvePluginUri } from '@eleplug/anvil';
+// in src/index.ts
+import "@eleplug/elep-boot/kernel";
+import { definePlugin, openWindow, type MainPluginApi } from '@eleplug/elep';
 
-// Define the service router for the main-process.
-const { router, procedure } = initERPC.create();
-const mainPluginApi = router({
-    ping: procedure.ask(async () => 'pong'),
-});
-
-// Define the API type of this plugin's main-process service.
-export type MainPluginApi = typeof mainPluginApi;
+// Define the API this plugin's main process will expose to its renderer.
+const serviceApi = {
+    ping: p2p.ask(async () => 'pong'),
+};
+export type MyServiceApi = typeof serviceApi;
 
 export default definePlugin({
-  async activate({ link, pluginUri }) {
+  async activate({ link, pluginUri, resolve }) {
     console.log('Main UI Plugin Activated!');
 
-    // 1. Link to the core API to get access to Electron functions.
-    const coreApi = await link('ecore-api');
-    const ecore = await coreApi.core.ask();
+    // 1. Link to the kernel to get access to core Electron functions.
+    const kernel = await link('__kernel');
+    const core = await kernel.core.ask();
 
-    // 2. Create a new window.
-    const eWindow: EWindow = await ecore.createWindow({
+    // 2. Open a new window, passing the service API to expose.
+    const eWindow = await openWindow(core, {
       width: 800,
       height: 600,
-      webPreferences: {
-        preload: resolvePluginUri(pluginUri, './preload.js'),
-      },
-    });
+    }, serviceApi);
 
-    // 3. Open a dedicated transport to the new window and start an erpc server on it.
-    // This allows the renderer process to call back into this specific plugin.
-    const rendererTransport = await eWindow.openTransport('ebus-core');
-    await createServer(rendererTransport, mainPluginApi);
-
-    // 4. Load the UI into the window.
-    const uiPath = resolvePluginUri(pluginUri, './index.html');
+    // 3. Load the UI into the window using the secure plugin:// protocol.
+    // The context.resolve() method handles any path rewrites from elep.prod.ts.
+    const uiPath = resolve('index.html');
     await eWindow.loadURL(uiPath);
     
+    // This plugin doesn't need to expose a P2P API to other plugins.
     return {};
   }
 });
 ```
 
-### 3. The Preload Script (`preload.ts`)
+### 3. Renderer Code (`renderer.ts`)
 
-This script runs in a sandboxed renderer context and securely exposes the communication bridge to your renderer code.
+This is your UI code. It runs in the sandboxed renderer process and connects back to the service you defined in the main process.
 
-**`plugins/main-ui/preload.ts`**
 ```typescript
-import { createAdapter } from '@eleplug/elep/preload';
-import { contextBridge, ipcRenderer } from 'electron';
-
-// Use contextBridge to securely expose a namespaced IPC adapter to the renderer.
-// This is the recommended security practice in Electron.
-contextBridge.exposeInMainWorld(
-  'ebusCoreAdapter', 
-  createAdapter('ebus-core', ipcRenderer)
-);
-```
-
-### 4. Renderer Code (`renderer.ts`)
-
-This is your UI code. It uses the adapter exposed by the preload script to establish a transport link back to the main process plugin.
-
-**`plugins/main-ui/renderer.ts`**
-```typescript
-import { IpcRendererLink, createDuplexTransport, createClient, type Api, type AskProcedure } from '@eleplug/elep/render';
-import type { MainPluginApi } from './index';
+// in src/renderer.ts
+import { getService } from '@eleplug/elep/renderer';
+import type { MyServiceApi } from './index';
 
 async function rendererMain() {
-  // 1. Get the adapter exposed securely by the preload script.
-  const adapter = window.ebusCoreAdapter;
-  if (!adapter) {
-    throw new Error('Ebus core adapter not found on window object!');
-  }
+  // `getService()` handles the IPC handshake and returns a type-safe client.
+  const service = await getService<MyServiceApi>();
+  
+  const response = await service.ping.ask(); // Fully type-safe!
 
-  // 2. Create a Muxen Link and Transport.
-  const link = new IpcRendererLink(adapter);
-  const transport = createDuplexTransport(link);
-
-  // 3. Create a type-safe erpc client to talk to the server in the main-ui plugin.
-  const client = await createClient<MainPluginApi>(transport);
-  const response = await client.procedure.ping.ask();
-
-  console.log(`Renderer connected and received response: ${response}`); // > "pong"
+  const content = `Renderer connected and received response: ${response}`;
+  document.body.innerHTML = `<h1>${content}</h1>`;
+  console.log(content); // > "Renderer connected and received response: pong"
 }
 
 rendererMain().catch(console.error);
+```
+
+### 4. Running in Development Mode
+
+Now, simply run the `dev` script:
+```bash
+npm run dev
+```
+`elep-dev` will automatically find and launch your plugin using `@eleplug/elep-boot`, providing a live development environment. If your plugin has dependencies (e.g., in an `elep_plugins` directory), they will be loaded as well.
+
+## Production Bootstrap
+
+When you're ready to ship, your application's main entry point will use `elep-boot` directly to start the system with a production configuration.
+
+```typescript
+// in your production app's main.ts
+import { bootstrap } from '@eleplug/elep-boot';
+
+// This is a simplified example. `elep-boot` is configured via a
+// `config.json` file or CLI arguments.
+bootstrap({
+  // Use a persistent registry in production
+  registry: './app-data/registry.json', 
+  // Define where your plugin containers are located
+  containers: {
+    'core-plugins': { path: './resources/core' },
+    'user-plugins': { path: './app-data/plugins' }
+  },
+  // Define which plugins to enable on startup
+  plugins: [
+    'core-plugins/kernel',
+    'core-plugins/main-ui'
+  ]
+}, __dirname, false);
 ```
 
 ## Security Model
 
 `elep` is designed with security as a primary concern for running third-party or untrusted plugin code.
 
-*   **Sandboxing and Context Isolation**: `elep` enforces `contextIsolation: true` and `sandbox: true` for all windows created through `ECore`, following modern Electron security best practices.
-*   **Secure API Proxies**: Plugins do not get direct access to powerful Electron modules like `BrowserWindow` or `app`. Instead, they interact with `ECore` and `EWindow`, which are secure, `pin`-able wrappers that expose only a curated set of safe functionalities.
-*   **`contextBridge`**: The recommended communication pattern uses `contextBridge` to securely expose namespaced IPC channels from the preload script to the renderer, preventing the renderer from accessing the full `ipcRenderer` object.
-*   **`plugin://` Protocol**: This custom protocol allows plugins to load their own resources (HTML, JS, CSS, images) without needing direct filesystem access from the renderer process, preventing path traversal attacks.
+*   **Sandboxing and Context Isolation**: `elep` enforces `contextIsolation: true` and `sandbox: true` for all windows, following modern Electron security best practices.
+*   **Secure API Proxies**: Plugins do not get direct access to powerful Electron modules. Instead, they interact with `ECore` and `EWindow`, which are secure, `pin`-able wrappers that expose only a curated set of safe functionalities.
+*   **Centralized IPC Router**: A single `GlobalIpcRouter` in the main process manages all IPC traffic, ensuring that renderer windows can only communicate through their designated, isolated channels.
+*   **`plugin://` Protocol**: This custom protocol allows plugins to load their own resources (HTML, JS, CSS) without needing direct filesystem access from the renderer process, preventing path traversal attacks.
 
 ## License
 

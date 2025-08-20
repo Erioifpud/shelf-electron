@@ -10,7 +10,7 @@
 When building a modular system, you need a clear and stable contract between the host system and the plugins it loads. This contract should answer several key questions:
 
 *   How does a plugin start and stop (`activate`/`deactivate`)?
-*   What capabilities does the host system provide to the plugin (e.g., communication, API creation)?
+*   What capabilities does the host system provide to the plugin (e.g., communication, API creation, resource resolution)?
 *   How can plugins communicate with each other in a way that is both secure and type-safe?
 
 `anvil` provides a definitive answer to these questions by defining the `Plugin` interface and the `PluginActivationContext`. Its most powerful feature is enabling **decoupled, end-to-end type-safe communication between plugins**.
@@ -20,12 +20,12 @@ When building a modular system, you need a clear and stable contract between the
 *   **The `Plugin` Interface**: The fundamental contract that all plugins must implement. It defines an `activate` function, which is the plugin's entry point, and an optional `deactivate` function for cleanup.
 
 *   **The `PluginActivationContext`**: When a plugin is activated, it receives a `context` object. This is its sandboxed "world view" and the sole entry point for interacting with the host system and other plugins. It provides:
-    *   `erpc` builders (`router`, `procedure`) for defining its own API.
+    *   An `erpc` `procedure` builder for defining its own API.
     *   `ebus` methods (`subscribe`, `emiter`) for participating in Pub/Sub messaging.
-    *   A unique `pluginUri` for self-identification.
+    *   A unique `pluginUri` for self-identification and a `resolve()` method for robust asset pathing.
     *   The powerful `link()` method for type-safe communication with other plugins.
 
-*   **Type-Safe Inter-Plugin Communication**: The `context.link('other-plugin')` method returns a fully-typed `erpc` client for another plugin's API. This is achieved through TypeScript's declaration merging via a `PluginApiMap` interface, allowing your entire plugin ecosystem to be type-checked at compile time.
+*   **Type-Safe Inter-Plugin Communication**: The `context.link('other-plugin-name')` method returns a fully-typed `erpc` client for another plugin's API. This is achieved through TypeScript's declaration merging via a `PluginApiMap` interface, allowing your entire plugin ecosystem to be type-checked at compile time.
 
 ## How to Use
 
@@ -33,7 +33,7 @@ Creating a plugin and enabling communication involves three main steps.
 
 ### 1. Define a Plugin
 
-Use the `definePlugin` helper to get full type-safety for your plugin definition. The `activate` function must return an `erpc` API.
+Use the `definePlugin` helper to get full type-safety for your plugin definition. The `activate` function must return a plain object that serves as its `erpc` API.
 
 ```typescript
 // in plugins/database/index.ts
@@ -44,13 +44,14 @@ const db = new Map<string, any>();
 
 export default definePlugin({
   // The activate function defines the plugin's public API.
-  activate({ router, procedure }) {
-    return router({
+  activate({ procedure }) {
+    // Return a plain object using the context's procedure builder.
+    return {
       get: procedure.ask((_ctx, key: string) => db.get(key)),
       set: procedure.tell((_ctx, key: string, value: any) => {
         db.set(key, value);
       }),
-    });
+    };
   },
 });
 ```
@@ -65,18 +66,22 @@ To make the `context.link()` method aware of your plugins' APIs, you need to "te
 // Import the utility type from anvil.
 import type { PluginApi } from '@eleplug/anvil';
 
+// Import the plugin's module type. This doesn't create a runtime dependency.
+type DatabasePluginModule = typeof import('plugins/database');
+type UserServicePluginModule = typeof import('plugins/user-service');
+
 // Use `declare module` to augment the original interface.
 declare module '@eleplug/anvil' {
-  // This interface maps your plugin names (as used in dependencies)
-  // to their API types.
+  // This interface maps your plugin names to their API types.
   interface PluginApiMap {
     // The key is the plugin's name (from its manifest/package.json).
     // The value infers the API type from the plugin's module.
-    'database-plugin': PluginApi<typeof import('plugins/database')>;
-    'user-service-plugin': PluginApi<typeof import('plugins/user-service')>;
+    'database-plugin': PluginApi<DatabasePluginModule>;
+    'user-service-plugin': PluginApi<UserServicePluginModule>;
   }
 }
 ```
+> **Tip:** The `elep-dev` CLI can automate the generation of this file for you!
 
 ### 3. Link to Other Plugins
 
@@ -87,7 +92,7 @@ Now, another plugin can securely and type-safely link to the `database-plugin`.
 import { definePlugin } from '@eleplug/anvil';
 
 export default definePlugin({
-  async activate({ router, procedure, link }) {
+  async activate({ procedure, link }) {
     // 1. Link to the database plugin.
     // The returned `dbClient` is a fully-typed erpc client!
     const dbClient = await link('database-plugin');
@@ -96,7 +101,7 @@ export default definePlugin({
     await dbClient.set.tell('user:1', { name: 'Alice' });
 
     // 3. Define this plugin's own API.
-    return router({
+    return {
       getUser: procedure.ask(async (_ctx, userId: string) => {
         // TypeScript knows `dbClient.get.ask` returns a Promise<any>.
         const user = await dbClient.get.ask(`user:${userId}`);
@@ -105,7 +110,7 @@ export default definePlugin({
         }
         return user;
       }),
-    });
+    };
   },
 });
 ```
@@ -119,6 +124,7 @@ With this setup, if the `database-plugin` changes its `get` procedure's signatur
 | `Plugin<TApi>`            | The core interface that all plugins must implement.                         |
 | `PluginActivationContext` | The context object passed to a plugin's `activate` function.                |
 | `PluginApiMap`            | The interface you extend via declaration merging for type-safe linking.     |
+| `createPluginUri()`       | A utility to create the canonical URI for a plugin.                         |
 
 ## Architectural Role
 
