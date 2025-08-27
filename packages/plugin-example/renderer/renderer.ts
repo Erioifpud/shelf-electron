@@ -27,7 +27,7 @@ console.log("[Renderer] Script loaded. Connecting to main process service...");
 // `getService` returns a strongly-typed ERPC client. The generic `<MyPluginApi>`
 // argument tells TypeScript the exact shape of the API we're connecting to.
 // This enables autocompletion and compile-time checks for all API calls.
-const client = await getService<MyPluginApi>();
+const service = await getService<MyPluginApi>();
 console.log("[Renderer] ERPC client connected successfully.");
 
 // --- 2. CACHE DOM ELEMENT REFERENCES ---
@@ -107,7 +107,7 @@ form.addEventListener("submit", async (event) => {
     // Call the main process API. This looks like a local function call but is
     // actually a type-safe RPC call over IPC. The API returns the new, complete
     // list of submissions.
-    const updatedForms = await client.form.submitForm.ask(formData);
+    const updatedForms = await service.form.submitForm.ask(formData);
 
     // Update the UI with the fresh data from the backend. This is a simple and
     // robust way to keep the UI in sync with the application's state.
@@ -140,7 +140,7 @@ formListDiv.addEventListener("click", async (event) => {
 
     try {
       // Call the delete API with the form's ID.
-      const updatedForms = await client.form.deleteForm.ask(formId);
+      const updatedForms = await service.form.deleteForm.ask(formId);
       // Re-render the list with the updated data.
       renderFormList(updatedForms);
       showResponseMessage("Submission deleted.", "success");
@@ -161,7 +161,7 @@ formListDiv.addEventListener("click", async (event) => {
  */
 const initializeApp = async () => {
   try {
-    const initialForms = await client.form.getForms.ask();
+    const initialForms = await service.form.getForms.ask();
     renderFormList(initialForms);
   } catch (error) {
     console.error("Failed to fetch initial forms:", error);
