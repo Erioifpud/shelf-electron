@@ -103,17 +103,15 @@ Each package is designed to be usable on its own and has its own `README.md` wit
 *   **For type-safe client-server communication?** Start with `@eleplug/erpc` and choose a transport like `@eleplug/h2-client`/`@eleplug/h2-server`.
 *   **For reliable messaging over WebSockets?** Use `@eleplug/muxen` to upgrade a raw WebSocket into a full `@eleplug/transport` instance.
 *   **For building a complex plugin system?** Dive into `@eleplug/esys` and `@eleplug/plexus`.
-*   **For a complete desktop app solution?** Use `@eleplug/elep` and see the example at `@eleplug/elep-example`.
+*   **For a complete desktop app solution?** Use `@eleplug/elep` and see the example at `plugin-example`.
 
 ### Running the Example
 
-⚠️ **Notice:** The `elep-example` package does not exist yet. A full Electron demo may be provided in the future.
-
-The `elep-example` package provides a fully functional demonstration of the entire stack in an Electron context. To run it:
+The `plugin-example` package provides a fully functional demonstration of the entire stack in an Electron context. To run it:
 
 ```bash
 # From the monorepo root
-pnpm --filter elep-example start
+pnpm --filter plugin-example dev
 ```
 
 ## How the Pieces Fit Together
