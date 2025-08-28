@@ -31,13 +31,13 @@ Building large-scale Electron applications often leads to monolithic codebases t
 `elep` establishes a secure client-server model between the main process and each renderer window. A central `GlobalIpcRouter` in the main process manages all communication, ensuring plugins and their UIs are completely isolated from one another.
 
 ```
-+------------------------------------------------------------------+
++--------------------------------------------------------------------+
 |                        Electron Main Process                       |
-|------------------------------------------------------------------|
-|  +---------------------------+   +-----------------------------+ |
-|  |       esys System         |   |      GlobalIpcRouter        | |
-|  | (Orchestrator, ebus, etc.)|   | (Singleton, manages all IPC)| |
-|  +---------------------------+   +-----------------------------+ |
+|--------------------------------------------------------------------|
+|  +---------------------------+   +-----------------------------+   |
+|  |       esys System         |   |      GlobalIpcRouter        |   |
+|  | (Orchestrator, ebus, etc.)|   | (Singleton, manages all IPC)|   |
+|  +---------------------------+   +-----------------------------+   |
 |                                                                    |
 |  +---------------------+    +----------------------------------+   |
 |  |   ECore (Pinned)    |    |   Plugin 'main-ui'               |   |
@@ -45,12 +45,12 @@ Building large-scale Electron applications often leads to monolithic codebases t
 |  +---------------------+    |    - `accept()`s connections     |   |
 |                             |    - Runs an erpc server         |   |
 |                             +----------------------------------+   |
-+------------------------------------------------------------------+
-        ^                |           IPC Handshake & Data           |
-        |                |      (via elep-handshake channel)        |
++--------------------------------------------------------------------+
+        ^                |           IPC Handshake & Data          |
+        |                |      (via elep-handshake channel)       |
         |                v                                         v
 +------------------------+-------------------------------------------+
-|                   Electron Renderer Process                      |
+|                   Electron Renderer Process                        |
 |--------------------------------------------------------------------|
 |  +-----------------+      +------------------------------------+   |
 |  | Preload Script  |----->|      UI (React, Vue, etc.)         |   |
