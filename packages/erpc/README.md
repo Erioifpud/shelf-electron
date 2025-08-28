@@ -45,14 +45,14 @@ import { rpc } from '@eleplug/erpc';
 export const appRouter = {
   // A simple 'ask' (request-response) procedure.
   greeting: rpc.ask(
-    (env, name: string) => `Hello, ${name}!`
+    (_, name: string) => `Hello, ${name}!`
   ),
 
   // A nested object for organization.
   math: {
-    add: rpc.ask((_env, a: number, b: number) => a + b),
+    add: rpc.ask((_, a: number, b: number) => a + b),
     // A 'tell' (fire-and-forget) procedure with no return value.
-    logToServer: rpc.tell((_env, message: string) => {
+    logToServer: rpc.tell((_, message: string) => {
       console.log(`LOG: ${message}`);
     }),
   },
@@ -127,7 +127,7 @@ export const loggingMiddleware = middleware(async ({ path, input, next }) => {
 const secureRouter = {
   publicAdd: rpc
     .use(loggingMiddleware) // Apply the middleware.
-    .ask((_env, a: number, b: number) => a + b),
+    .ask((_, a: number, b: number) => a + b),
 };
 ```
 
@@ -156,8 +156,8 @@ const p = createProcedureBuilder<MyContext, any, any>();
 // 3. Define your API. Public routes can use the default `rpc` builder.
 //    Protected routes use the context-aware `p` builder.
 const authApi = {
-  getSecretData: p.ask((env: Env<MyContext>) => {
-    if (!env.ctx.isAdmin) {
+  getSecretData: p.ask(({ ctx: MyContext }) => {
+    if (!ctx.isAdmin) {
       throw new Error("Unauthorized");
     }
     return { secret: "The cake is a lie." };
@@ -239,7 +239,7 @@ import { rpc } from '@eleplug/erpc';
 
 const streamRouter = {
   // A procedure that accepts a ReadableStream.
-  upload: rpc.tell(async (_env, stream: ReadableStream) => {
+  upload: rpc.tell(async (_, stream: ReadableStream) => {
     for await (const chunk of stream) {
       console.log('Received chunk:', chunk);
     }
