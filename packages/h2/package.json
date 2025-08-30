@@ -1,0 +1,30 @@
+{
+  "name": "@eleplug/h2",
+  "version": "0.1.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@eleplug/transport": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.14",
+    "@eleplug/erpc": "workspace:^",
+    "@eleplug/transport-mem": "workspace:^",
+    "@eleplug/h2": "workspace:^",
+    "@eleplug/h2-client": "workspace:^",
+    "@eleplug/h2-server": "workspace:^",
+    "selfsigned": "^2.4.1",
+    "tseep": "^1.3.1",
+    "uuid": "^11.1.0"
+  }
+}

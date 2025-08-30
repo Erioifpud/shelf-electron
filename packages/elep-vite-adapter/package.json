@@ -1,0 +1,25 @@
+{
+  "name": "@eleplug/elep-vite-adapter",
+  "version": "0.1.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "vite build",
+    "run": "electron dist/main.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@eleplug/elep": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.14"
+  },
+  "peerDependencies": {
+    "vite": "^7.1.3"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "name": "@eleplug/elep",
+  "version": "0.1.0",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./main": {
+      "types": "./dist/main.d.ts",
+      "import": "./dist/main.mjs",
+      "require": "./dist/main.js"
+    },
+    "./renderer": {
+      "types": "./dist/renderer.d.ts",
+      "import": "./dist/renderer.mjs"
+    },
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.mjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@eleplug/anvil": "workspace:^",
+    "@eleplug/ebus": "workspace:^",
+    "@eleplug/erpc": "workspace:^",
+    "@eleplug/esys": "workspace:^",
+    "@eleplug/mimic": "workspace:^",
+    "@eleplug/muxen": "workspace:^",
+    "@eleplug/plexus": "workspace:^",
+    "@eleplug/transport": "workspace:^",
+    "electron": "^37.2.6",
+    "find-cache-dir": "^6.0.0",
+    "lru-cache": "^11.1.0",
+    "mime-types": "^3.0.1",
+    "tmp": "^0.2.5"
+  },
+  "devDependencies": {
+    "@types/micromatch": "^4.0.9",
+    "@types/mime-types": "^3.0.1",
+    "@types/node": "^24.0.14",
+    "@types/tmp": "^0.2.6",
+    "esbuild": "^0.25.9",
+    "micromatch": "^4.0.8"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@eleplug/erpc",
+  "version": "1.0.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@eleplug/mimic": "workspace:^",
+    "@eleplug/transport": "workspace:^",
+    "circular_buffer_js": "^1.10.0",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@eleplug/transport-mem": "workspace:^"
+  }
+}

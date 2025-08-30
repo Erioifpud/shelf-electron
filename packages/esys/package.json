@@ -1,0 +1,30 @@
+{
+  "name": "@eleplug/esys",
+  "version": "0.1.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@eleplug/anvil": "workspace:^",
+    "@eleplug/ebus": "workspace:^",
+    "@eleplug/erpc": "workspace:^",
+    "@eleplug/plexus": "workspace:^",
+    "@eleplug/transport": "workspace:^",
+    "@eleplug/transport-mem": "workspace:^",
+    "lokijs": "^1.5.12",
+    "semver": "^7.7.2"
+  },
+  "devDependencies": {
+    "@types/lokijs": "^1.5.14",
+    "@types/semver": "^7.7.0"
+  }
+}

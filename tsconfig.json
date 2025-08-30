@@ -1,0 +1,10 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/erpc" },
+    { "path": "./packages/mimic" },
+    { "path": "./packages/h2"},
+    { "path": "./packages/h2-client"},
+    { "path": "./packages/h2-server"},
+  ],
+}

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<!-- The language attribute is important for accessibility and search engines. -->
+<html lang="en">
+<head>
+  <meta charset="UTF--8">
+  <!-- The viewport meta tag is crucial for responsive design, ensuring the layout adapts correctly to different screen sizes. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elep Plugin Template</title>
+  
+  <!-- Link to the stylesheet. This will be processed and bundled by Vite. -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Main container for the two-column layout -->
+  <div class="main-container">
+
+    <!-- Left Column: The submission form -->
+    <div class="form-container">
+      <div class="form-wrapper">
+        <h1>Contact Us</h1>
+        <p>Submit your feedback directly to the main process via ERPC.</p>
+        
+        <!-- The form element. The 'submit' event is handled in renderer.ts -->
+        <form id="contact-form" novalidate>
+          <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" required>
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required>
+          </div>
+          <div class="form-group">
+            <label for="message">Message</label>
+            <textarea id="message" name="message" rows="5" required></textarea>
+          </div>
+          <button type="submit" id="submit-btn">Submit</button>
+        </form>
+
+        <!-- This container is used to display success or error messages after form submission. -->
+        <div id="response-message" class="response"></div>
+      </div>
+    </div>
+    
+    <!-- Right Column: The list of submissions -->
+    <div class="list-container">
+      <h2>Submitted Forms</h2>
+      <!-- This wrapper will contain the dynamically rendered list of submissions. -->
+      <div id="form-list" class="form-list-wrapper">
+        <!-- An initial empty state message, which will be replaced by the renderer script. -->
+        <p class="empty-state">Loading submissions...</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 
+    The entry point for the renderer script.
+    `type="module"` is essential for using modern JavaScript features like `import`/`export`
+    and for Vite to correctly handle dependencies and HMR.
+  -->
+  <script type="module" src="./renderer.ts"></script>
+</body>
+</html>

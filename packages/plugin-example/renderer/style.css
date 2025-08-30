@@ -1,0 +1,237 @@
+/**
+ * @fileoverview Stylesheet for the Plugin Template UI.
+ *
+ * This file uses CSS Custom Properties (variables) for easy theme management.
+ * The layout is built with modern CSS (Grid), providing a robust and responsive
+ * two-column design.
+ */
+
+/* Define a consistent color palette and design tokens at the root level. */
+:root {
+  --primary-color: #4a90e2;
+  --primary-hover-color: #357abd;
+  --background-color: #f4f7f9;
+  --surface-color: #ffffff;
+  --text-color: #333;
+  --text-light-color: #555;
+  --border-color: #e2e8f0;
+  --success-bg: #e6f7e9;
+  --success-text: #2f855a;
+  --error-bg: #fed7d7;
+  --error-text: #c53030;
+  --danger-color: #e53e3e;
+  --danger-hover-color: #c53030;
+}
+
+/* --- Global & Body Styles --- */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  margin: 0;
+  height: 100vh;
+  overflow: hidden; /* Prevent body scrolling; individual columns will scroll. */
+}
+
+/* --- Main Layout --- */
+.main-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Create two equal-width columns. */
+  height: 100%;
+  width: 100%;
+}
+
+/* --- Left Column: Form --- */
+.form-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  background-color: var(--surface-color);
+  border-right: 1px solid var(--border-color);
+}
+
+.form-wrapper {
+  width: 100%;
+  max-width: 500px;
+}
+
+h1 {
+  color: #1a202c;
+  margin-top: 0;
+  font-size: 2rem;
+}
+
+p {
+  color: var(--text-light-color);
+  margin-bottom: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: 100%;
+}
+
+button:hover {
+  background-color: var(--primary-hover-color);
+}
+
+button:disabled {
+  background-color: #a0c3ed;
+  cursor: not-allowed;
+}
+
+/* --- Right Column: List --- */
+.list-container {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Prevent the container itself from scrolling. */
+}
+
+h2 {
+  margin-top: 0;
+  color: #1a202c;
+  font-size: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0; /* Prevent the header from shrinking. */
+}
+
+.form-list-wrapper {
+  overflow-y: auto; /* Enable vertical scrolling only for the list. */
+  flex-grow: 1;    /* Allow the list to take up all available vertical space. */
+  padding-right: 10px; /* Space for the scrollbar. */
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-light-color);
+  padding: 2rem;
+}
+
+.form-item {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  position: relative;
+}
+
+.form-item p {
+  margin: 0 0 0.75rem 0;
+  color: var(--text-color);
+  word-break: break-word; /* Prevent long words from overflowing. */
+}
+
+.form-item p strong {
+  color: var(--text-light-color);
+  display: inline-block;
+  width: 70px; /* Align the content text. */
+}
+
+.form-item .message-content {
+  background-color: #fafafa;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #eee;
+  white-space: pre-wrap;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.delete-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: var(--danger-color);
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 5px;
+  line-height: 1;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.delete-btn:hover {
+  background-color: var(--danger-hover-color);
+  color: white;
+}
+
+/* --- UI Feedback Messages --- */
+.response {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border-radius: 4px;
+  font-weight: 500;
+  display: none; /* Hidden by default. */
+}
+.response.success {
+  background-color: var(--success-bg);
+  color: var(--success-text);
+  display: block;
+}
+.response.error {
+  background-color: var(--error-bg);
+  color: var(--error-text);
+  display: block;
+}
+
+/* --- Responsive Layout for Smaller Screens --- */
+@media (max-width: 900px) {
+  .main-container {
+    grid-template-columns: 1fr; /* Stack columns vertically. */
+    height: auto;
+    overflow-y: auto; /* Allow the entire page to scroll. */
+  }
+  .form-container {
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+}
