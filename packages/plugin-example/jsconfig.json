@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["renderer/*"]
+    },
+    // "target": "ES6",
+    "allowSyntheticDefaultImports": true,
+    "jsx": "react-jsx"
+  },
+  "include": ["renderer/**/*"],
+  "exclude": ["node_modules"]
+}
