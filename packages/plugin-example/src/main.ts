@@ -60,6 +60,7 @@ export default definePlugin({
         
         webPreferences: {
           devTools: true, // Very useful for debugging the renderer process.
+          webSecurity: false,
         },
       },
       myPluginApi // This is our API object from `api.ts` being served to this window.
