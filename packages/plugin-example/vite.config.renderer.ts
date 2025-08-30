@@ -6,14 +6,22 @@
  */
 
 import { defineConfig } from 'vite';
+import path from "path"
 import react from '@vitejs/plugin-react-swc'
+import tailwindcss from "@tailwindcss/vite"
 
 export default defineConfig({
   // The root is the project directory. This is because the build entry point
   // is `renderer/index.html`, and Vite needs to resolve asset paths from there.
   root: ".",
 
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
+
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
 
   // Ensures that asset paths in the generated HTML are absolute (e.g., /renderer.js),
   // which works seamlessly with the `plugin://` protocol.
