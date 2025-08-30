@@ -6,11 +6,14 @@
  */
 
 import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react-swc'
 
 export default defineConfig({
   // The root is the project directory. This is because the build entry point
   // is `renderer/index.html`, and Vite needs to resolve asset paths from there.
   root: ".",
+
+  plugins: [react()],
 
   // Ensures that asset paths in the generated HTML are absolute (e.g., /renderer.js),
   // which works seamlessly with the `plugin://` protocol.
