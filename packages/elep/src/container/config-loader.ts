@@ -152,7 +152,7 @@ export class ConfigLoader {
     pluginAbsolutePath: string,
     baseName: string
   ): Promise<string | null> {
-    for (const ext of ["ts", "js", "mjs"]) {
+    for (const ext of ["ts", "js", "mts", "mjs"]) {
       const configPath = path.join(pluginAbsolutePath, `${baseName}.${ext}`);
       try {
         await fsp.access(configPath, fsp.constants.F_OK);

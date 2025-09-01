@@ -13,7 +13,7 @@ import { defineDevConfig } from '@eleplug/elep/config';
 // The adapter that integrates Vite with Elep's development mode.
 import { viteDevPlugin } from '@eleplug/elep-vite-adapter';
 // Import the Vite config for the renderer to pass it to the adapter.
-import rendererConfig from './vite.config.renderer';
+import rendererConfig from './vite.config.renderer.mjs';
 
 export default defineDevConfig({
   /**
