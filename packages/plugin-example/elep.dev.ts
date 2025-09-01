@@ -63,6 +63,6 @@ export default defineDevConfig({
    * }
    */
   rewrites: {
-    "/@renderer/<rest:**>": "/renderer/<rest>"
+    "/@renderer/<**>": "/renderer/<1>"
   }
 });
