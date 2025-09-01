@@ -172,3 +172,5 @@ const initializeApp = async () => {
 
 // Start the application.
 initializeApp();
+
+console.log(window.location.origin);

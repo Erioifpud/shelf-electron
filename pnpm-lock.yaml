@@ -254,6 +254,22 @@ importers:
         specifier: ^17.0.33
         version: 17.0.33
 
+  packages/elep-example:
+    dependencies:
+      '@eleplug/erpc':
+        specifier: workspace:^
+        version: link:../erpc
+      '@eleplug/transport':
+        specifier: workspace:^
+        version: link:../transport
+      '@eleplug/transport-mem':
+        specifier: workspace:^
+        version: link:../transport-mem
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.14
+        version: 24.3.0
+
   packages/elep-vite-adapter:
     dependencies:
       '@eleplug/elep':

@@ -6,6 +6,18 @@ import { type EWindowOptions } from "./ewindow-options.js";
 import type { Convert } from "../types.js";
 import path from "node:path";
 
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "plugin",
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
+  },
+]);
+
 /**
  * Represents the core of the Electron application, acting as a secure proxy to the
  * `app` module and a factory for `EWindow` instances.

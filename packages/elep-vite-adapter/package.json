@@ -10,7 +10,6 @@
   },
   "scripts": {
     "build": "tsup",
-    "run": "electron dist/main.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
