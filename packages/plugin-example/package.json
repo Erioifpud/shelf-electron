@@ -9,8 +9,8 @@
     "dev": "elep dev",
     "dts": "elep dts",
 
-    "build:main": "vite build --config vite.config.main.ts",
-    "build:renderer": "vite build --config vite.config.renderer.ts",
+    "build:main": "vite build --config vite.config.main.mts",
+    "build:renderer": "vite build --config vite.config.renderer.mts",
 
     "build": "pnpm run build:main && pnpm run build:renderer"
   },

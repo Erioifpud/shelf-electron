@@ -45,14 +45,14 @@
     "find-cache-dir": "^6.0.0",
     "lru-cache": "^11.1.0",
     "mime-types": "^3.0.1",
-    "tmp": "^0.2.5"
+    "tmp": "^0.2.5",
+    "esbuild": "^0.25.9",
+    "micromatch": "^4.0.8"
   },
   "devDependencies": {
     "@types/micromatch": "^4.0.9",
     "@types/mime-types": "^3.0.1",
     "@types/node": "^24.0.14",
-    "@types/tmp": "^0.2.6",
-    "esbuild": "^0.25.9",
-    "micromatch": "^4.0.8"
+    "@types/tmp": "^0.2.6"
   }
 }

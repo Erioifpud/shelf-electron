@@ -27,11 +27,30 @@ export default defineDevConfig({
    * Development-specific path rewrites.
    * These rewrites are merged with and take precedence over those in `elep.prod.ts`.
    *
-   * This example maps the abstract path "/@renderer/" to the physical source
-   * directory "/renderer/". This allows `context.resolve('@renderer/index.html')`
-   * in `main.ts` to correctly resolve to the Vite Dev Server URL during development.
+   * The rewrite engine supports a powerful glob-based capture syntax: `<name:glob>`.
+   * This allows for flexible and precise matching and substitution.
+   *
+   * - `<name:pattern>`: Defines a capture group named 'name'.
+   * - The `pattern` can be any valid glob expression (e.g., `*`, `**`, `*.js`, `{a,b}`).
+   * - In the target string, use `<name>` to insert the captured value.
+   *
+   * This example maps the abstract path prefix "/@renderer/" to the physical source
+   * directory "/renderer/".
+   * - A call to `context.resolve('@renderer/index.html')`
+   * - will match `"/@renderer/<rest:**>"`, capturing 'index.html' into the `rest` group.
+   * - It will then be rewritten to `"/renderer/<rest>"`, resulting in "renderer/index.html".
+   * This rewritten path is then correctly handled by the Vite Dev Server.
+   *
+   * @example
+   * {
+   *   // Captures everything after /src/ and places it in /dist/
+   *   "/src/<path:**>": "/dist/<path>",
+   *
+   *   // Captures a filename and extension separately
+   *   "/pages/<name:*>/<file:*.{js|css}>": "/assets/<name>/<file>"
+   * }
    */
   rewrites: {
-    "/@renderer/": "/renderer/"
+    "/@renderer/<rest:**>": "/renderer/<rest>"
   }
 });
