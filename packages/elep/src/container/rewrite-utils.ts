@@ -3,72 +3,74 @@
  * Provides a powerful, glob-based path rewriting utility for the Elep container.
  * This module is the core engine for interpreting the `rewrites` configuration
  * in `elep.prod.ts` and `elep.dev.ts`, enabling complex path transformations.
- * It uses an LRU cache for compiled patterns to optimize performance.
+ * It supports both named (`<name:glob>`) and anonymous (`<glob>`) capture groups
+ * and uses an LRU cache for compiled patterns to optimize performance.
  */
 
 import micromatch from "micromatch";
 import { LRUCache } from "lru-cache";
 
 /**
- * Represents the compiled form of a rewrite pattern, including the final
- * regular expression and the names of the capture groups.
+ * Represents the compiled form of a rewrite pattern.
  * @internal
  */
 interface CompiledPattern {
   regex: RegExp;
-  groups: string[];
+  /** The total number of capture groups (both named and anonymous). */
+  groupCount: number;
 }
 
-// Replace the simple Map with a more robust LRUCache instance.
-// The `max` option defines the maximum number of compiled patterns to store.
-// 200 is a generous number for most applications, preventing excessive memory usage
-// while still providing significant performance benefits.
 const compiledPatternCache = new LRUCache<string, CompiledPattern>({
   max: 200,
 });
 
 /**
- * Compiles a custom pattern string containing named glob captures (e.g., `<name:glob>`)
- * into a standard, executable regular expression.
+ * Compiles a custom pattern string containing named (`<name:glob>`) or anonymous (`<glob>`)
+ * captures into a standard, executable regular expression.
  *
- * This function is the heart of the rewrite engine. It checks a high-performance
- * LRU cache for a pre-compiled pattern. If not found, it parses the pattern,
- * separates literal parts from capture groups, converts glob expressions
- * into regex segments using `micromatch`, and assembles a final RegExp object,
- * which is then stored in the cache for future use.
+ * It checks a high-performance LRU cache for a pre-compiled pattern. If not found,
+ * it parses the pattern, converting glob expressions into regex segments and assembling
+ * a final RegExp object, which is then stored in the cache.
  *
- * @param pattern - The custom rewrite pattern, e.g., "/src/assets/<path:** *.{png,jpg}>".
- * @returns A `CompiledPattern` object containing the RegExp and group names.
- * @throws {Error} If the pattern is malformed (e.g., invalid glob).
+ * @param pattern - The custom rewrite pattern, e.g., "/assets/<**> OR /src/<path:**>".
+ * @returns A `CompiledPattern` object containing the RegExp and total group count.
  */
 function compilePattern(pattern: string): CompiledPattern {
-  // Check the LRU cache first.
   const cached = compiledPatternCache.get(pattern);
   if (cached) {
     return cached;
   }
 
-  const groups: string[] = [];
-  const captureGroupRegex = /<(\w+):([^>]+)>/g;
+  // This new regex can match both `<name:glob>` and `<glob>`.
+  // `match[1]` will be the name (or undefined if anonymous).
+  // `match[2]` will be the glob pattern.
+  const captureGroupRegex = /<(?:(\w+):)?([^>]+)>/g;
 
   let finalRegexString = "^";
   let lastIndex = 0;
+  let groupCount = 0;
   let match;
 
   while ((match = captureGroupRegex.exec(pattern)) !== null) {
     const literalPart = pattern.substring(lastIndex, match.index);
     finalRegexString += literalPart.replace(/([.*+?^${}()|[\]\\])/g, "\\$1");
 
-    const groupName = match[1];
+    groupCount++;
+    const groupName = match[1]; // Will be undefined for anonymous groups
     const globPattern = match[2];
-    groups.push(groupName);
 
     const globRegexSourceWithAnchors = micromatch.makeRe(globPattern, {
       dot: true,
     }).source;
     const globRegexSource = globRegexSourceWithAnchors.slice(1, -1);
 
-    finalRegexString += `(?<${groupName}>${globRegexSource})`;
+    // Generate a named or a standard (anonymous) capture group based on syntax.
+    if (groupName) {
+      finalRegexString += `(?<${groupName}>${globRegexSource})`;
+    } else {
+      finalRegexString += `(${globRegexSource})`;
+    }
+
     lastIndex = captureGroupRegex.lastIndex;
   }
 
@@ -78,26 +80,22 @@ function compilePattern(pattern: string): CompiledPattern {
 
   const compiled: CompiledPattern = {
     regex: new RegExp(finalRegexString),
-    groups,
+    groupCount,
   };
 
-  // Store the newly compiled pattern in the LRU cache.
   compiledPatternCache.set(pattern, compiled);
-
   return compiled;
 }
 
 /**
  * Applies a set of rewrite rules to a given source path.
  *
- * It iterates through the provided rules, compiles each pattern on its first encounter
- * (leveraging an LRU cache for performance), and executes the resulting regular
- * expression against the path. The first rule that matches will be applied, and its
- * target template will be populated with the captured values.
+ * It iterates through the rules, using the `compilePattern` function (with caching)
+ * to get a RegExp. The first rule that matches is applied. The target template can
+ * reference captures by name (`<name>`) or by 1-based index (`<1>`, `<2>`, etc.).
  *
- * @param sourcePath - The original path to be rewritten (e.g., "src/main.js").
- * @param rules - A record mapping source patterns to target templates,
- *                e.g., `{ "/src/<rest:*>": "/dist/<rest>" }`.
+ * @param sourcePath - The original path to be rewritten.
+ * @param rules - A record mapping source patterns to target templates.
  * @returns The rewritten path, or the original path if no rules matched.
  */
 export function applyRewriteRules(
@@ -110,20 +108,40 @@ export function applyRewriteRules(
 
   for (const [pattern, targetTemplate] of Object.entries(rules)) {
     try {
-      const { regex } = compilePattern(pattern);
+      const { regex, groupCount } = compilePattern(pattern);
       const match = normalizedPath.match(regex);
 
-      if (match?.groups) {
+      if (match) {
+        // A match was found (groups may or may not exist).
+        // This new regex matches both `<name>` and `<number>` placeholders.
+        const placeholderRegex = /<(\w+|\d+)>/g;
+
         let rewrittenPath = targetTemplate.replace(
-          /<(\w+)>/g,
-          (_, groupName) => {
-            if (!(groupName in match.groups!)) {
-              console.warn(
-                `[Elep Rewrite] Warning: Capture group '<${groupName}>' is used in the target template but not defined in the source pattern '${pattern}'.`
-              );
-              return "";
+          placeholderRegex,
+          (_, placeholder) => {
+            const isNumeric = /^\d+$/.test(placeholder);
+
+            if (isNumeric) {
+              const index = parseInt(placeholder, 10);
+              if (index > 0 && index <= groupCount) {
+                return match[index] || "";
+              } else {
+                console.warn(
+                  `[Elep Rewrite] Warning: Invalid index <${index}> referenced in target for pattern '${pattern}'. There are only ${groupCount} capture groups.`
+                );
+                return "";
+              }
+            } else {
+              // It's a named placeholder
+              if (match.groups && placeholder in match.groups) {
+                return match.groups[placeholder] || "";
+              } else {
+                console.warn(
+                  `[Elep Rewrite] Warning: Named group '<${placeholder}>' is used in the target but not defined in the source pattern '${pattern}'.`
+                );
+                return "";
+              }
             }
-            return match.groups![groupName] || "";
           }
         );
 
