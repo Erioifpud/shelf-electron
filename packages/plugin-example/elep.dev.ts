@@ -27,27 +27,39 @@ export default defineDevConfig({
    * Development-specific path rewrites.
    * These rewrites are merged with and take precedence over those in `elep.prod.ts`.
    *
-   * The rewrite engine supports a powerful glob-based capture syntax: `<name:glob>`.
-   * This allows for flexible and precise matching and substitution.
+   * The rewrite engine supports a powerful glob-based capture syntax that allows
+   * for flexible and precise path transformations. It supports two styles of capture groups:
    *
-   * - `<name:pattern>`: Defines a capture group named 'name'.
-   * - The `pattern` can be any valid glob expression (e.g., `*`, `**`, `*.js`, `{a,b}`).
-   * - In the target string, use `<name>` to insert the captured value.
+   * 1. **Named Capture Groups:** `<name:glob>`
+   *    - Defines a capture group named 'name'. `glob` can be any valid glob pattern
+   *      (e.g., `*`, `**`, `*.js`).
+   *    - In the target string, use `<name>` to insert the captured value.
+   *
+   * 2. **Anonymous Capture Groups:** `<glob>`
+   *    - A simpler syntax for when you don't need a name.
+   *    - In the target string, use 1-based indexed placeholders like `<1>`, `<2>`
+   *      to insert captured values in the order they appear.
    *
    * This example maps the abstract path prefix "/@renderer/" to the physical source
-   * directory "/renderer/".
-   * - A call to `context.resolve('@renderer/index.html')`
-   * - will match `"/@renderer/<rest:**>"`, capturing 'index.html' into the `rest` group.
-   * - It will then be rewritten to `"/renderer/<rest>"`, resulting in "renderer/index.html".
-   * This rewritten path is then correctly handled by the Vite Dev Server.
+   * directory "/renderer/". A call to `context.resolve('@renderer/index.html')` will
+   * match the rule, capture "index.html" into the `rest` group, and rewrite the path
+   * to "renderer/index.html", which is then correctly handled by the Vite Dev Server.
    *
    * @example
    * {
+   *   // --- Named Groups ---
    *   // Captures everything after /src/ and places it in /dist/
    *   "/src/<path:**>": "/dist/<path>",
    *
-   *   // Captures a filename and extension separately
-   *   "/pages/<name:*>/<file:*.{js|css}>": "/assets/<name>/<file>"
+   *   // --- Anonymous Groups ---
+   *   // A concise way to reorder path segments.
+   *   // /assets/js/main.js -> /static/js/main.js
+   *   "/assets/<*>/<*.js>": "/static/<1>/<2>",
+   *
+   *   // --- Mixed (use with care) ---
+   *   // Captures version and endpoint separately.
+   *   // /api/v2/users -> /internal/users?v=2
+   *   "/api/v<[0-9]+>/<endpoint:**>": "/internal/<endpoint>?v=<1>"
    * }
    */
   rewrites: {

@@ -12,26 +12,33 @@ export default defineProdConfig({
   /**
    * Production-specific path rewrites.
    *
-   * This is a critical piece of configuration. It decouples your source code's
-   * logical paths from the final build output structure using a powerful
-   * glob-based capture and substitution syntax.
+   * This is a critical piece of configuration that decouples your source code's
+   * logical paths from the final build output structure. It uses a powerful
+   * glob-based capture and substitution engine.
    *
-   * **Syntax:**
-   * - Source Pattern: Use `<name:glob>` to define a named capture group.
-   *   - `name`: A name for your captured value (e.g., `path`, `file`).
-   *   - `glob`: Any valid glob pattern (`*`, `**`, `*.js`, etc.).
-   * - Target Template: Use `<name>` to substitute the value captured by the group.
+   * **Syntax Guide:**
    *
-   * **Example Breakdown:**
-   * In the rule `"/@renderer/<rest:**>": "/dist/renderer/<rest>"`, a request for a path
-   * like `/@renderer/assets/icon.svg` will be processed as follows:
-   * 1. The pattern matches the path.
+   * **1. Source Pattern (the key):**
+   *    - **Named Capture:** Use `<name:glob>` to capture a path segment into a
+   *      variable named `name`. The `glob` can be any valid pattern like `*`
+   *      (single segment), `**` (multiple segments), or `*.{js,css}`.
+   *    - **Anonymous Capture:** Use `<glob>` for a simpler capture when a name
+   *      isn't needed.
+   *
+   * **2. Target Template (the value):**
+   *    - **Named Reference:** Use `<name>` to substitute the value captured by
+   *      the corresponding named group.
+   *    - **Indexed Reference:** Use `<1>`, `<2>`, etc., to substitute values from
+   *      all capture groups (both named and anonymous) in the order they appear
+   *      from left to right.
+   *
+   * **Example Breakdown (`/@renderer/<rest:**>` -> `/dist/renderer/<rest>`):**
+   * A call to `context.resolve('@renderer/assets/icon.svg')` is processed as follows:
+   * 1. The pattern `"/@renderer/<rest:**>"` matches the path.
    * 2. The glob `**` captures the substring "assets/icon.svg" into a group named `rest`.
    * 3. The system substitutes `<rest>` in the target template with the captured value.
    * 4. The final, rewritten path becomes `/dist/renderer/assets/icon.svg`.
-   *
-   * This allows `context.resolve('@renderer/index.html')` to correctly generate the
-   * URI "plugin://.../dist/renderer/index.html" in a production environment.
+   * This correctly generates the production URI: "plugin://.../dist/renderer/index.html".
    */
   rewrites: {
     "/@renderer/<rest:**>": "/dist/renderer/<rest>",
