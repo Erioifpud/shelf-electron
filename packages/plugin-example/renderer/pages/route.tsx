@@ -15,7 +15,7 @@ const router = createBrowserRouter([
     element: <Navigate to="/source" replace />
   }
 ], {
-  basename: "/renderer/index.html"
+  basename: "/renderer/index.html",
 });
 
 export default router;
