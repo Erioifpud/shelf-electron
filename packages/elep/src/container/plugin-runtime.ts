@@ -11,7 +11,7 @@ import type { DevPlugin } from "./dev-plugin-types.js";
 import * as path from "node:path";
 import type { FilePluginLoader } from "./plugin-loader.js";
 import type { DevConfig, ElepConfig } from "./config-types.js";
-import { applyRewriteRules } from "./rewrite-utils.js";
+import { applyRewriteRules, mergeRewriteRules } from "./rewrite-utils.js";
 
 /**
  * Encapsulates the complete runtime state and lifecycle for a single activated plugin.
@@ -121,10 +121,11 @@ export class PluginRuntime {
       this.options.containerName,
       this.options.pluginPath
     );
-    const mergedRewrites: Record<string, string> = {
-      ...prodConfig?.rewrites,
-      ...devConfig?.rewrites,
-    };
+
+    const finalRewrites = mergeRewriteRules(
+      devConfig?.rewrites,
+      prodConfig?.rewrites
+    );
 
     const context: PluginActivationContext = {
       procedure: p2p,
@@ -135,7 +136,7 @@ export class PluginRuntime {
       // The `resolve` method now uses the powerful `applyRewriteRules` utility.
       resolve: (relativePath: string): string => {
         // Apply the merged rewrite rules to the path provided by the plugin.
-        const rewrittenPath = applyRewriteRules(relativePath, mergedRewrites);
+        const rewrittenPath = applyRewriteRules(relativePath, finalRewrites);
         // Resolve the potentially modified path against the plugin's base URI.
         return staticResolvePluginUri(pluginUri, rewrittenPath);
       },

@@ -107,9 +107,11 @@ export function applyRewriteRules(
     : `/${sourcePath}`;
 
   for (const [pattern, targetTemplate] of Object.entries(rules)) {
+    console.log("[ffffffffffffff]", pattern + "   " + targetTemplate);
     try {
       const { regex, groupCount } = compilePattern(pattern);
       const match = normalizedPath.match(regex);
+      console.log("[fffffffffffffg]", regex + "   " + normalizedPath + "  " + match);
 
       if (match) {
         // A match was found (groups may or may not exist).
@@ -159,4 +161,44 @@ export function applyRewriteRules(
   }
 
   return sourcePath;
+}
+
+/**
+ * Merges development and production rewrite rules, ensuring correct priority.
+ * The merging strategy is as follows:
+ * 1. All development rules are given higher priority than production rules.
+ * 2. If a rule with the same source pattern exists in both sets, the development
+ *    version is used, and the production version is discarded.
+ * 3. The internal order of rules within each set is preserved.
+ *
+ * @param devRules - The rewrite rules from `elep.dev.ts`.
+ * @param prodRules - The rewrite rules from `elep.prod.ts`.
+ * @returns A single, ordered record of rewrite rules to be processed.
+ * @internal
+ */
+export function mergeRewriteRules(
+  devRules: Record<string, string> | null | undefined,
+  prodRules: Record<string, string> | null | undefined
+): Record<string, string> {
+  const finalRules = new Map<string, string>();
+  
+  // 1. Add all dev rules first. Their order is preserved.
+  if (devRules) {
+    for (const [pattern, target] of Object.entries(devRules)) {
+      finalRules.set(pattern, target);
+    }
+  }
+
+  // 2. Add prod rules only if a rule with the same pattern
+  //    doesn't already exist from the dev rules.
+  if (prodRules) {
+    for (const [pattern, target] of Object.entries(prodRules)) {
+      if (!finalRules.has(pattern)) {
+        finalRules.set(pattern, target);
+      }
+    }
+  }
+  
+  // A Map preserves insertion order, so converting back to an object is safe.
+  return Object.fromEntries(finalRules);
 }
