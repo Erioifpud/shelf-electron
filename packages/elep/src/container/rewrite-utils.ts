@@ -1,202 +1,130 @@
 /**
  * @fileoverview
- * Provides a powerful, glob-based path rewriting utility for the Elep container.
- * This module is the core engine for interpreting the `rewrites` configuration
- * in `elep.prod.ts` and `elep.dev.ts`, enabling complex path transformations.
- * It supports both named (`<name:glob>`) and anonymous (`<glob>`) capture groups
- * and uses an LRU cache for compiled patterns to optimize performance.
+ * Provides path rewriting and SPA fallback utilities for the Elep container.
+ * It uses a high-performance LRU cache for memoizing sorted rewrite keys.
  */
 
-import micromatch from "micromatch";
 import { LRUCache } from "lru-cache";
 
-/**
- * Represents the compiled form of a rewrite pattern.
- * @internal
- */
-interface CompiledPattern {
-  regex: RegExp;
-  /** The total number of capture groups (both named and anonymous). */
-  groupCount: number;
-}
-
-const compiledPatternCache = new LRUCache<string, CompiledPattern>({
+// A high-performance LRU cache for storing sorted rewrite keys.
+const sortedKeysCache = new LRUCache<Record<string, string>, string[]>({
   max: 200,
 });
 
 /**
- * Compiles a custom pattern string containing named (`<name:glob>`) or anonymous (`<glob>`)
- * captures into a standard, executable regular expression.
+ * Applies a set of simple prefix-based rewrite rules to a given source path.
+ * It deterministically finds the longest matching prefix from the rules and replaces it.
  *
- * It checks a high-performance LRU cache for a pre-compiled pattern. If not found,
- * it parses the pattern, converting glob expressions into regex segments and assembling
- * a final RegExp object, which is then stored in the cache.
- *
- * @param pattern - The custom rewrite pattern, e.g., "/assets/<**> OR /src/<path:**>".
- * @returns A `CompiledPattern` object containing the RegExp and total group count.
- */
-function compilePattern(pattern: string): CompiledPattern {
-  const cached = compiledPatternCache.get(pattern);
-  if (cached) {
-    return cached;
-  }
-
-  // This new regex can match both `<name:glob>` and `<glob>`.
-  // `match[1]` will be the name (or undefined if anonymous).
-  // `match[2]` will be the glob pattern.
-  const captureGroupRegex = /<(?:(\w+):)?([^>]+)>/g;
-
-  let finalRegexString = "^";
-  let lastIndex = 0;
-  let groupCount = 0;
-  let match;
-
-  while ((match = captureGroupRegex.exec(pattern)) !== null) {
-    const literalPart = pattern.substring(lastIndex, match.index);
-    finalRegexString += literalPart.replace(/([.*+?^${}()|[\]\\])/g, "\\$1");
-
-    groupCount++;
-    const groupName = match[1]; // Will be undefined for anonymous groups
-    const globPattern = match[2];
-
-    const globRegexSourceWithAnchors = micromatch.makeRe(globPattern, {
-      dot: true,
-    }).source;
-    const globRegexSource = globRegexSourceWithAnchors.slice(1, -1);
-
-    // Generate a named or a standard (anonymous) capture group based on syntax.
-    if (groupName) {
-      finalRegexString += `(?<${groupName}>${globRegexSource})`;
-    } else {
-      finalRegexString += `(${globRegexSource})`;
-    }
-
-    lastIndex = captureGroupRegex.lastIndex;
-  }
-
-  const remainingPart = pattern.substring(lastIndex);
-  finalRegexString += remainingPart.replace(/([.*+?^${}()|[\]\\])/g, "\\$1");
-  finalRegexString += "$";
-
-  const compiled: CompiledPattern = {
-    regex: new RegExp(finalRegexString),
-    groupCount,
-  };
-
-  compiledPatternCache.set(pattern, compiled);
-  return compiled;
-}
-
-/**
- * Applies a set of rewrite rules to a given source path.
- *
- * It iterates through the rules, using the `compilePattern` function (with caching)
- * to get a RegExp. The first rule that matches is applied. The target template can
- * reference captures by name (`<name>`) or by 1-based index (`<1>`, `<2>`, etc.).
- *
- * @param sourcePath - The original path to be rewritten.
- * @param rules - A record mapping source patterns to target templates.
+ * @param sourcePath - The original path to be rewritten (e.g., "@renderer/main.js").
+ * @param rules - A record mapping virtual prefixes to their corresponding physical prefixes.
  * @returns The rewritten path, or the original path if no rules matched.
  */
-export function applyRewriteRules(
+export function applyPrefixRewriteRules(
   sourcePath: string,
   rules: Record<string, string>
 ): string {
+  let sortedKeys = sortedKeysCache.get(rules);
+  if (!sortedKeys) {
+    sortedKeys = Object.keys(rules).sort((a, b) => b.length - a.length);
+    sortedKeysCache.set(rules, sortedKeys);
+  }
+
   const normalizedPath = sourcePath.startsWith("/")
     ? sourcePath
     : `/${sourcePath}`;
 
-  for (const [pattern, targetTemplate] of Object.entries(rules)) {
-    try {
-      const { regex, groupCount } = compilePattern(pattern);
-      const match = normalizedPath.match(regex);
-
-      if (match) {
-        // A match was found (groups may or may not exist).
-        // This new regex matches both `<name>` and `<number>` placeholders.
-        const placeholderRegex = /<(\w+|\d+)>/g;
-
-        let rewrittenPath = targetTemplate.replace(
-          placeholderRegex,
-          (_, placeholder) => {
-            const isNumeric = /^\d+$/.test(placeholder);
-
-            if (isNumeric) {
-              const index = parseInt(placeholder, 10);
-              if (index > 0 && index <= groupCount) {
-                return match[index] || "";
-              } else {
-                console.warn(
-                  `[Elep Rewrite] Warning: Invalid index <${index}> referenced in target for pattern '${pattern}'. There are only ${groupCount} capture groups.`
-                );
-                return "";
-              }
-            } else {
-              // It's a named placeholder
-              if (match.groups && placeholder in match.groups) {
-                return match.groups[placeholder] || "";
-              } else {
-                console.warn(
-                  `[Elep Rewrite] Warning: Named group '<${placeholder}>' is used in the target but not defined in the source pattern '${pattern}'.`
-                );
-                return "";
-              }
-            }
-          }
-        );
-
-        if (rewrittenPath.startsWith("/")) {
-          rewrittenPath = rewrittenPath.substring(1);
-        }
-
-        return rewrittenPath;
-      }
-    } catch (e: any) {
-      console.error(
-        `[Elep Rewrite] Error compiling rewrite pattern '${pattern}': ${e.message}`
-      );
+  for (const from of sortedKeys) {
+    if (normalizedPath.startsWith(from)) {
+      const to = rules[from];
+      const rewrittenPath = to + normalizedPath.substring(from.length);
+      return rewrittenPath.startsWith("/")
+        ? rewrittenPath.substring(1)
+        : rewrittenPath;
     }
   }
 
   return sourcePath;
 }
 
+// A pre-compiled regex to efficiently test for common web page file extensions.
+const WEB_PAGE_EXTENSIONS_REGEX = /\.(html|htm|xhtml)$/;
+// A pre-compiled regex to check if a path segment looks like a static asset.
+const STATIC_ASSET_REGEX = /[^/]+\.[^/]+$/;
+
 /**
- * Merges development and production rewrite rules, ensuring correct priority.
- * The merging strategy is as follows:
- * 1. All development rules are given higher priority than production rules.
- * 2. If a rule with the same source pattern exists in both sets, the development
- *    version is used, and the production version is discarded.
- * 3. The internal order of rules within each set is preserved.
+ * Applies a configured SPA (Single Page Application) fallback strategy to a path.
  *
- * @param devRules - The rewrite rules from `elep.dev.ts`.
- * @param prodRules - The rewrite rules from `elep.prod.ts`.
- * @returns A single, ordered record of rewrite rules to be processed.
- * @internal
+ * This function is the core of Elep's SPA routing. Based on the `spaConfig`, it
+ * intelligently rewrites paths that look like client-side routes to an appropriate
+ * HTML entry point, while leaving direct requests for static assets untouched.
+ *
+ * @param originalPath - The path to potentially apply the fallback to.
+ * @param spaConfig - The SPA configuration (`true`, a string, or an array of strings).
+ * @returns The rewritten path if a fallback was applied, otherwise the original path.
  */
-export function mergeRewriteRules(
-  devRules: Record<string, string> | null | undefined,
-  prodRules: Record<string, string> | null | undefined
-): Record<string, string> {
-  const finalRules = new Map<string, string>();
-  
-  // 1. Add all dev rules first. Their order is preserved.
-  if (devRules) {
-    for (const [pattern, target] of Object.entries(devRules)) {
-      finalRules.set(pattern, target);
+export function applySpaFallback(
+  originalPath: string,
+  spaConfig: boolean | string | string[]
+): string {
+  // Heuristic: If the path looks like a direct request for a static asset (e.g., 'main.js', 'logo.svg'),
+  // we should never apply the SPA fallback, regardless of the configuration.
+  if (STATIC_ASSET_REGEX.test(originalPath)) {
+    return originalPath;
+  }
+
+  // --- Strategy 1: `spa: string` (Single Entry Point Mode) ---
+  if (typeof spaConfig === "string") {
+    console.debug(
+      `[Elep SPA Fallback] Path '${originalPath}' rewritten to single entry point '${spaConfig}'.`
+    );
+    // Unconditionally rewrite to the specified entry point.
+    return spaConfig.startsWith("/") ? spaConfig.substring(1) : spaConfig;
+  }
+
+  // --- Strategy 2: `spa: string[]` (Multi-App Mode) ---
+  if (Array.isArray(spaConfig)) {
+    // Sort entry points by length, descending, to find the most specific match first.
+    // E.g., '/app/admin/index.html' should be checked before '/app/index.html'.
+    const sortedEntryPoints = [...spaConfig].sort(
+      (a, b) => b.length - a.length
+    );
+
+    for (const entryPoint of sortedEntryPoints) {
+      // If the request path starts with a known entry point, fall back to it.
+      if (originalPath.startsWith(entryPoint)) {
+        console.debug(
+          `[Elep SPA Fallback] Path '${originalPath}' rewritten to multi-app entry point '${entryPoint}'.`
+        );
+        return entryPoint;
+      }
+    }
+    // If no entry point is a prefix of the path, do nothing.
+    return originalPath;
+  }
+
+  // --- Strategy 3: `spa: true` (Smart Detection Mode) ---
+  if (spaConfig === true) {
+    const pathSegments = originalPath.split("/");
+    let htmlEntryIndex = -1;
+
+    // Find the index of the last segment that ends with a common web page extension.
+    for (let i = pathSegments.length - 1; i >= 0; i--) {
+      if (WEB_PAGE_EXTENSIONS_REGEX.test(pathSegments[i])) {
+        htmlEntryIndex = i;
+        break;
+      }
+    }
+
+    // If an HTML-like segment was found, rewrite the path to include only up to that segment.
+    if (htmlEntryIndex !== -1) {
+      const spaRootPath = pathSegments.slice(0, htmlEntryIndex + 1).join("/");
+      console.debug(
+        `[Elep SPA Fallback] Path '${originalPath}' smartly rewritten to '${spaRootPath}'.`
+      );
+      return spaRootPath;
     }
   }
 
-  // 2. Add prod rules only if a rule with the same pattern
-  //    doesn't already exist from the dev rules.
-  if (prodRules) {
-    for (const [pattern, target] of Object.entries(prodRules)) {
-      if (!finalRules.has(pattern)) {
-        finalRules.set(pattern, target);
-      }
-    }
-  }
-  
-  // A Map preserves insertion order, so converting back to an object is safe.
-  return Object.fromEntries(finalRules);
+  // If SPA is not enabled, or if no applicable fallback logic was matched, return the original path.
+  return originalPath;
 }

@@ -3,45 +3,54 @@
  *
  * This file is loaded by the `FileContainer` in production mode. It provides
  * essential metadata that allows the runtime to correctly resolve resource paths
-* after the project has been built.
+ * after the project has been built.
  */
 
 import { defineProdConfig } from '@eleplug/elep/config';
 
 export default defineProdConfig({
   /**
-   * Production-specific path rewrites.
+   * Configures the Single Page Application (SPA) routing fallback strategy for production.
+   * This ensures that deep links to client-side routes (e.g., your-plugin/users/123)
+   * correctly serve the main application shell, allowing the client-side router to take over.
    *
-   * This is a critical piece of configuration that decouples your source code's
-   * logical paths from the final build output structure. It uses a powerful
-   * glob-based capture and substitution engine.
-   *
-   * **Syntax Guide:**
-   *
-   * **1. Source Pattern (the key):**
-   *    - **Named Capture:** Use `<name:glob>` to capture a path segment into a
-   *      variable named `name`. The `glob` can be any valid pattern like `*`
-   *      (single segment), `**` (multiple segments), or `*.{js,css}`.
-   *    - **Anonymous Capture:** Use `<glob>` for a simpler capture when a name
-   *      isn't needed.
-   *
-   * **2. Target Template (the value):**
-   *    - **Named Reference:** Use `<name>` to substitute the value captured by
-   *      the corresponding named group.
-   *    - **Indexed Reference:** Use `<1>`, `<2>`, etc., to substitute values from
-   *      all capture groups (both named and anonymous) in the order they appear
-   *      from left to right.
-   *
-   * **Example Breakdown (`/@renderer/<rest:**>` -> `/dist/renderer/<rest>`):**
-   * A call to `context.resolve('@renderer/assets/icon.svg')` is processed as follows:
-   * 1. The pattern `"/@renderer/<rest:**>"` matches the path.
-   * 2. The glob `**` captures the substring "assets/icon.svg" into a group named `rest`.
-   * 3. The system substitutes `<rest>` in the target template with the captured value.
-   * 4. The final, rewritten path becomes `/dist/renderer/assets/icon.svg`.
-   * This correctly generates the production URI: "plugin://.../dist/renderer/index.html".
+   * Elep offers three flexible SPA configuration modes:
+   */
+
+  // --- MODE 1: Smart Detection (boolean) ---
+  // Setting `spa: true` enables a smart-detection mode. Elep will automatically
+  // rewrite any deep-link URL that doesn't point to a specific file asset to its
+  // parent HTML entry point.
+  // This is a flexible default, suitable for various application structures.
+  // Example: A request for `.../dist/renderer/index.html/users` is rewritten to
+  // serve the `.../dist/renderer/index.html` file.
+  // spa: true,
+
+  // --- MODE 2: Single Entry Point (string) ---
+  // This is the most common and recommended setup for standard SPAs.
+  // All non-static file requests are unconditionally rewritten to this single path.
+  // The path should be the *virtual* path, which will then be processed by `rewrites`.
+  //
+  // spa: "/@renderer/index.html",
+
+  // --- MODE 3: Multi-App Mode (string[]) ---
+  // For advanced plugins containing several distinct applications.
+  // Elep will fall back to the most specific matching entry point from the list.
+  // The paths should be the *virtual* paths.
+  //
+  // spa: [
+  //   "/@renderer/admin.html",
+  //   "/@renderer/app.html"
+  // ],
+
+  /**
+   * Production-specific path rewrites. This is a critical piece of configuration
+   * that decouples your source code's logical paths from the final build structure.
+   * Here, we map the abstract path `/@renderer/` to the actual build output
+   * directory `/dist/renderer/`.
    */
   rewrites: {
-    "/@renderer/<**>": "/dist/renderer/<1>",
+    "/@renderer/": "/dist/renderer/",
   },
 
   /**
