@@ -42,6 +42,7 @@ export default defineProdConfig({
    */
   rewrites: {
     "/@renderer/<**>": "/dist/renderer/<1>",
+    '/@renderer/index.html</**>': '/dist/renderer/index.html'
   },
 
   /**
