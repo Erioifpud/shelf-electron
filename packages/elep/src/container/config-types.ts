@@ -64,12 +64,6 @@ export interface DevConfig {
    * These rewrites are merged with and take precedence over those in `elep.prod.ts`.
    */
   rewrites?: Record<string, string>;
-
-  /**
-   * Configures the SPA routing fallback strategy for the development environment.
-   * The behavior mirrors the `ElepConfig.spa` options.
-   */
-  spa?: boolean | string | string[];
 }
 
 /**

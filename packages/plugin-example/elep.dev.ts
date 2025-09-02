@@ -17,8 +17,7 @@ export default defineDevConfig({
    * which is crucial for handling client-side routing correctly.
    */
   dev: viteDevPlugin({
-    ...rendererConfig,
-    appType: 'spa',
+    ...rendererConfig
   }),
 
   /**
