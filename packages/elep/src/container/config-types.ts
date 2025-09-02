@@ -2,98 +2,78 @@ import type { DevPlugin } from "./dev-plugin-types.js";
 
 /**
  * Defines the structure of the production configuration file (elep.prod.ts).
- * This configuration contains metadata that is relevant for the plugin's runtime
- * behavior in a production environment.
  */
 export interface ElepConfig {
   /**
-   * A map of MIME type overrides for resources within the plugin.
-   *
-   * The keys are `micromatch` glob patterns relative to the plugin's root directory.
-   * The values are the corresponding MIME type strings. The first pattern that
-   * matches a resource path will be used, providing a deterministic override mechanism.
+   * A map of simple path prefix rewrites for production mode.
    *
    * @example
-   * {
-   *   "assets/logo.svg": "image/svg+xml",
-   *   "dist/**\/*.js": "text/javascript"
+   * rewrites: {
+   *   "/@renderer/": "/dist/renderer/"
    * }
+   */
+  rewrites?: Record<string, string>;
+
+  /**
+   * A map of MIME type overrides for resources within the plugin.
+   * Uses `micromatch` glob patterns.
    */
   mimes?: Record<string, string>;
 
   /**
-   * A map of path rewrites for production mode.
+   * Configures the Single Page Application (SPA) routing fallback strategy.
+   * This is crucial for ensuring client-side routes are handled correctly.
    *
-   * This provides a powerful mechanism to abstract away build directories (like 'dist')
-   * when generating resource URIs or handling incoming requests. The key is the
-   * original path prefix to match, and the value is the new path prefix to replace
-   * it with. The first matching rewrite wins.
+   * It can be configured in one of three ways:
    *
-   * @example
-   * // A request for "plugin://.../dist/renderer/index.html"
-   * // will be rewritten to "plugin://.../renderer/index.html".
-   * // A call to `context.resolve('renderer/index.html')` might be rewritten
-   * // to point to "dist/renderer/index.html" if configured inversely.
-   * {
-   *   "/dist/renderer/": "/renderer/"
-   * }
+   * 1.  `true` (Smart Detection Mode):
+   *     - For any request that doesn't look like a static file, the system will
+   *       rewrite the path to the first preceding file segment that ends with a
+   *       common web page extension (e.g., .html, .htm, .xhtml).
+   *     - Example: A request for `.../app/index.html/users/1` falls back to `.../app/index.html`.
+   *     - Best for plugins with multiple nested SPAs or MPAs.
+   *
+   * 2.  `string` (Single Entry Point Mode):
+   *     - Example: `spa: "/@renderer/index.html"`
+   *     - All non-static file requests are unconditionally rewritten to this single path.
+   *     - This is the standard and recommended configuration for most SPAs.
+   *
+   * 3.  `string[]` (Multi-App Mode):
+   *     - Example: `spa: ["/@renderer/admin.html", "/@renderer/app.html"]`
+   *     - For non-static file requests, the system finds the most specific matching
+   *       entry point from the list. A request for `.../admin.html/settings` will
+   *       fall back to `.../admin.html`.
+   *     - Useful for advanced plugins that bundle multiple distinct applications.
+   *
+   * @default undefined (SPA mode disabled)
    */
-  rewrites?: Record<string, string>;
+  spa?: boolean | string | string[];
 }
 
 /**
  * Defines the structure for the development configuration file (elep.dev.ts).
- * This configuration is loaded only when the container is running in development mode
- * and is used to integrate with external development tools.
  */
 export interface DevConfig {
   /**
-   * The development mode adapter for this plugin.
-   * This should be an object that conforms to the `DevPlugin` interface, allowing
-   * integration with tools like Vite or Webpack Dev Server for features such as
-   * Hot Module Replacement (HMR).
+   * The development mode adapter for this plugin (e.g., Vite Dev Server).
    */
   dev: DevPlugin;
 
   /**
-   * A map of path rewrites for development mode.
-   *
-   * This provides a powerful mechanism to abstract away build directories (like 'dist')
-   * during development. The key is the original path prefix to match, and the value
-   * is the new path prefix to replace it with. The first matching rewrite wins.
-   *
-   * In development mode, these rewrites will be merged with and take precedence
-   * over any rewrites defined in `elep.prod.ts`.
-   *
-   * @example
-   * {
-   *   "/dist/": "/"
-   * }
+   * A map of simple path prefix rewrites for development mode.
+   * These rewrites are merged with and take precedence over those in `elep.prod.ts`.
    */
   rewrites?: Record<string, string>;
+
+  /**
+   * Configures the SPA routing fallback strategy for the development environment.
+   * The behavior mirrors the `ElepConfig.spa` options.
+   */
+  spa?: boolean | string | string[];
 }
 
 /**
  * A type-safe helper function for defining a production configuration (`elep.prod.ts`).
- *
- * This function is an identity function that provides TypeScript autocompletion and
- * type-checking for the configuration object without altering the runtime value.
- *
- * @param config The Elep production configuration object.
- * @returns The same configuration object, but strongly typed.
- *
- * @example
- * // my-plugin/elep.prod.ts
- * import { defineProdConfig } from '@eleplug/elep';
- *
- * export default defineProdConfig({
- *   mimes: {
- *     '**\/*.ui.js': 'text/javascript',
- *   },
- *   rewrites: {
- *     '/dist/': '/'
- *   }
- * });
  */
 export function defineProdConfig(config: ElepConfig): ElepConfig {
   return config;
@@ -101,24 +81,6 @@ export function defineProdConfig(config: ElepConfig): ElepConfig {
 
 /**
  * A type-safe helper function for defining a development configuration (`elep.dev.ts`).
- *
- * This function is an identity function that provides TypeScript autocompletion and
- * type-checking, ensuring the `dev` property conforms to the `DevPlugin` interface.
- *
- * @param config The Elep development configuration object.
- * @returns The same configuration object, but strongly typed.
- *
- * @example
- * // my-plugin/elep.dev.ts
- * import { defineDevConfig } from '@eleplug/elep/dev';
- * import { viteDevPlugin } from 'elep-vite-adapter';
- *
- * export default defineDevConfig({
- *   dev: viteDevPlugin(),
- *   rewrites: {
- *     "/dist/": "/"
- *   }
- * });
  */
 export function defineDevConfig(config: DevConfig): DevConfig {
   return config;

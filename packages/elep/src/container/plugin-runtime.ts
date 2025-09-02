@@ -11,7 +11,7 @@ import type { DevPlugin } from "./dev-plugin-types.js";
 import * as path from "node:path";
 import type { FilePluginLoader } from "./plugin-loader.js";
 import type { DevConfig, ElepConfig } from "./config-types.js";
-import { applyRewriteRules, mergeRewriteRules } from "./rewrite-utils.js";
+import { applyPrefixRewriteRules } from "./rewrite-utils.js";
 
 /**
  * Encapsulates the complete runtime state and lifecycle for a single activated plugin.
@@ -66,9 +66,6 @@ export class PluginRuntime {
     return this.devConfig;
   }
 
-  /**
-   * Activates the plugin. This process is idempotent.
-   */
   public async activate(): Promise<void> {
     if (this.isActive) {
       console.warn(
@@ -77,14 +74,12 @@ export class PluginRuntime {
       return;
     }
 
-    // --- 1. Load Manifest and Configurations ---
     this.manifest = await this.options.loader.loadManifest(
       this.options.pluginPath
     );
     const prodConfig = await this.getProdConfig();
     const devConfig = this.options.devMode ? await this.getDevConfig() : null;
 
-    // --- 2. Start Development Server (if in dev mode) ---
     if (this.options.devMode && devConfig?.dev) {
       this.activeDevPlugin = devConfig.dev;
       const loader = this.options.loader as FilePluginLoader;
@@ -103,29 +98,24 @@ export class PluginRuntime {
       await this.activeDevPlugin.start({ pluginUri, pluginAbsolutePath });
     }
 
-    // --- 3. Load Plugin Module ---
     this.pluginModule = await this.options.loader.loadModule(
       this.options.pluginPath,
       this.manifest
     );
 
-    // --- 4. Join EBUS Network ---
     const node = await this.options.bus.join({
       id: this.manifest.name,
       groups: this.manifest.pluginGroups || [],
     });
     this.node = node;
 
-    // --- 5. Activate Plugin Module with Full Context ---
     const pluginUri = createPluginUri(
       this.options.containerName,
       this.options.pluginPath
     );
 
-    const finalRewrites = mergeRewriteRules(
-      devConfig?.rewrites,
-      prodConfig?.rewrites
-    );
+    // Merge rewrite rules, with development rules taking precedence over production ones.
+    const mergedRewrites = { ...prodConfig?.rewrites, ...devConfig?.rewrites };
 
     const context: PluginActivationContext = {
       procedure: p2p,
@@ -133,11 +123,12 @@ export class PluginRuntime {
       subscribe: node.subscribe.bind(node),
       emiter: node.emiter.bind(node),
       link: (pluginName: string) => node.connectTo(pluginName) as any,
-      // The `resolve` method now uses the powerful `applyRewriteRules` utility.
       resolve: (relativePath: string): string => {
-        // Apply the merged rewrite rules to the path provided by the plugin.
-        const rewrittenPath = applyRewriteRules(relativePath, finalRewrites);
-        // Resolve the potentially modified path against the plugin's base URI.
+        // Use the simplified prefix-based rewrite engine.
+        const rewrittenPath = applyPrefixRewriteRules(
+          relativePath,
+          mergedRewrites
+        );
         return staticResolvePluginUri(pluginUri, rewrittenPath);
       },
     };
