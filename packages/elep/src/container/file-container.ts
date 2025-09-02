@@ -201,8 +201,7 @@ export class FileContainer implements Container {
     let finalPath = await this.#applyRewrites(runtime, subPath);
 
     const prodConfig = await runtime.getProdConfig();
-    const devConfig = this.devMode ? await runtime.getDevConfig() : null;
-    const spaConfig = this.devMode ? devConfig?.spa : prodConfig?.spa;
+    const spaConfig = prodConfig?.spa;
 
     if (spaConfig) {
       finalPath = applySpaFallback(finalPath, spaConfig);
