@@ -41,8 +41,8 @@ export default defineProdConfig({
    * This correctly generates the production URI: "plugin://.../dist/renderer/index.html".
    */
   rewrites: {
-    "/@renderer/<**>": "/dist/renderer/<1>",
-    '/@renderer/index.html</**>': '/dist/renderer/index.html'
+   '/@renderer/index.html</**>': '/dist/renderer/index.html',
+   "/@renderer/<**>": "/dist/renderer/<1>",
   },
 
   /**

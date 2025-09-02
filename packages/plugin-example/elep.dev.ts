@@ -63,7 +63,7 @@ export default defineDevConfig({
    * }
    */
   rewrites: {
+    '/@renderer/index.html</**>': '/renderer/index.html',
     "/@renderer/<**>": "/renderer/<1>",
-    '/@renderer/index.html</**>': '/renderer/index.html'
   }
 });
