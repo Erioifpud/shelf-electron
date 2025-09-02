@@ -107,11 +107,9 @@ export function applyRewriteRules(
     : `/${sourcePath}`;
 
   for (const [pattern, targetTemplate] of Object.entries(rules)) {
-    console.log("[ffffffffffffff]", pattern + "   " + targetTemplate);
     try {
       const { regex, groupCount } = compilePattern(pattern);
       const match = normalizedPath.match(regex);
-      console.log("[fffffffffffffg]", regex + "   " + normalizedPath + "  " + match);
 
       if (match) {
         // A match was found (groups may or may not exist).
