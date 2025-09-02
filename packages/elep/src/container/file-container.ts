@@ -16,7 +16,7 @@ import micromatch from "micromatch";
 import { FilePluginLoader, type IPluginLoader } from "./plugin-loader.js";
 import { PluginRuntime } from "./plugin-runtime.js";
 import { FileStorage, type IResourceStorage } from "./file-storage.js";
-import { applyRewriteRules } from "./rewrite-utils.js";
+import { applyRewriteRules, mergeRewriteRules } from "./rewrite-utils.js";
 
 export interface FileContainerOptions {
   bus: Bus;
@@ -219,13 +219,17 @@ export class FileContainer implements Container {
   ): Promise<string> {
     const prodConfig = await runtime.getProdConfig();
     const devConfig = this.devMode ? await runtime.getDevConfig() : null;
-    const mergedRewrites = { ...prodConfig?.rewrites, ...devConfig?.rewrites };
 
-    if (Object.keys(mergedRewrites).length === 0) {
+    const finalRewrites = mergeRewriteRules(
+      devConfig?.rewrites,
+      prodConfig?.rewrites
+    );
+
+    if (Object.keys(finalRewrites).length === 0) {
       return resourcePathInPlugin;
     }
 
-    return applyRewriteRules(resourcePathInPlugin, mergedRewrites);
+    return applyRewriteRules(resourcePathInPlugin, finalRewrites);
   }
 
   async #applyMimeOverrides(
