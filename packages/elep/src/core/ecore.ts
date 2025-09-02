@@ -15,7 +15,7 @@ protocol.registerSchemesAsPrivileged([
       supportFetchAPI: true,
       corsEnabled: true,
     },
-  }, 
+  },
 ]);
 
 /**

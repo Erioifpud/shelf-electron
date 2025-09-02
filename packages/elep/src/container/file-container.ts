@@ -1,3 +1,9 @@
+/**
+ * @fileoverview
+ * Implements the FileContainer, a core component of Elep that loads plugins
+ * and their resources from the local file system.
+ */
+
 import { type Bus } from "@eleplug/ebus";
 import {
   type Container,
@@ -10,6 +16,7 @@ import micromatch from "micromatch";
 import { FilePluginLoader, type IPluginLoader } from "./plugin-loader.js";
 import { PluginRuntime } from "./plugin-runtime.js";
 import { FileStorage, type IResourceStorage } from "./file-storage.js";
+import { applyRewriteRules } from "./rewrite-utils.js";
 
 export interface FileContainerOptions {
   bus: Bus;
@@ -23,6 +30,7 @@ export interface FileContainerOptions {
  * It acts as the primary coordinator for its plugins, responsible for:
  * - Managing the lifecycle of each plugin's `PluginRuntime`.
  * - Routing resource requests based on the system's operating mode (dev vs. prod).
+ * - Applying powerful, glob-based path rewrites to decouple source code from build artifacts.
  * - Delegating I/O operations to a secure storage backend.
  */
 export class FileContainer implements Container {
@@ -78,14 +86,14 @@ export class FileContainer implements Container {
 
   public readonly resources = {
     /**
-     * Retrieves a resource, implementing the core routing logic:
-     * 1. In dev mode, attempts to serve from the dev plugin (e.g., Vite), applying path rewrites.
-     * 2. On failure or in production, falls back to the physical file storage.
-     * 3. Applies any production MIME type overrides before returning.
+     * Retrieves a resource, implementing the core routing logic.
+     * The logic flow is now simplified and guaranteed to be correct:
+     * 1. The requested path is IMMEDIATELY rewritten.
+     * 2. All subsequent operations use this REWRITTEN path.
      */
     get: async (uri: string): Promise<ResourceGetResponse> => {
-      const { pluginPathInContainer, subPath } = parseUri(uri);
-      if (subPath === null) {
+      const { pluginPathInContainer, subPath: originalSubPath } = parseUri(uri);
+      if (originalSubPath === null) {
         throw new Error(
           `[FileContainer] Invalid resource URI: Must specify a resource path. URI: "${uri}"`
         );
@@ -93,60 +101,94 @@ export class FileContainer implements Container {
 
       const runtime = this.#findRuntime(pluginPathInContainer);
 
+      // --- Perform the rewrite ONCE at the very top. ---
+      const rewrittenSubPath = await this.#applyRewrites(
+        runtime,
+        originalSubPath
+      );
+
       if (this.devMode && runtime.activeDevPlugin?.get) {
         try {
-          return await this.#tryDevServerResource(runtime, subPath);
+          // Pass the ALREADY REWRITTEN path to the dev server adapter.
+          return await runtime.activeDevPlugin.get(rewrittenSubPath);
         } catch (devError: any) {
           console.debug(
-            `[FileContainer] Dev server hook for '${uri}' fell back to filesystem. Error: ${devError.message}`
+            `[FileContainer] Dev server hook for '${rewrittenSubPath}' (from '${originalSubPath}') fell back to filesystem. Error: ${devError.message}`
           );
         }
       }
 
-      return this.#getStoredResource(runtime, subPath);
+      // Fallback to stored resource using the REWRITTEN path.
+      const absolutePath = path.resolve(
+        this.rootPath,
+        runtime.options.pluginPath,
+        rewrittenSubPath
+      );
+      const response = await this.storage.get(absolutePath);
+
+      // Apply MIME overrides based on the ORIGINAL path, as this is what developers configure.
+      return this.#applyMimeOverrides(response, runtime, originalSubPath);
     },
 
     put: async (uri: string, stream: ReadableStream): Promise<void> => {
-      const { pluginPathInContainer, subPath } = parseUri(uri);
-      if (subPath === null)
-        throw new Error("Resource URI must have a sub-path.");
+      const { pluginPathInContainer, subPath: originalSubPath } = parseUri(uri);
+      if (originalSubPath === null)
+        throw new Error(
+          "Resource URI must have a sub-path for 'put' operation."
+        );
+
       const runtime = this.#findRuntime(pluginPathInContainer);
-      const absolutePath = path.resolve(
-        this.rootPath,
-        pluginPathInContainer,
-        subPath
+      const rewrittenSubPath = await this.#applyRewrites(
+        runtime,
+        originalSubPath
       );
 
       if (this.devMode && runtime.activeDevPlugin?.put) {
-        const pathForDevServer = await this.#applyRewrites(runtime, subPath);
         try {
-          return await runtime.activeDevPlugin.put(pathForDevServer, stream);
+          return await runtime.activeDevPlugin.put(rewrittenSubPath, stream);
         } catch (e) {
-          /* Fallback to storage */
+          console.debug(
+            `[FileContainer] Dev server 'put' for '${rewrittenSubPath}' fell back to filesystem.`
+          );
         }
       }
+
+      const absolutePath = path.resolve(
+        this.rootPath,
+        pluginPathInContainer,
+        rewrittenSubPath
+      );
       return this.storage.put(absolutePath, stream);
     },
 
     list: async (uri: string): Promise<string[]> => {
-      const { pluginPathInContainer, subPath } = parseUri(uri);
-      if (subPath === null)
-        throw new Error("Resource URI must have a sub-path.");
+      const { pluginPathInContainer, subPath: originalSubPath } = parseUri(uri);
+      if (originalSubPath === null)
+        throw new Error(
+          "Resource URI must have a sub-path for 'list' operation."
+        );
+
       const runtime = this.#findRuntime(pluginPathInContainer);
-      const absolutePath = path.resolve(
-        this.rootPath,
-        pluginPathInContainer,
-        subPath
+      const rewrittenSubPath = await this.#applyRewrites(
+        runtime,
+        originalSubPath
       );
 
       if (this.devMode && runtime.activeDevPlugin?.list) {
-        const pathForDevServer = await this.#applyRewrites(runtime, subPath);
         try {
-          return await runtime.activeDevPlugin.list(pathForDevServer);
+          return await runtime.activeDevPlugin.list(rewrittenSubPath);
         } catch (e) {
-          /* Fallback to storage */
+          console.debug(
+            `[FileContainer] Dev server 'list' for '${rewrittenSubPath}' fell back to filesystem.`
+          );
         }
       }
+
+      const absolutePath = path.resolve(
+        this.rootPath,
+        pluginPathInContainer,
+        rewrittenSubPath
+      );
       return this.storage.list(absolutePath);
     },
   };
@@ -183,56 +225,21 @@ export class FileContainer implements Container {
       return resourcePathInPlugin;
     }
 
-    let rewrittenPath = resourcePathInPlugin;
-    const normalizedPath = `/${rewrittenPath.replace(/\\/g, "/")}`;
-
-    for (const [from, to] of Object.entries(mergedRewrites)) {
-      if (normalizedPath.startsWith(from)) {
-        const newPath = to + normalizedPath.slice(from.length);
-        rewrittenPath = newPath.startsWith("/") ? newPath.slice(1) : newPath;
-        break;
-      }
-    }
-    return rewrittenPath;
-  }
-
-  async #tryDevServerResource(
-    runtime: PluginRuntime,
-    resourcePathInPlugin: string
-  ): Promise<ResourceGetResponse> {
-    const pathForDevServer = await this.#applyRewrites(
-      runtime,
-      resourcePathInPlugin
-    );
-    return runtime.activeDevPlugin!.get!(pathForDevServer);
-  }
-
-  async #getStoredResource(
-    runtime: PluginRuntime,
-    resourcePathInPlugin: string
-  ): Promise<ResourceGetResponse> {
-    const absolutePath = path.resolve(
-      this.rootPath,
-      runtime.options.pluginPath,
-      resourcePathInPlugin
-    );
-    const response = await this.storage.get(absolutePath);
-    return this.#applyMimeOverrides(response, runtime, resourcePathInPlugin);
+    return applyRewriteRules(resourcePathInPlugin, mergedRewrites);
   }
 
   async #applyMimeOverrides(
     response: ResourceGetResponse,
     runtime: PluginRuntime,
-    resourcePathInPlugin: string
+    originalResourcePath: string
   ): Promise<ResourceGetResponse> {
     const prodConfig = await runtime.getProdConfig();
     if (prodConfig?.mimes) {
       for (const [pattern, mimeType] of Object.entries(prodConfig.mimes)) {
-        if (micromatch.isMatch(resourcePathInPlugin, pattern)) {
-          // CORRECTED: Ensure mimeType is a string before assignment.
+        if (micromatch.isMatch(originalResourcePath, pattern)) {
           if (typeof mimeType === "string") {
             response.mimeType = mimeType;
-            break; // First match wins.
+            break;
           }
         }
       }
