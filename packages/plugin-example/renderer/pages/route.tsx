@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router";
+import { createHashRouter, Navigate } from "react-router";
 import SourceList from "./SourceList";
 import Root from "./Root";
 import BookList from "./BookList";
@@ -18,7 +18,7 @@ const ErrorPage = () => {
   );
 };
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     path: '/',
     element: <Root />,
@@ -73,6 +73,4 @@ export const router = createBrowserRouter([
       },
     ]
   }
-], {
-  basename: "/renderer/index.html",
-});
+]);

@@ -1,6 +1,6 @@
 // src/routes/Root.jsx
 import React from 'react';
-import { Outlet, Link, useMatches, useNavigation } from 'react-router';
+import { Outlet, Link, useMatches, useNavigation, Route, NavLink } from 'react-router';
 
 // 面包屑组件
 function Breadcrumbs() {
@@ -42,7 +42,7 @@ export default function Root() {
         )}
         {/* 子路由将在这里全屏渲染 */}
         <Outlet />
-        <a href="/sources">Go to Home</a>
+        <NavLink to="/sources/1123">Go to Home</NavLink>
       </main>
     </div>
   );

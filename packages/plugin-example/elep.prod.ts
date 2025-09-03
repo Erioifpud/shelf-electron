@@ -24,7 +24,7 @@ export default defineProdConfig({
   // This is a flexible default, suitable for various application structures.
   // Example: A request for `.../dist/renderer/index.html/users` is rewritten to
   // serve the `.../dist/renderer/index.html` file.
-  // spa: true,
+  spa: true,
 
   // --- MODE 2: Single Entry Point (string) ---
   // This is the most common and recommended setup for standard SPAs.
