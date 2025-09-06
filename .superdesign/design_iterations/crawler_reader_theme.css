@@ -1,0 +1,278 @@
+:root {
+  /* Primary Colors - Dark theme for reading comfort */
+  --background: oklch(0.1308 0 0);
+  --foreground: oklch(0.9500 0 0);
+  
+  /* Card/Panel backgrounds */
+  --card: oklch(0.1800 0 0);
+  --card-foreground: oklch(0.9500 0 0);
+  
+  /* Popover/Modal backgrounds */
+  --popover: oklch(0.1500 0 0);
+  --popover-foreground: oklch(0.9500 0 0);
+  
+  /* Primary actions - Tech blue */
+  --primary: oklch(0.6500 0.2000 250);
+  --primary-foreground: oklch(1.0000 0 0);
+  
+  /* Secondary elements */
+  --secondary: oklch(0.2500 0 0);
+  --secondary-foreground: oklch(0.9000 0 0);
+  
+  /* Muted elements */
+  --muted: oklch(0.2000 0 0);
+  --muted-foreground: oklch(0.6500 0 0);
+  
+  /* Accent colors - Purple for highlights */
+  --accent: oklch(0.5500 0.2500 280);
+  --accent-foreground: oklch(1.0000 0 0);
+  
+  /* Destructive/Error */
+  --destructive: oklch(0.6500 0.2800 25);
+  --destructive-foreground: oklch(1.0000 0 0);
+  
+  /* Borders and inputs */
+  --border: oklch(0.3000 0 0);
+  --input: oklch(0.3000 0 0);
+  --ring: oklch(0.6500 0.2000 250);
+  
+  /* Chart colors */
+  --chart-1: oklch(0.6500 0.2000 250);
+  --chart-2: oklch(0.5500 0.2500 280);
+  --chart-3: oklch(0.4500 0.2000 320);
+  --chart-4: oklch(0.7500 0.1500 180);
+  --chart-5: oklch(0.8500 0.2000 80);
+  
+  /* Sidebar specific */
+  --sidebar: oklch(0.1500 0 0);
+  --sidebar-foreground: oklch(0.9500 0 0);
+  --sidebar-primary: oklch(0.6500 0.2000 250);
+  --sidebar-primary-foreground: oklch(1.0000 0 0);
+  --sidebar-accent: oklch(0.2500 0 0);
+  --sidebar-accent-foreground: oklch(0.9000 0 0);
+  --sidebar-border: oklch(0.3000 0 0);
+  --sidebar-ring: oklch(0.6500 0.2000 250);
+  
+  /* Typography */
+  --font-sans: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Source Serif Pro', Georgia, Cambria, 'Times New Roman', Times, serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  
+  /* Spacing and sizing */
+  --radius: 0.5rem;
+  --spacing: 0.25rem;
+  
+  /* Shadows for depth */
+  --shadow-2xs: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
+  --shadow-xs: 0 1px 3px 0 hsl(0 0% 0% / 0.4), 0 1px 2px -1px hsl(0 0% 0% / 0.4);
+  --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.5), 0 1px 2px -1px hsl(0 0% 0% / 0.5);
+  --shadow: 0 4px 6px -1px hsl(0 0% 0% / 0.6), 0 2px 4px -2px hsl(0 0% 0% / 0.6);
+  --shadow-md: 0 10px 15px -3px hsl(0 0% 0% / 0.7), 0 4px 6px -4px hsl(0 0% 0% / 0.7);
+  --shadow-lg: 0 20px 25px -5px hsl(0 0% 0% / 0.8), 0 8px 10px -6px hsl(0 0% 0% / 0.8);
+  --shadow-xl: 0 25px 50px -12px hsl(0 0% 0% / 0.9);
+  --shadow-2xl: 0 25px 50px -12px hsl(0 0% 0% / 1.0);
+  
+  /* Tracking for readability */
+  --tracking-normal: 0em;
+  --tracking-tight: -0.025em;
+  --tracking-wide: 0.025em;
+}
+
+/* Additional utility classes for the theme */
+.crawler-theme {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+.crawler-card {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.crawler-input {
+  background-color: var(--background);
+  border: 1px solid var(--input);
+  color: var(--foreground);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+}
+
+.crawler-input:focus {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
+}
+
+.crawler-button {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.crawler-button:hover {
+  background-color: oklch(0.7000 0.2200 250);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+
+.crawler-button:active {
+  transform: translateY(0);
+}
+
+.crawler-button-secondary {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+.crawler-sidebar {
+  background-color: var(--sidebar);
+  color: var(--sidebar-foreground);
+  border-right: 1px solid var(--sidebar-border);
+}
+
+.crawler-tab {
+  background-color: transparent;
+  color: var(--muted-foreground);
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.crawler-tab:hover {
+  color: var(--foreground);
+  background-color: hsl(var(--muted) / 0.5);
+}
+
+.crawler-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* Reader specific styles */
+.crawler-reader {
+  background-color: oklch(0.0800 0 0);
+  color: oklch(0.9800 0 0);
+}
+
+.crawler-reader-controls {
+  background-color: hsl(var(--background) / 0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Form styles */
+.crawler-form-group {
+  margin-bottom: 1rem;
+}
+
+.crawler-form-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+  color: var(--foreground);
+  font-size: 0.875rem;
+}
+
+.crawler-form-help {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  margin-top: 0.25rem;
+}
+
+/* Book card styles */
+.crawler-book-card {
+  background-color: var(--card);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+
+.crawler-book-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--accent);
+}
+
+.crawler-book-cover {
+  aspect-ratio: 3/4;
+  object-fit: cover;
+  background-color: var(--muted);
+}
+
+.crawler-book-info {
+  padding: 0.75rem;
+}
+
+.crawler-book-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crawler-book-author {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* Progress bar */
+.crawler-progress {
+  background-color: var(--muted);
+  border-radius: 9999px;
+  height: 0.5rem;
+  overflow: hidden;
+}
+
+.crawler-progress-bar {
+  background-color: var(--primary);
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* Status indicators */
+.crawler-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-weight: 500;
+}
+
+.crawler-status.success {
+  background-color: oklch(0.2500 0.2000 140);
+  color: oklch(0.9000 0 0);
+}
+
+.crawler-status.error {
+  background-color: oklch(0.3500 0.2000 25);
+  color: oklch(0.9000 0 0);
+}
+
+.crawler-status.warning {
+  background-color: oklch(0.3500 0.2000 80);
+  color: oklch(0.9000 0 0);
+}
+
+.crawler-status.info {
+  background-color: oklch(0.2500 0.2000 250);
+  color: oklch(0.9000 0 0);
+}

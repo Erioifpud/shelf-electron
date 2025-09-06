@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="crawler-theme">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Crawler - Book Details</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.0.0/dist/flowbite.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="crawler_reader_theme.css">
+    <style>
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--background);
+            color: var(--foreground);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .book-cover-large {
+            aspect-ratio: 3/4;
+            object-fit: cover;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .chapter-item {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .chapter-item:hover {
+            background-color: hsl(var(--card) / 0.8);
+            border-color: var(--accent);
+            transform: translateX(4px);
+        }
+
+        .chapter-item.read {
+            background-color: hsl(var(--muted) / 0.5);
+            opacity: 0.7;
+        }
+
+        .chapter-item.current {
+            background-color: hsl(var(--primary) / 0.2);
+            border-color: var(--primary);
+        }
+
+        .rating-stars {
+            color: #fbbf24;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.35s;
+            stroke-dasharray: 339.292; /* 2π × 54 */
+            stroke-dashoffset: 339.292;
+        }
+
+        .action-button {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            color: var(--foreground);
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .action-button:hover {
+            background-color: var(--accent);
+            color: var(--accent-foreground);
+            border-color: var(--accent);
+        }
+
+        .action-button.primary {
+            background-color: var(--primary);
+            color: var(--primary-foreground);
+            border-color: var(--primary);
+        }
+
+        .action-button.primary:hover {
+            background-color: oklch(0.7000 0.2200 250);
+        }
+
+        .tag {
+            background-color: hsl(var(--accent) / 0.2);
+            color: var(--accent);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .chapter-filter {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .reading-stats {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .chapter-pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+
+        .page-button {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            color: var(--foreground);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .page-button:hover {
+            background-color: var(--accent);
+            color: var(--accent-foreground);
+            border-color: var(--accent);
+        }
+
+        .page-button.active {
+            background-color: var(--primary);
+            color: var(--primary-foreground);
+            border-color: var(--primary);
+        }
+
+        .page-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Custom scrollbar for chapter list */
+        .chapter-list-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .chapter-list-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chapter-list-container::-webkit-scrollbar-track {
+            background: var(--muted);
+        }
+
+        .chapter-list-container::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .chapter-list-container::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+    </style>
+</head>
+<body class="crawler-theme">
+    <!-- Header -->
+    <header class="crawler-card border-b px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <a href="crawler_book_library_1.html" class="crawler-button crawler-button-secondary">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back to Library
+                </a>
+                <h1 class="text-2xl font-bold text-foreground">Book Details</h1>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button class="action-button" onclick="editBook()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                    Edit
+                </button>
+                <button class="action-button primary" onclick="startReading()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                    </svg>
+                    Continue Reading
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="flex h-screen">
+        <!-- Book Info Sidebar -->
+        <aside class="crawler-sidebar w-96 flex flex-col border-r border-border">
+            <div class="p-6">
+                <div class="text-center mb-6">
+                    <img src="https://placehold.co/300x400/1a1a1a/ffffff?text=The+Ancient+Chronicles" alt="Book Cover" class="book-cover-large mx-auto mb-4">
+                    <h2 class="text-xl font-bold text-foreground mb-2">The Ancient Chronicles</h2>
+                    <p class="text-muted-foreground mb-4">by Elara Moonwhisper</p>
+                    
+                    <!-- Rating -->
+                    <div class="flex items-center justify-center mb-4">
+                        <span class="rating-stars text-lg mr-2">★★★★☆</span>
+                        <span class="text-lg font-semibold mr-1">4.2</span>
+                        <span class="text-sm text-muted-foreground">(1,247 reviews)</span>
+                    </div>
+
+                    <!-- Progress Ring -->
+                    <div class="relative inline-flex items-center justify-center mb-4">
+                        <svg class="progress-ring w-24 h-24">
+                            <circle class="stroke-muted" stroke-width="8" fill="transparent" r="54" cx="60" cy="60"></circle>
+                            <circle class="progress-ring-circle stroke-primary" stroke-width="8" fill="transparent" r="54" cx="60" cy="60" 
+                                    style="stroke-dashoffset: 50.894;" ></circle>
+                        </svg>
+                        <div class="absolute text-center">
+                            <div class="text-lg font-bold">85%</div>
+                            <div class="text-xs text-muted-foreground">Read</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="space-y-3 mb-6">
+                    <button class="action-button primary w-full justify-center" onclick="startReading()">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                        Continue Reading
+                    </button>
+                    <button class="action-button w-full justify-center" onclick="addToFavorites()">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                        </svg>
+                        Add to Favorites
+                    </button>
+                    <button class="action-button w-full justify-center" onclick="downloadBook()">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        Download
+                    </button>
+                </div>
+
+                <!-- Book Stats -->
+                <div class="reading-stats">
+                    <h3 class="text-lg font-semibold mb-4 text-foreground">Reading Stats</h3>
+                    <div class="space-y-3"
+                        <div class="stat-item">
+                            <span class="text-sm text-muted-foreground">Total Chapters</span>
+                            <span class="text-sm font-medium">156</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="text-sm text-muted-foreground">Chapters Read>
+                            <span class="text-sm font-medium">133</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="text-sm text-muted-foreground">Reading Time</span>
+                            <span class="text-sm font-medium">12h 34m</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="text-sm text-muted-foreground">Last Read</span>
+                            <span class="text-sm font-medium">2 days ago</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="text-sm text-muted-foreground">Estimated Time Left</span>
+                            <span class="text-sm font-medium">2h 15m</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content - Chapters -->
+        <main class="flex-1 flex flex-col">
+            <!-- Chapter Header -->
+            <div class="crawler-card border-b px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-bold text-foreground mb-2">Chapters</h2>
+                        <p class="text-sm text-muted-foreground">156 chapters • 85% completed • 23 chapters left</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button class="action-button" onclick="markAllRead()">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Mark All Read
+                        </button>
+                        <button class="action-button" onclick="exportChapters()">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                            </svg>
+                            Export
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chapter Filters -->
+            <div class="chapter-filter mx-6 mt-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-foreground">Filter Chapters</h3>
+                    <button class="text-sm text-muted-foreground hover:text-foreground">Clear All</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Status</label>
+                        <select class="crawler-input form-input w-full">
+                            <option>All Chapters</option>
+                            <option>Unread</option>
+                            <option>Read</option>
+                            <option>Currently Reading</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Chapter Range</label>
+                        <input type="text" placeholder="e.g., 1-50" class="crawler-input form-input w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Search</label>
+                        <input type="text" placeholder="Chapter title..." class="crawler-input form-input w-full">
+                    </div>
+                    <div class="flex items-end">
+                        <button class="crawler-button w-full">Apply Filter</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chapter List -->
+            <div class="flex-1 overflow-y-auto px-6 py-6">
+                <div class="chapter-list-container">
+                    <!-- Chapter 1 (Read) -->
+                    <div class="chapter-item read" onclick="readChapter(1)">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3"
+                                <div class="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-sm font-medium">1</div>
+                                <div>
+                                    <h4 class="font-medium text-foreground">Chapter 1: The Beginning</h4>
+                                    <p class="text-sm text-muted-foreground">Published: 2024-01-15 • 15 min read</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2"
+                                <span class="text-xs text-muted-foreground">Read 2 days ago</span>
+                                <span class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chapter 2 (Read) -->
+                    <div class="chapter-item read" onclick="readChapter(2)">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-sm font-medium">2</div>
+                                <div>
+                                    <h4 class="font-medium text-foreground">Chapter 2: The Journey</h4>
+                                    <p class="text-sm text-muted-foreground">Published: 2024-01-16 • 18 min read</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-muted-foreground">Read 2 days ago</span>
+                                <span class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chapter 3 (Read) -->
+                    <div class="chapter-item read" onclick="readChapter(3)">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-sm font-medium">3</div>
+                                <div>
+                                    <h4 class="font-medium text-foreground">Chapter 3: The Discovery</h4>
+                                    <p class="text-sm text-muted-foreground">Published: 2024-01-17 • 22 min read</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-muted-foreground">Read 1 day ago</span>
+                                <span class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chapter 4 (Read) -->
+                    <div class="chapter-item read" onclick="readChapter(4)">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-sm font-medium">4</div>
+                                <div>
+                                    <h4 class="font-medium text-foreground">Chapter 4: The Challenge</h4>
+                                    <p class="text-sm text-muted-foreground">Published: 2024-01-18 • 25 min read</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-muted-foreground">Read 1 day ago</span>
+                                <span class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chapter 5 (Current) -->
+                    <div class="chapter-item current" onclick="readChapter(5)">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-sm font-medium text-primary-foreground">5</div>
+                                <div>
+                                    <h4 class="font-medium text-foreground">Chapter 5: The Revelation</h4>
+                                    <p class="text-sm text-muted-foreground">Published: 2024-01-19 • 28 min read</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-primary font-medium">Currently Reading</span>
+                                <span class="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chapter 6 (Unread) -->
+                    <div class="chapter-item" onclick="readChapter(6)">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-sm font-medium">6</div>
+                                <div>
+                                    <h4 class="font-medium text-foreground">Chapter 6: The Alliance</h4>
+                                    <p class="text-sm text-muted-foreground">Published: 2024-01-20 • 30 min read</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-muted-foreground">Unread</span>
+                                <span class="w-6 h-6 bg-muted rounded-full flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chapter 7 (Unread) -->
+                    <div class="chapter-item" onclick="readChapter(7)">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-sm font-medium">7</div>
+                                <div>
+                                    <h4 class="font-medium text-foreground">Chapter 7: The Betrayal</h4>
+                                    <p class="text-sm text-muted-foreground">Published: 2024-01-21 • 32 min read</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-muted-foreground">Unread</span>
+                                <span class="w-6 h-6 bg-muted rounded-full flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chapter 8-10 (Unread examples) -->
+                    <div class="chapter-item" onclick="readChapter(8)">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-sm font-medium">8</div>
+                                <div>
+                                    <h4 class="font-medium text-foreground">Chapter 8: The Confrontation</h4>
+                                    <p class="text-sm text-muted-foreground">Published: 2024-01-22 • 35 min read</p>
+                                </div>
+                            </div>
+                            <span class="text-xs text-muted-foreground">Unread</span>
+                        </div>
+                    </div>
+
+                    <div class="chapter-item" onclick="readChapter(9)">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-sm font-medium">9</div>
+                                <div>
+                                    <h4 class="font-medium text-foreground">Chapter 9: The Resolution</h4>
+                                    <p class="text-sm text-muted-foreground">Published: 2024-01-23 • 38 min read</p>
+                                </div>
+                            </div>
+                            <span class="text-xs text-muted-foreground">Unread</span>
+                        </div>
+                    </div>
+
+                    <div class="chapter-item" onclick="readChapter(10)">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-sm font-medium">10</div>
+                                <div>
+                                    <h4 class="font-medium text-foreground">Chapter 10: The Epilogue</h4>
+                                    <p class="text-sm text-muted-foreground">Published: 2024-01-24 • 20 min read</p>
+                                </div>
+                            </div>
+                            <span class="text-xs text-muted-foreground">Unread</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chapter Pagination -->
+                <div class="chapter-pagination">
+                    <button class="page-button" disabled>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <button class="page-button active">1</button>
+                    <button class="page-button">2</button>
+                    <button class="page-button">3</button>
+                    <button class="page-button">4</button>
+                    <button class="page-button">5</button>
+                    <span class="px-2">...</span>
+                    <button class="page-button">16</button>
+                    <button class="page-button">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Book Info Modal -->
+    <div id="bookInfoModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="crawler-card p-6 max-w-2xl w-full mx-4">
+            <div class="flex justify-between items-center mb-4"
+                <h3 class="text-xl font-bold">Book Information</h3>
+                <button onclick="closeModal()" class="text-muted-foreground hover:text-foreground">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Title</label>
+                    <input type="text" value="The Ancient Chronicles" class="crawler-input form-input w-full">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Author</label>
+                    <input type="text" value="Elara Moonwhisper" class="crawler-input form-input w-full">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Status</label>
+                    <select class="crawler-input form-input w-full">
+                        <option>Ongoing</option>
+                        <option selected>Completed</option>
+                        <option>Hiatus</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Rating</label>
+                    <input type="number" value="4.2" step="0.1" min="0" max="5" class="crawler-input form-input w-full">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button class="action-button" onclick="closeModal()">Cancel</button>
+                <button class="crawler-button" onclick="saveBookInfo()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function startReading() {
+            window.location.href = 'crawler_reader_1.html';
+        }
+
+        function readChapter(chapterId) {
+            console.log('Reading chapter:', chapterId);
+            window.location.href = 'crawler_reader_1.html?chapter=' + chapterId;
+        }
+
+        function editBook() {
+            document.getElementById('bookInfoModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('bookInfoModal').classList.add('hidden');
+        }
+
+        function saveBookInfo() {
+            closeModal();
+            showNotification('Book information saved!', 'success');
+        }
+
+        function addToFavorites() {
+            showNotification('Added to favorites!', 'success');
+        }
+
+        function downloadBook() {
+            showNotification('Download started!', 'info');
+        }
+
+        function markAllRead() {
+            if (confirm('Mark all chapters as read?')) {
+                document.querySelectorAll('.chapter-item').forEach(item => {
+                    item.classList.add('read');
+                });
+                showNotification('All chapters marked as read!', 'success');
+            }
+        }
+
+        function exportChapters() {
+            showNotification('Chapter list exported!', 'info');
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${bgColor} text-white`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Progress ring animation
+        function updateProgressRing(percentage) {
+            const circle = document.querySelector('.progress-ring-circle');
+            const radius = 54;
+            const circumference = 2 * Math.PI * radius;
+            const offset = circumference - (percentage / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+        }
+
+        // Initialize progress ring
+        updateProgressRing(85);
+
+        // Chapter item hover effects
+        document.querySelectorAll('.chapter-item').forEach(item => {
+            item.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateX(8px)';
+            });
+            
+            item.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateX(0)';
+            });
+        });
+
+        // Modal backdrop click to close
+        document.getElementById('bookInfoModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

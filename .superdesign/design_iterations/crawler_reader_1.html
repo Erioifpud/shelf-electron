@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="crawler-theme">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Crawler - Reader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.0.0/dist/flowbite.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="crawler_reader_theme.css">
+    <style>
+        body {
+            font-family: var(--font-sans);
+            background-color: oklch(0.0800 0 0);
+            color: var(--foreground);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .reader-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .reader-controls {
+            background-color: hsl(var(--background) / 0.95);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .reader-controls.hidden {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+
+        .reader-content {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .comic-page {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: all 0.4s ease;
+            cursor: grab;
+            user-select: none;
+        }
+
+        .comic-page:active {
+            cursor: grabbing;
+        }
+
+        .comic-page.zoomed {
+            cursor: grab;
+            max-width: none;
+            max-height: none;
+        }
+
+        .navigation-area {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 20%;
+            cursor: pointer;
+            z-index: 10;
+            transition: background-color 0.2s ease;
+        }
+
+        .navigation-area:hover {
+            background-color: hsl(var(--primary) / 0.1);
+        }
+
+        .nav-left {
+            left: 0;
+        }
+
+        .nav-right {
+            right: 0;
+        }
+
+        .page-indicator {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: hsl(var(--background) / 0.9);
+            backdrop-filter: blur(8px);
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: 1px solid var(--border);
+            z-index: 50;
+        }
+
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .zoom-button {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            color: var(--foreground);
+            padding: 0.5rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .zoom-button:hover {
+            background-color: var(--accent);
+            color: var(--accent-foreground);
+            border-color: var(--accent);
+        }
+
+        .zoom-level {
+            min-width: 4rem;
+            text-align: center;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .chapter-list {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 300px;
+            background-color: hsl(var(--background) / 0.95);
+            backdrop-filter: blur(8px);
+            border-left: 1px solid var(--border);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 60;
+            overflow-y: auto;
+        }
+
+        .chapter-list.open {
+            transform: translateX(0);
+        }
+
+        .chapter-item-reader {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .chapter-item-reader:hover {
+            background-color: hsl(var(--accent) / 0.2);
+        }
+
+        .chapter-item-reader.active {
+            background-color: hsl(var(--primary) / 0.2);
+            border-left: 3px solid var(--primary);
+        }
+
+        .progress-bar-reader {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background-color: hsl(var(--muted) / 0.5);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary);
+            transition: width 0.3s ease;
+        }
+
+        .settings-panel {
+            position: absolute;
+            top: 4rem;
+            right: 1rem;
+            background-color: hsl(var(--background) / 0.95);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            min-width: 250px;
+            display: none;
+            z-index: 70;
+        }
+
+        .settings-panel.show {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .reading-mode-btn {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            color: var(--foreground);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+        }
+
+        .reading-mode-btn:hover {
+            background-color: var(--accent);
+            color: var(--accent-foreground);
+            border-color: var(--accent);
+        }
+
+        .reading-mode-btn.active {
+            background-color: var(--primary);
+            color: var(--primary-foreground);
+            border-color: var(--primary);
+        }
+
+        .keyboard-shortcuts {
+            position: absolute;
+            bottom: 2rem;
+            left: 2rem;
+            background-color: hsl(var(--background) / 0.9);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            font-size: 0.75rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 30;
+        }
+
+        .keyboard-shortcuts.show {
+            opacity: 1;
+        }
+
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .shortcut-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .shortcut-key {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+        }
+
+        /* Fullscreen mode */
+        .fullscreen .reader-controls {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+        }
+
+        .fullscreen .page-indicator {
+            bottom: 1rem;
+        }
+    </style>
+</head>
+<body class="crawler-theme reader-mode">
+    <!-- Reader Container -->
+    <div class="reader-container">
+        <!-- Reader Controls -->
+        <header class="reader-controls" id="readerControls">
+            <div class="flex items-center space-x-4">
+                <a href="crawler_book_details_1.html" class="crawler-button crawler-button-secondary">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back
+                </a>
+                <div class="text-sm text-muted-foreground">
+                    <span class="font-medium text-foreground">The Ancient Chronicles</span>
+                    <span class="mx-2">•</span>
+                    <span>Chapter 5 of 156</span>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <!-- Zoom Controls -->
+                <div class="zoom-controls">
+                    <button class="zoom-button" onclick="zoomOut()" title="Zoom Out">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+                        </svg>
+                    </button>
+                    <span class="zoom-level" id="zoomLevel">100%</span>
+                    <button class="zoom-button" onclick="zoomIn()" title="Zoom In">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                    </button>
+                    <button class="zoom-button" onclick="resetZoom()" title="Reset Zoom">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Reading Mode -->
+                <button class="reading-mode-btn" onclick="toggleReadingMode()" id="readingModeBtn">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Single Page
+                </button>
+
+                <!-- Chapter List -->
+                <button class="crawler-button crawler-button-secondary" onclick="toggleChapterList()">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                    </svg>
+                    Chapters
+                </button>
+
+                <!-- Settings -->
+                <button class="crawler-button crawler-button-secondary" onclick="toggleSettings()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </button>
+
+                <!-- Fullscreen -->
+                <button class="crawler-button crawler-button-secondary" onclick="toggleFullscreen()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Reader Content -->
+        <div class="reader-content" id="readerContent">
+            <!-- Navigation Areas -->
+            <div class="navigation-area nav-left" onclick="previousPage()" title="Previous Page (A or ←)"></div>
+            <div class="navigation-area nav-right" onclick="nextPage()" title="Next Page (D or →)"></div>
+
+            <!-- Comic Page -->
+            <img src="https://placehold.co/800x1200/1a1a1a/ffffff?text=Comic+Page+5" alt="Comic Page" class="comic-page" id="comicPage">
+
+            <!-- Page Indicator -->
+            <div class="page-indicator">
+                <span>Page 5 of 24</span>
+                <span class="mx-2">•</span>
+                <span>Chapter 5</span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress-bar-reader">
+                <div class="progress-fill" style="width: 20.8%"></div>
+            </div>
+        </div>
+
+        <!-- Chapter List Sidebar -->
+        <div class="chapter-list" id="chapterList">
+            <div class="p-4 border-b border-border">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">Chapters</h3>
+                    <button onclick="toggleChapterList()" class="text-muted-foreground hover:text-foreground">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="relative">
+                    <input type="text" placeholder="Search chapters..." class="crawler-input form-input w-full pl-10 pr-4 text-sm">
+                    <svg class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-4 space-y-1">
+                <!-- Chapter items -->
+                <div class="chapter-item-reader active" onclick="goToChapter(1)">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3"
+                            <div class="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-xs font-medium text-primary-foreground">5</div>
+                            <div>
+                                <h4 class="text-sm font-medium">Chapter 5</h4>
+                                <p class="text-xs text-muted-foreground">The Revelation</p>
+                            </div>
+                        </div>
+                        <span class="text-xs text-muted-foreground">24p</span>
+                    </div>
+                </div>
+
+                <div class="chapter-item-reader" onclick="goToChapter(2)">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-6 h-6 bg-muted rounded-full flex items-center justify-center text-xs font-medium">6</div>
+                            <div>
+                                <h4 class="text-sm font-medium">Chapter 6</h4>
+                                <p class="text-xs text-muted-foreground">The Alliance</p>
+                            </div>
+                        </div>
+                        <span class="text-xs text-muted-foreground">28p</span>
+                    </div>
+                </div>
+
+                <div class="chapter-item-reader" onclick="goToChapter(3)">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-6 h-6 bg-muted rounded-full flex items-center justify-center text-xs font-medium">7</div>
+                            <div>
+                                <h4 class="text-sm font-medium">Chapter 7</h4>
+                                <p class="text-xs text-muted-foreground">The Betrayal</p>
+                            </div>
+                        </div>
+                        <span class="text-xs text-muted-foreground">32p</span>
+                    </div>
+                </div>
+
+                <!-- More chapters... -->
+                <div class="chapter-item-reader" onclick="goToChapter(4)">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-6 h-6 bg-muted rounded-full flex items-center justify-center text-xs font-medium">8</div>
+                            <div>
+                                <h4 class="text-sm font-medium">Chapter 8</h4>
+                                <p class="text-xs text-muted-foreground">The Confrontation</p>
+                            </div>
+                        </div>
+                        <span class="text-xs text-muted-foreground">35p</span>
+                    </div>
+                </div>
+
+                <div class="chapter-item-reader" onclick="goToChapter(5)">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-6 h-6 bg-muted rounded-full flex items-center justify-center text-xs font-medium">9</div>
+                            <div>
+                                <h4 class="text-sm font-medium">Chapter 9</h4>
+                                <p class="text-xs text-muted-foreground">The Resolution</p>
+                            </div>
+                        </div>
+                        <span class="text-xs text-muted-foreground">38p</span>
+                    </div>
+                </div>
+
+                <div class="chapter-item-reader" onclick="goToChapter(6)">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-6 h-6 bg-muted rounded-full flex items-center justify-center text-xs font-medium">10</div>
+                            <div>
+                                <h4 class="text-sm font-medium">Chapter 10</h4>
+                                <p class="text-xs text-muted-foreground">The Epilogue</p>
+                            </div>
+                        </div>
+                        <span class="text-xs text-muted-foreground">20p</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Panel -->
+        <div class="settings-panel" id="settingsPanel">
+            <h3 class="text-lg font-semibold mb-4">Reading Settings</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Reading Mode</label>
+                    <div class="flex space-x-2">
+                        <button class="reading-mode-btn active" onclick="setReadingMode('single')">Single Page</button>
+                        <button class="reading-mode-btn" onclick="setReadingMode('double')">Double Page</button>
+                        <button class="reading-mode-btn" onclick="setReadingMode('scroll')">Scroll</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2">Page Transition</label>
+                    <select class="crawler-input form-input w-full">
+                        <option>Slide</option>
+                        <option>Fade</option>
+                        <option>Instant</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2">Auto-hide Controls</label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="mr-2" checked onchange="toggleAutoHide(this)">
+                        <span class="text-sm">Hide controls after 3 seconds</span>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2">Background Color</label>
+                    <div class="flex space-x-2"
+                        <button class="w-8 h-8 bg-black rounded border-2 border-primary" onclick="setBackground('black')"></button>
+                        <button class="w-8 h-8 bg-gray-900 rounded" onclick="setBackground('gray')"></button>
+                        <button class="w-8 h-8 bg-amber-50 rounded" onclick="setBackground('sepia')"></button>
+                        <button class="w-8 h-8 bg-white rounded" onclick="setBackground('white')"></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Keyboard Shortcuts Help -->
+        <div class="keyboard-shortcuts" id="keyboardShortcuts">
+            <h4 class="font-medium mb-2">Keyboard Shortcuts</h4>
+            <div class="shortcut-item">
+                <span>Previous Page</span>
+                <span class="shortcut-key">A / ←</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Next Page</span>
+                <span class="shortcut-key">D / →</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Zoom In</span>
+                <span class="shortcut-key">+</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Zoom Out</span>
+                <span class="shortcut-key">-</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Reset Zoom</span>
+                <span class="shortcut-key">0</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Toggle Controls</span>
+                <span class="shortcut-key">H</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Fullscreen</span>
+                <span class="shortcut-key">F</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Reader state
+        let currentPage = 5;
+        let totalPages = 24;
+        let currentChapter = 5;
+        let zoomLevel = 100;
+        let isFullscreen = false;
+        let autoHideControls = true;
+        let hideTimeout;
+
+        // Initialize reader
+        document.addEventListener('DOMContentLoaded', function() {
+            updatePageDisplay();
+            setupKeyboardShortcuts();
+            setupMouseControls();
+            
+            // Show keyboard shortcuts briefly
+            setTimeout(() => {
+                document.getElementById('keyboardShortcuts').classList.add('show');
+                setTimeout(() => {
+                    document.getElementById('keyboardShortcuts').classList.remove('show');
+                }, 3000);
+            }, 1000);
+
+            // Auto-hide controls if enabled
+            if (autoHideControls) {
+                startAutoHideTimer();
+            }
+        });
+
+        // Navigation functions
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                updatePageDisplay();
+                updateProgress();
+                animatePageTransition('prev');
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                updatePageDisplay();
+                updateProgress();
+                animatePageTransition('next');
+            }
+        }
+
+        function updatePageDisplay() {
+            document.querySelector('.page-indicator').innerHTML = `
+                <span>Page ${currentPage} of ${totalPages}</span>
+                <span class="mx-2">•</span>
+                <span>Chapter ${currentChapter}</span>
+            `;
+            
+            // Update page image
+            const comicPage = document.getElementById('comicPage');
+            comicPage.src = `https://placehold.co/800x1200/${currentPage.toString(16)}a1a1a/ffffff?text=Page+${currentPage}`;
+        }
+
+        function updateProgress() {
+            const progress = (currentPage / totalPages) * 100;
+            document.querySelector('.progress-fill').style.width = progress + '%';
+        }
+
+        function animatePageTransition(direction) {
+            const comicPage = document.getElementById('comicPage');
+            comicPage.style.transform = direction === 'next' ? 'translateX(-100%)' : 'translateX(100%)';
+            comicPage.style.opacity = '0';
+            
+            setTimeout(() => {
+                comicPage.style.transform = 'translateX(0)';
+                comicPage.style.opacity = '1';
+            }, 100);
+        }
+
+        // Zoom functions
+        function zoomIn() {
+            if (zoomLevel < 300) {
+                zoomLevel += 25;
+                applyZoom();
+            }
+        }
+
+        function zoomOut() {
+            if (zoomLevel > 50) {
+                zoomLevel -= 25;
+                applyZoom();
+            }
+        }
+
+        function resetZoom() {
+            zoomLevel = 100;
+            applyZoom();
+        }
+
+        function applyZoom() {
+            const comicPage = document.getElementById('comicPage');
+            comicPage.style.transform = `scale(${zoomLevel / 100})`;
+            document.getElementById('zoomLevel').textContent = zoomLevel + '%';
+            
+            if (zoomLevel > 100) {
+                comicPage.classList.add('zoomed');
+                enablePan();
+            } else {
+                comicPage.classList.remove('zoomed');
+                disablePan();
+            }
+        }
+
+        // Pan functionality
+        let isPanning = false;
+        let startX, startY, translateX = 0, translateY = 0;
+
+        function enablePan() {
+            const comicPage = document.getElementById('comicPage');
+            comicPage.addEventListener('mousedown', startPan);
+            comicPage.addEventListener('mousemove', pan);
+            comicPage.addEventListener('mouseup', endPan);
+            comicPage.addEventListener('mouseleave', endPan);
+        }
+
+        function disablePan() {
+            const comicPage = document.getElementById('comicPage');
+            comicPage.removeEventListener('mousedown', startPan);
+            comicPage.removeEventListener('mousemove', pan);
+            comicPage.removeEventListener('mouseup', endPan);
+            comicPage.removeEventListener('mouseleave', endPan);
+            translateX = 0;
+            translateY = 0;
+            comicPage.style.transform = `scale(${zoomLevel / 100})`;
+        }
+
+        function startPan(e) {
+            if (zoomLevel > 100) {
+                isPanning = true;
+                startX = e.clientX - translateX;
+                startY = e.clientY - translateY;
+            }
+        }
+
+        function pan(e) {
+            if (isPanning) {
+                e.preventDefault();
+                translateX = e.clientX - startX;
+                translateY = e.clientY - startY;
+                const comicPage = document.getElementById('comicPage');
+                comicPage.style.transform = `scale(${zoomLevel / 100}) translate(${translateX}px, ${translateY}px)`;
+            }
+        }
+
+        function endPan() {
+            isPanning = false;
+        }
+
+        // UI toggle functions
+        function toggleChapterList() {
+            const chapterList = document.getElementById('chapterList');
+            chapterList.classList.toggle('open');
+        }
+
+        function toggleSettings() {
+            const settingsPanel = document.getElementById('settingsPanel');
+            settingsPanel.classList.toggle('show');
+        }
+
+        function toggleFullscreen() {
+            if (!isFullscreen) {
+                document.documentElement.requestFullscreen();
+                document.body.classList.add('fullscreen');
+                isFullscreen = true;
+            } else {
+                document.exitFullscreen();
+                document.body.classList.remove('fullscreen');
+                isFullscreen = false;
+            }
+        }
+
+        function toggleReadingMode() {
+            const btn = document.getElementById('readingModeBtn');
+            const currentMode = btn.textContent.trim();
+            
+            if (currentMode === 'Single Page') {
+                btn.innerHTML = `
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Double Page
+                `;
+            } else if (currentMode === 'Double Page') {
+                btn.innerHTML = `
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                    </svg>
+                    Scroll Mode
+                `;
+            } else {
+                btn.innerHTML = `
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Single Page
+                `;
+            }
+        }
+
+        function setReadingMode(mode) {
+            // Implementation for different reading modes
+            document.querySelectorAll('.reading-mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function setBackground(color) {
+            const body = document.body;
+            switch(color) {
+                case 'black':
+                    body.style.backgroundColor = 'oklch(0.0800 0 0)';
+                    break;
+                case 'gray':
+                    body.style.backgroundColor = 'oklch(0.1500 0 0)';
+                    break;
+                case 'sepia':
+                    body.style.backgroundColor = 'oklch(0.9000 0.0500 80)';
+                    break;
+                case 'white':
+                    body.style.backgroundColor = 'oklch(0.9800 0 0)';
+                    break;
+            }
+        }
+
+        function toggleAutoHide(checkbox) {
+            autoHideControls = checkbox.checked;
+            if (autoHideControls) {
+                startAutoHideTimer();
+            } else {
+                clearTimeout(hideTimeout);
+                document.getElementById('readerControls').classList.remove('hidden');
+            }
+        }
+
+        function startAutoHideTimer() {
+            if (autoHideControls) {
+                clearTimeout(hideTimeout);
+                hideTimeout = setTimeout(() => {
+                    document.getElementById('readerControls').classList.add('hidden');
+                }, 3000);
+            }
+        }
+
+        function showControls() {
+            if (autoHideControls) {
+                clearTimeout(hideTimeout);
+                document.getElementById('readerControls').classList.remove('hidden');
+                startAutoHideTimer();
+            }
+        }
+
+        // Keyboard shortcuts
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', function(e) {
+                // Don't handle shortcuts if user is typing in input
+                if (e.target.tagName === 'INPUT') return;
+
+                switch(e.key.toLowerCase()) {
+                    case 'a':
+                    case 'arrowleft':
+                        e.preventDefault();
+                        previousPage();
+                        break;
+                    case 'd':
+                    case 'arrowright':
+                        e.preventDefault();
+                        nextPage();
+                        break;
+                    case '+':
+                    case '=':
+                        e.preventDefault();
+                        zoomIn();
+                        break;
+                    case '-':
+                    case '_':
+                        e.preventDefault();
+                        zoomOut();
+                        break;
+                    case '0':
+                        e.preventDefault();
+                        resetZoom();
+                        break;
+                    case 'h':
+                        e.preventDefault();
+                        toggleControlsVisibility();
+                        break;
+                    case 'f':
+                        e.preventDefault();
+                        toggleFullscreen();
+                        break;
+                    case 'c':
+                        e.preventDefault();
+                        toggleChapterList();
+                        break;
+                    case 's':
+                        e.preventDefault();
+                        toggleSettings();
+                        break;
+                    case '?':
+                        e.preventDefault();
+                        toggleKeyboardShortcuts();
+                        break;
+                }
+            });
+        }
+
+        function toggleControlsVisibility() {
+            const controls = document.getElementById('readerControls');
+            controls.classList.toggle('hidden');
+        }
+
+        function toggleKeyboardShortcuts() {
+            const shortcuts = document.getElementById('keyboardShortcuts');
+            shortcuts.classList.toggle('show');
+        }
+
+        // Mouse controls
+        function setupMouseControls() {
+            const readerContent = document.getElementById('readerContent');
+            
+            readerContent.addEventListener('mousemove', function() {
+                showControls();
+            });
+
+            readerContent.addEventListener('click', function(e) {
+                // Navigate based on click position
+                const rect = readerContent.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const width = rect.width;
+                
+                if (clickX < width * 0.3) {
+                    previousPage();
+                } else if (clickX > width * 0.7) {
+                    nextPage();
+                }
+            });
+        }
+
+        // Chapter navigation
+        function goToChapter(chapterId) {
+            currentChapter = chapterId;
+            currentPage = 1; // Reset to first page of chapter
+            updatePageDisplay();
+            updateProgress();
+            toggleChapterList();
+        }
+
+        // Click outside to close panels
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#settingsPanel') && !e.target.closest('button[onclick="toggleSettings()"]')) {
+                document.getElementById('settingsPanel').classList.remove('show');
+            }
+        });
+
+        // Prevent context menu for better UX
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+    </script>
+</body>
+</html>

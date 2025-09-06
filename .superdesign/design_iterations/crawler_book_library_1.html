@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="crawler-theme">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Crawler - Book Library</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.0.0/dist/flowbite.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="crawler_reader_theme.css">
+    <style>
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--background);
+            color: var(--foreground);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .book-card {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: all 0.4s ease-out;
+            cursor: pointer;
+        }
+
+        .book-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--accent);
+        }
+
+        .book-cover {
+            aspect-ratio: 3/4;
+            object-fit: cover;
+            background-color: var(--muted);
+            transition: transform 0.3s ease;
+        }
+
+        .book-card:hover .book-cover {
+            transform: scale(1.05);
+        }
+
+        .search-filters {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+
+        .view-toggle {
+            transition: all 0.2s ease;
+        }
+
+        .view-toggle:hover {
+            background-color: var(--accent);
+            color: var(--accent-foreground);
+        }
+
+        .view-toggle.active {
+            background-color: var(--primary);
+            color: var(--primary-foreground);
+        }
+
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+
+        .loading-skeleton {
+            background: linear-gradient(90deg, var(--muted) 25%, var(--border) 50%, var(--muted) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .search-suggestions {
+            animation: slideDown 0.2s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .filter-chip {
+            background-color: var(--accent);
+            color: var(--accent-foreground);
+            border-radius: 9999px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .filter-chip .remove {
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s ease;
+        }
+
+        .filter-chip .remove:hover {
+            opacity: 1;
+        }
+
+        .status-badge {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background-color: hsl(var(--background) / 0.9);
+            backdrop-filter: blur(4px);
+            border-radius: 9999px;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .grid-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .list-view .book-card {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .list-view .book-cover {
+            width: 80px;
+            height: 120px;
+            margin-right: 1rem;
+        }
+
+        .list-view .book-info {
+            flex: 1;
+        }
+
+        .advanced-search {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .sort-dropdown {
+            position: relative;
+        }
+
+        .sort-options {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            z-index: 50;
+            min-width: 200px;
+            display: none;
+        }
+
+        .sort-options.show {
+            display: block;
+            animation: slideDown 0.2s ease-out;
+        }
+    </style>
+</head>
+<body class="crawler-theme">
+    <!-- Header -->
+    <header class="crawler-card border-b px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <a href="crawler_source_management_1.html" class="crawler-button crawler-button-secondary">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back to Sources
+                </a>
+                <h1 class="text-2xl font-bold text-foreground">Book Library</h1>
+                <span class="crawler-status success">
+                    <span class="w-2 h-2 bg-green-500 rounded-full status-indicator"></span>
+                    156 Books
+                </span>
+            </div>
+            <div class="flex items-center space-x-3"
+                <button class="crawler-button">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Refresh Library
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="flex h-screen">
+        <!-- Filters Sidebar -->
+        <aside class="crawler-sidebar w-80 flex flex-col border-r border-border">
+            <div class="p-6 border-b border-border">
+                <h2 class="text-lg font-semibold text-foreground mb-4">Search & Filters</h2>
+                <div class="relative">
+                    <input type="text" id="searchInput" placeholder="Search books, authors..." class="crawler-input form-input w-full pl-10 pr-4">
+                    <svg class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                <div id="searchSuggestions" class="search-suggestions hidden"></div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                <!-- Active Filters -->
+                <div id="activeFilters" class="space-y-2">
+                    <h3 class="text-sm font-medium text-foreground mb-2">Active Filters</h3>
+                    <div class="filter-chip">
+                        Fantasy
+                        <span class="remove" onclick="removeFilter(this)">&times;</span>
+                    </div>
+                    <div class="filter-chip">
+                        Completed
+                        <span class="remove" onclick="removeFilter(this)">&times;</span>
+                    </div>
+                </div>
+
+                <!-- Genre Filter -->
+                <div class="space-y-3">
+                    <h3 class="text-sm font-medium text-foreground">Genre</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center text-sm">
+                            <input type="checkbox" class="mr-2" checked> Fantasy (45)
+                        </label>
+                        <label class="flex items-center text-sm">
+                            <input type="checkbox" class="mr-2"> Adventure (32)
+                        </label>
+                        <label class="flex items-center text-sm">
+                            <input type="checkbox" class="mr-2"> Romance (28)
+                        </label>
+                        <label class="flex items-center text-sm">
+                            <input type="checkbox" class="mr-2"> Sci-Fi (24)
+                        </label>
+                        <label class="flex items-center text-sm">
+                            <input type="checkbox" class="mr-2"> Mystery (18)
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="space-y-3">
+                    <h3 class="text-sm font-medium text-foreground">Status</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center text-sm">
+                            <input type="radio" name="status" class="mr-2" checked> All
+                        </label>
+                        <label class="flex items-center text-sm">
+                            <input type="radio" name="status" class="mr-2"> Ongoing
+                        </label>
+                        <label class="flex items-center text-sm">
+                            <input type="radio" name="status" class="mr-2"> Completed
+                        </label>
+                        <label class="flex items-center text-sm">
+                            <input type="radio" name="status" class="mr-2"> Hiatus
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Rating Filter -->
+                <div class="space-y-3">
+                    <h3 class="text-sm font-medium text-foreground">Rating</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center text-sm">
+                            <input type="radio" name="rating" class="mr-2" checked> All ratings
+                        </label>
+                        <label class="flex items-center text-sm">
+                            <input type="radio" name="rating" class="mr-2"> ★★★★★ 5+ stars
+                        </label>
+                        <label class="flex items-center text-sm">
+                            <input type="radio" name="rating" class="mr-2"> ★★★★☆ 4+ stars
+                        </label>
+                        <label class="flex items-center text-sm">
+                            <input type="radio" name="rating" class="mr-2"> ★★★☆☆ 3+ stars
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col">
+            <!-- Toolbar -->
+            <div class="crawler-card border-b px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-2">
+                            <button class="view-toggle active px-3 py-2 rounded-lg">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                                </svg>
+                            </button>
+                            <button class="view-toggle px-3 py-2 rounded-lg">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="sort-dropdown">
+                            <button class="crawler-button crawler-button-secondary" onclick="toggleSort()">
+                                Sort by: Latest
+                                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            <div id="sortOptions" class="sort-options">
+                                <button class="block w-full text-left px-4 py-2 text-sm hover:bg-muted">Latest Updated</button>
+                                <button class="block w-full text-left px-4 py-2 text-sm hover:bg-muted">Oldest Updated</button>
+                                <button class="block w-full text-left px-4 py-2 text-sm hover:bg-muted">Title A-Z</button>
+                                <button class="block w-full text-left px-4 py-2 text-sm hover:bg-muted">Title Z-A</button>
+                                <button class="block w-full text-left px-4 py-2 text-sm hover:bg-muted">Highest Rated</button>
+                                <button class="block w-full text-left px-4 py-2 text-sm hover:bg-muted">Most Popular</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <span class="text-sm text-muted-foreground">1-24 of 156 books</span>
+                        <div class="flex items-center space-x-1">
+                            <button class="crawler-button crawler-button-secondary px-3 py-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                </svg>
+                            </button>
+                            <button class="crawler-button crawler-button-secondary px-3 py-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Books Grid -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <div id="booksGrid" class="grid-view">
+                    <!-- Book Card 1 -->
+                    <div class="book-card" onclick="viewBook(1)">
+                        <div class="relative">
+                            <img src="https://placehold.co/300x400/1a1a1a/ffffff?text=Book+1" alt="Book Cover" class="book-cover w-full">
+                            <div class="status-badge">
+                                <span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                                Completed
+                            </div>
+                        </div>
+                        <div class="p-4"
+                            <h3 class="crawler-book-title text-sm font-semibold mb-1">The Ancient Chronicles</h3>
+                            <p class="crawler-book-author text-xs mb-2">by Elara Moonwhisper</p>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <span class="text-yellow-400 text-xs">★★★★☆</span>
+                                    <span class="text-xs text-muted-foreground ml-1">4.2</span>
+                                </div>
+                                <span class="text-xs text-muted-foreground">156 ch</span>
+                            </div>
+                            <div class="mt-2">
+                                <div class="crawler-progress h-1 bg-muted rounded-full">
+                                    <div class="progress-bar h-full bg-primary rounded-full" style="width: 85%"></div>
+                                </div>
+                                <p class="text-xs text-muted-foreground mt-1">85% read</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Book Card 2 -->
+                    <div class="book-card" onclick="viewBook(2)">
+                        <div class="relative">
+                            <img src="https://placehold.co/300x400/2a2a2a/ffffff?text=Book+2" alt="Book Cover" class="book-cover w-full">
+                            <div class="status-badge">
+                                <span class="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
+                                Ongoing
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="crawler-book-title text-sm font-semibold mb-1">Dragon's Legacy</h3>
+                            <p class="crawler-book-author text-xs mb-2">by Kael Stormrider</p>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <span class="text-yellow-400 text-xs">★★★★★</span>
+                                    <span class="text-xs text-muted-foreground ml-1">4.8</span>
+                                </div>
+                                <span class="text-xs text-muted-foreground">89 ch</span>
+                            </div>
+                            <div class="mt-2">
+                                <div class="crawler-progress h-1 bg-muted rounded-full">
+                                    <div class="progress-bar h-full bg-primary rounded-full" style="width: 45%"></div>
+                                </div>
+                                <p class="text-xs text-muted-foreground mt-1">45% read</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Book Card 3 -->
+                    <div class="book-card" onclick="viewBook(3)">
+                        <div class="relative">
+                            <img src="https://placehold.co/300x400/3a3a3a/ffffff?text=Book+3" alt="Book Cover" class="book-cover w-full">
+                            <div class="status-badge">
+                                <span class="w-2 h-2 bg-yellow-500 rounded-full mr-1"></span>
+                                Hiatus
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="crawler-book-title text-sm font-semibold mb-1">Mystic Realms</h3>
+                            <p class="crawler-book-author text-xs mb-2">by Lyra Starweaver</p>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <span class="text-yellow-400 text-xs">★★★☆☆</span>
+                                    <span class="text-xs text-muted-foreground ml-1">3.5</span>
+                                </div>
+                                <span class="text-xs text-muted-foreground">67 ch</span>
+                            </div>
+                            <div class="mt-2">
+                                <div class="crawler-progress h-1 bg-muted rounded-full">
+                                    <div class="progress-bar h-full bg-primary rounded-full" style="width: 12%"></div>
+                                </div>
+                                <p class="text-xs text-muted-foreground mt-1">12% read</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Book Card 4 -->
+                    <div class="book-card" onclick="viewBook(4)">
+                        <div class="relative">
+                            <img src="https://placehold.co/300x400/4a4a4a/ffffff?text=Book+4" alt="Book Cover" class="book-cover w-full">
+                            <div class="status-badge">
+                                <span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                                Completed
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="crawler-book-title text-sm font-semibold mb-1">Shadow Chronicles</h3>
+                            <p class="crawler-book-author text-xs mb-2">by Raven Nightshade</p>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <span class="text-yellow-400 text-xs">★★★★☆</span>
+                                    <span class="text-xs text-muted-foreground ml-1">4.1</span>
+                                </div>
+                                <span class="text-xs text-muted-foreground">203 ch</span>
+                            </div>
+                            <div class="mt-2">
+                                <div class="crawler-progress h-1 bg-muted rounded-full">
+                                    <div class="progress-bar h-full bg-primary rounded-full" style="width: 100%"></div>
+                                </div>
+                                <p class="text-xs text-muted-foreground mt-1">100% read</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Book Card 5 -->
+                    <div class="book-card" onclick="viewBook(5)">
+                        <div class="relative">
+                            <img src="https://placehold.co/300x400/5a5a5a/ffffff?text=Book+5" alt="Book Cover" class="book-cover w-full">
+                            <div class="status-badge">
+                                <span class="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
+                                Ongoing
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="crawler-book-title text-sm font-semibold mb-1">Celestial Wars</h3>
+                            <p class="crawler-book-author text-xs mb-2">by Astral Phoenix</p>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <span class="text-yellow-400 text-xs">★★★★★</span>
+                                    <span class="text-xs text-muted-foreground ml-1">4.7</span>
+                                </div>
+                                <span class="text-xs text-muted-foreground">134 ch</span>
+                            </div>
+                            <div class="mt-2">
+                                <div class="crawler-progress h-1 bg-muted rounded-full">
+                                    <div class="progress-bar h-full bg-primary rounded-full" style="width: 23%"></div>
+                                </div>
+                                <p class="text-xs text-muted-foreground mt-1">23% read</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Book Card 6 -->
+                    <div class="book-card" onclick="viewBook(6)">
+                        <div class="relative">
+                            <img src="https://placehold.co/300x400/6a6a6a/ffffff?text=Book+6" alt="Book Cover" class="book-cover w-full">
+                            <div class="status-badge">
+                                <span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                                Completed
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="crawler-book-title text-sm font-semibold mb-1">Eternal Odyssey</h3>
+                            <p class="crawler-book-author text-xs mb-2">by Sage Wanderer</p>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <span class="text-yellow-400 text-xs">★★★★☆</span>
+                                    <span class="text-xs text-muted-foreground ml-1">4.3</span>
+                                </div>
+                                <span class="text-xs text-muted-foreground">178 ch</span>
+                            </div>
+                            <div class="mt-2">
+                                <div class="crawler-progress h-1 bg-muted rounded-full">
+                                    <div class="progress-bar h-full bg-primary rounded-full" style="width: 67%"></div>
+                                </div>
+                                <p class="text-xs text-muted-foreground mt-1">67% read</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Book Card 7 -->
+                    <div class="book-card" onclick="viewBook(7)">
+                        <div class="relative">
+                            <img src="https://placehold.co/300x400/7a7a7a/ffffff?text=Book+7" alt="Book Cover" class="book-cover w-full">
+                            <div class="status-badge">
+                                <span class="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
+                                Ongoing
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="crawler-book-title text-sm font-semibold mb-1">Quantum Realms</h3>
+                            <p class="crawler-book-author text-xs mb-2">by Neo Technomancer</p>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <span class="text-yellow-400 text-xs">★★★★☆</span>
+                                    <span class="text-xs text-muted-foreground ml-1">4.0</span>
+                                </div>
+                                <span class="text-xs text-muted-foreground">95 ch</span>
+                            </div>
+                            <div class="mt-2">
+                                <div class="crawler-progress h-1 bg-muted rounded-full">
+                                    <div class="progress-bar h-full bg-primary rounded-full" style="width: 0%"></div>
+                                </div>
+                                <p class="text-xs text-muted-foreground mt-1">Not started</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Book Card 8 -->
+                    <div class="book-card" onclick="viewBook(8)">
+                        <div class="relative">
+                            <img src="https://placehold.co/300x400/8a8a8a/ffffff?text=Book+8" alt="Book Cover" class="book-cover w-full">
+                            <div class="status-badge">
+                                <span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                                Completed
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="crawler-book-title text-sm font-semibold mb-1">Phoenix Rising</h3>
+                            <p class="crawler-book-author text-xs mb-2">by Ember Flameheart</p>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <span class="text-yellow-400 text-xs">★★★★★</span>
+                                    <span class="text-xs text-muted-foreground ml-1">4.9</span>
+                                </div>
+                                <span class="text-xs text-muted-foreground">245 ch</span>
+                            </div>
+                            <div class="mt-2">
+                                <div class="crawler-progress h-1 bg-muted rounded-full">
+                                    <div class="progress-bar h-full bg-primary rounded-full" style="width: 100%"></div>
+                                </div>
+                                <p class="text-xs text-muted-foreground mt-1">100% read</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Load More -->
+                <div class="text-center mt-8">
+                    <button class="crawler-button px-6 py-3" onclick="loadMore()">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Load More Books
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        const searchSuggestions = document.getElementById('searchSuggestions');
+        
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            if (query.length > 0) {
+                showSuggestions(query);
+            } else {
+                hideSuggestions();
+            }
+        });
+
+        function showSuggestions(query) {
+            const suggestions = [
+                'The Ancient Chronicles',
+                'Dragon\'s Legacy', 
+                'Mystic Realms',
+                'Shadow Chronicles',
+                'Celestial Wars',
+                'Eternal Odyssey',
+                'Quantum Realms',
+                'Phoenix Rising'
+            ].filter(item => item.toLowerCase().includes(query));
+
+            if (suggestions.length > 0) {
+                searchSuggestions.innerHTML = suggestions.map(suggestion => 
+                    `<div class="p-2 hover:bg-muted cursor-pointer text-sm" onclick="selectSuggestion('${suggestion}')">${suggestion}</div>`
+                ).join('');
+                searchSuggestions.classList.remove('hidden');
+            } else {
+                hideSuggestions();
+            }
+        }
+
+        function hideSuggestions() {
+            searchSuggestions.classList.add('hidden');
+        }
+
+        function selectSuggestion(suggestion) {
+            searchInput.value = suggestion;
+            hideSuggestions();
+            // Trigger search
+            console.log('Searching for:', suggestion);
+        }
+
+        // Click outside to hide suggestions
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !searchSuggestions.contains(e.target)) {
+                hideSuggestions();
+            }
+        });
+
+        // View toggle
+        document.querySelectorAll('.view-toggle').forEach(button => {
+            button.addEventListener('click', function() {
+                document.querySelectorAll('.view-toggle').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                const booksGrid = document.getElementById('booksGrid');
+                if (this.querySelector('path').getAttribute('d').includes('M4 6a2')) {
+                    booksGrid.className = 'grid-view';
+                } else {
+                    booksGrid.className = 'list-view';
+                }
+            });
+        });
+
+        // Sort dropdown
+        function toggleSort() {
+            const sortOptions = document.getElementById('sortOptions');
+            sortOptions.classList.toggle('show');
+        }
+
+        // Click outside to close sort dropdown
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.sort-dropdown')) {
+                document.getElementById('sortOptions').classList.remove('show');
+            }
+        });
+
+        // Filter removal
+        function removeFilter(element) {
+            element.parentElement.remove();
+        }
+
+        // Book navigation
+        function viewBook(bookId) {
+            window.location.href = 'crawler_book_details_1.html';
+        }
+
+        // Load more functionality
+        function loadMore() {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<svg class="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>Loading...';
+            button.disabled = true;
+
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+                // Add more books here
+                console.log('Loading more books...');
+            }, 1500);
+        }
+
+        // Simulate loading animation for book covers
+        window.addEventListener('load', function() {
+            const bookCovers = document.querySelectorAll('.book-cover');
+            bookCovers.forEach((cover, index) => {
+                setTimeout(() => {
+                    cover.style.opacity = '1';
+                    cover.style.transform = 'scale(1)';
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html>

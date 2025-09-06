@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="crawler-theme">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Crawler - Source Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.0.0/dist/flowbite.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="crawler_reader_theme.css">
+    <style>
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--background);
+            color: var(--foreground);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .sidebar-item {
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            position: relative;
+        }
+
+        .sidebar-item:hover {
+            background-color: hsl(var(--muted) / 0.5);
+            border-left-color: var(--accent);
+        }
+
+        .sidebar-item.active {
+            background-color: hsl(var(--primary) / 0.2);
+            border-left-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .sidebar-main-area {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-main-area:hover {
+            background-color: hsl(var(--accent) / 0.1);
+        }
+
+        .sidebar-actions {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .sidebar-item:hover .sidebar-actions {
+            opacity: 1;
+        }
+
+        .edit-button {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            border: 1px solid var(--border);
+            background: var(--background);
+            color: var(--foreground);
+        }
+
+        .edit-button:hover {
+            background-color: var(--accent);
+            color: var(--accent-foreground);
+            border-color: var(--accent);
+            transform: scale(1.05);
+        }
+
+        .navigate-hint {
+            position: absolute;
+            top: 50%;
+            right: 8px;
+            transform: translateY(-50%);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            color: var(--muted-foreground);
+        }
+
+        .sidebar-main-area:hover .navigate-hint {
+            opacity: 1;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .book-card {
+            transition: all 0.4s ease-out;
+        }
+
+        .book-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .form-input {
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus {
+            transform: scale(1.01);
+        }
+
+        .status-indicator {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .reader-mode {
+            background-color: oklch(0.0800 0 0);
+        }
+
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--muted);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+
+        /* Animations for reader */
+        .reader-image {
+            transition: all 0.3s ease;
+        }
+
+        .reader-controls {
+            transition: all 0.25s ease;
+        }
+
+        .hidden-controls {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+
+        /* Mode indicator */
+        .mode-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            z-index: 100;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .mode-indicator.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .mode-indicator.editing {
+            border-color: var(--accent);
+            background: hsl(var(--accent) / 0.1);
+            color: var(--accent);
+        }
+
+        .mode-indicator.browsing {
+            border-color: var(--primary);
+            background: hsl(var(--primary) / 0.1);
+            color: var(--primary);
+        }
+
+        /* Book library styles */
+        .book-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .book-item {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .book-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-color: var(--accent);
+        }
+
+        .book-cover {
+            width: 100%;
+            height: 250px;
+            background: var(--muted);
+            border-radius: 4px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted-foreground);
+            font-size: 14px;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .breadcrumb-item {
+            color: var(--muted-foreground);
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .breadcrumb-item:hover {
+            color: var(--foreground);
+        }
+
+        .breadcrumb-separator {
+            color: var(--border);
+        }
+    </style>
+</head>
+<body class="crawler-theme">
+    <!-- Mode Indicator -->
+    <div id="modeIndicator" class="mode-indicator">
+        <span id="modeText">Browsing Mode</span>
+    </div>
+
+    <!-- Header -->
+    <header class="crawler-card border-b px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <h1 class="text-2xl font-bold text-foreground">Web Crawler Studio</h1>
+                <span class="crawler-status info">
+                    <span class="w-2 h-2 bg-green-500 rounded-full status-indicator"></span>
+                    Ready
+                </span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button class="crawler-button crawler-button-secondary" onclick="goBack()" id="backButton" style="display: none;">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back to Sources
+                </button>
+                <button class="crawler-button crawler-button-secondary">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                    </svg>
+                    Export
+                </button>
+                <button class="crawler-button">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V2"></path>
+                    </svg>
+                    Save All
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="flex h-screen">
+        <!-- Sidebar - Source List -->
+        <aside class="crawler-sidebar w-80 flex flex-col">
+            <div class="p-4 border-b border-border">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-foreground">Sources</h2>
+                    <button class="crawler-button text-sm px-3 py-1.5">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        New
+                    </button>
+                </div>
+                <div class="relative">
+                    <input type="text" placeholder="Search sources..." class="crawler-input w-full pl-10 pr-4">
+                    <svg class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto">
+                <!-- Source Item 1 -->
+                <div class="sidebar-item p-3 border-b border-border">
+                    <div class="sidebar-main-area" onclick="navigateToLibrary('Novel Site B')">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-medium text-sm">Novel Site B</h3>
+                                <p class="text-xs text-muted-foreground">https://novelsite-b.com</p>
+                            </div>
+                            <span class="crawler-status success text-xs px-2 py-1">Active</span>
+                        </div>
+                        <div class="flex items-center mt-2 text-xs text-muted-foreground">
+                            <span>156 books</span>
+                            <span class="mx-2">•</span>
+                            <span>Last updated: 2h ago</span>
+                        </div>
+                        <div class="navigate-hint">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="sidebar-actions flex items-center justify-end mt-2">
+                        <button class="edit-button" onclick="editSource(event, 'Novel Site B')">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                            Edit
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Source Item 2 -->
+                <div class="sidebar-item p-3 border-b border-border">
+                    <div class="sidebar-main-area" onclick="navigateToLibrary('Manga Site A')">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-medium text-sm">Manga Site A</h3>
+                                <p class="text-xs text-muted-foreground">https://mangasite-a.com</p>
+                            </div>
+                            <span class="crawler-status warning text-xs px-2 py-1">Needs Update</span>
+                        </div>
+                        <div class="flex items-center mt-2 text-xs text-muted-foreground">
+                            <span>89 chapters</span>
+                            <span class="mx-2">•</span>
+                            <span>Last updated: 1d ago</span>
+                        </div>
+                        <div class="navigate-hint">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="sidebar-actions flex items-center justify-end mt-2">
+                        <button class="edit-button" onclick="editSource(event, 'Manga Site A')">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                            Edit
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Source Item 3 -->
+                <div class="sidebar-item p-3 border-b border-border">
+                    <div class="sidebar-main-area" onclick="navigateToLibrary('Comic Hub')">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-medium text-sm">Comic Hub</h3>
+                                <p class="text-xs text-muted-foreground">https://comichub.net</p>
+                            </div>
+                            <span class="crawler-status error text-xs px-2 py-1">Failed</span>
+                        </div>
+                        <div class="flex items-center mt-2 text-xs text-muted-foreground">
+                            <span>0 books</span>
+                            <span class="mx-2">•</span>
+                            <span>Last attempt: 3h ago</span>
+                        </div>
+                        <div class="navigate-hint">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="sidebar-actions flex items-center justify-end mt-2">
+                        <button class="edit-button" onclick="editSource(event, 'Comic Hub')">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                            Edit
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Source Item 4 -->
+                <div class="sidebar-item p-3 border-b border-border">
+                    <div class="sidebar-main-area" onclick="navigateToLibrary('Light Novel DB')">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-medium text-sm">Light Novel DB</h3>
+                                <p class="text-xs text-muted-foreground">https://lndb.com</p>
+                            </div>
+                            <span class="crawler-status info text-xs px-2 py-1">Testing</span>
+                        </div>
+                        <div class="flex items-center mt-2 text-xs text-muted-foreground">
+                            <span>234 books</span>
+                            <span class="mx-2">•</span>
+                            <span>Last updated: 5h ago</span>
+                        </div>
+                        <div class="navigate-hint">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="sidebar-actions flex items-center justify-end mt-2">
+                        <button class="edit-button" onclick="editSource(event, 'Light Novel DB')">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                            Edit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col">
+            <!-- Breadcrumb Navigation -->
+            <div id="breadcrumb" class="breadcrumb px-6 pt-4" style="display: none;">
+                <span class="breadcrumb-item" onclick="showSourceList()">Sources</span>
+                <span class="breadcrumb-separator">/</span>
+                <span id="currentSource" class="breadcrumb-item" style="color: var(--foreground);"></span>
+            </div>
+
+            <!-- Tab Navigation (Edit Mode Only) -->
+            <div id="editTabs" class="crawler-card border-b px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex space-x-1">
+                        <button class="crawler-tab active" onclick="switchTab('general')">General</button>
+                        <button class="crawler-tab" onclick="switchTab('selectors')">Selectors</button>
+                        <button class="crawler-tab" onclick="switchTab('pagination')">Pagination</button>
+                        <button class="crawler-tab" onclick="switchTab('advanced')">Advanced</button>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button class="crawler-button crawler-button-secondary" onclick="testConnection()">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Test Connection
+                        </button>
+                        <button class="crawler-button" onclick="saveSource()">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Save Source
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content (Edit Mode Only) -->
+            <div id="editContent" class="flex-1 overflow-y-auto p-6">
+                <!-- General Tab -->
+                <div id="general" class="tab-content active">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="space-y-6">
+                            <div class="crawler-card p-6">
+                                <h3 class="text-lg font-semibold mb-4 text-foreground">Basic Information</h3>
+                                <div class="space-y-4">
+                                    <div class="crawler-form-group">
+                                        <label class="crawler-form-label">Source Name</label>
+                                        <input type="text" value="Novel Site B" class="crawler-input form-input w-full">
+                                        <p class="crawler-form-help">A friendly name for this source</p>
+                                    </div>
+                                    <div class="crawler-form-group">
+                                        <label class="crawler-form-label">Base URL</label>
+                                        <input type="url" value="https://novelsite-b.com" class="crawler-input form-input w-full">
+                                        <p class="crawler-form-help">The main website URL</p>
+                                    </div>
+                                    <div class="crawler-form-group">
+                                        <label class="crawler-form-label">Source Type</label>
+                                        <select class="crawler-input form-input w-full">
+                                            <option>Novel</option>
+                                            <option>Manga</option>
+                                            <option>Comic</option>
+                                            <option>Manhwa</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="crawler-card p-6">
+                                <h3 class="text-lg font-semibold mb-4 text-foreground">Crawl Settings</h3>
+                                <div class="space-y-4">
+                                    <div class="crawler-form-group">
+                                        <label class="crawler-form-label">User Agent</label>
+                                        <input type="text" value="Mozilla/5.0 (compatible; CrawlerBot/1.0)" class="crawler-input form-input w-full">
+                                    </div>
+                                    <div class="crawler-form-group">
+                                        <label class="crawler-form-label">Request Delay (ms)</label>
+                                        <input type="number" value="1000" class="crawler-input form-input w-full">
+                                        <p class="crawler-form-help">Delay between requests to avoid rate limiting</p>
+                                    </div>
+                                    <div class="crawler-form-group">
+                                        <label class="crawler-form-label">Max Pages</label>
+                                        <input type="number" value="10" class="crawler-input form-input w-full">
+                                        <p class="crawler-form-help">Maximum pages to crawl in one session</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <div class="crawler-card p-6">
+                                <h3 class="text-lg font-semibold mb-4 text-foreground">Connection Test</h3>
+                                <div class="space-y-4">
+                                    <div class="flex items-center justify-between p-3 bg-muted rounded-lg">
+                                        <div class="flex items-center">
+                                            <span class="w-3 h-3 bg-green-500 rounded-full mr-3"></span>
+                                            <span class="text-sm">Connection Status</span>
+                                        </div>
+                                        <span class="text-sm font-medium text-green-400">Connected</span>
+                                    </div>
+                                    <div class="flex items-center justify-between p-3 bg-muted rounded-lg">
+                                        <span class="text-sm">Response Time</span>
+                                        <span class="text-sm font-medium">247ms</span>
+                                    </div>
+                                    <div class="flex items-center justify-between p-3 bg-muted rounded-lg">
+                                        <span class="text-sm">Last Test</span>
+                                        <span class="text-sm font-medium">2 minutes ago</span>
+                                    </div>
+                                    <div class="flex items-center justify-between p-3 bg-muted rounded-lg">
+                                        <span class="text-sm">Books Found</span>
+                                        <span class="text-sm font-medium">156</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="crawler-card p-6">
+                                <h3 class="text-lg font-semibold mb-4 text-foreground">Quick Actions</h3>
+                                <div class="space-y-3">
+                                    <button class="crawler-button w-full justify-center">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                        </svg>
+                                        Crawl Now
+                                    </button>
+                                    <button class="crawler-button crawler-button-secondary w-full justify-center">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                        </svg>
+                                        Refresh Data
+                                    </button>
+                                    <button class="crawler-button crawler-button-secondary w-full justify-center">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                        </svg>
+                                        View Logs
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selectors Tab -->
+                <div id="selectors" class="tab-content">
+                    <div class="crawler-card p-6">
+                        <h3 class="text-lg font-semibold mb-4 text-foreground">CSS Selectors Configuration</h3>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="space-y-4">
+                                <div class="crawler-form-group">
+                                    <label class="crawler-form-label">Book Title Selector</label>
+                                    <input type="text" value="h1.book-title" class="crawler-input form-input w-full">
+                                    <p class="crawler-form-help">CSS selector for book titles</p>
+                                </div>
+                                <div class="crawler-form-group">
+                                    <label class="crawler-form-label">Author Selector</label>
+                                    <input type="text" value=".author-name" class="crawler-input form-input w-full">
+                                    <p class="crawler-form-help">CSS selector for authors</p>
+                                </div>
+                                <div class="crawler-form-group">
+                                    <label class="crawler-form-label">Cover Image Selector</label>
+                                    <input type="text" value="img.book-cover" class="crawler-input form-input w-full">
+                                    <p class="crawler-form-help">CSS selector for cover images</p>
+                                </div>
+                                <div class="crawler-form-group">
+                                    <label class="crawler-form-label">Book Link Selector</label>
+                                    <input type="text" value="a.book-link" class="crawler-input form-input w-full">
+                                    <p class="crawler-form-help">CSS selector for book detail links</p>
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <div class="crawler-form-group">
+                                    <label class="crawler-form-label">Chapter Title Selector</label>
+                                    <input type="text" value=".chapter-title" class="crawler-input form-input w-full">
+                                    <p class="crawler-form-help">CSS selector for chapter titles</p>
+                                </div>
+                                <div class="crawler-form-group">
+                                    <label class="crawler-form-label">Chapter Link Selector</label>
+                                    <input type="text" value="a.chapter-link" class="crawler-input form-input w-full">
+                                    <p class="crawler-form-help">CSS selector for chapter links</p>
+                                </div>
+                                <div class="crawler-form-group">
+                                    <label class="crawler-form-label">Content Image Selector</label>
+                                    <input type="text" value=".page-image img" class="crawler-input form-input w-full">
+                                    <p class="crawler-form-help">CSS selector for content images</p>
+                                </div>
+                                <div class="crawler-form-group">
+                                    <label class="crawler-form-label">Next Page Selector</label>
+                                    <input type="text" value="a.next-page" class="crawler-input form-input w-full">
+                                    <p class="crawler-form-help">CSS selector for pagination</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end space-x-3">
+                            <button class="crawler-button crawler-button-secondary">Test Selectors</button>
+                            <button class="crawler-button">Save Selectors</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pagination Tab -->
+                <div id="pagination" class="tab-content">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="crawler-card p-6">
+                            <h3 class="text-lg font-semibold mb-4 text-foreground">Pagination Settings</h3>
+                            <div class="space-y-4">
+                                <div class="crawler-form-group">
+                                    <label class="crawler-form-label">Pagination Type</label>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center">
+                                            <input type="radio" name="pagination" value="none" class="mr-2">
+                                            <span class="text-sm">No Pagination</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="pagination" value="next" class="mr-2" checked>
+                                            <span class="text-sm">Next Button</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="pagination" value="load-more" class="mr-2">
+                                            <span class="text-sm">Load More Button</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="pagination" value="infinite" class="mr-2">
+                                            <span class="text-sm">Infinite Scroll</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="crawler-form-group">
+                                    <label class="crawler-form-label">Max Pages to Crawl</label>
+                                    <input type="number" value="10" class="crawler-input form-input w-full">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="crawler-card p-6">
+                            <h3 class="text-lg font-semibold mb-4 text-foreground">URL Patterns</h3>
+                            <div class="space-y-4">
+                                <div class="crawler-form-group">
+                                    <label class="crawler-form-label">List Page URL Pattern</label>
+                                    <input type="text" value="https://novelsite-b.com/list?page={page}" class="crawler-input form-input w-full">
+                                    <p class="crawler-form-help">Use {page} as placeholder for page number</p>
+                                </div>
+                                <div class="crawler-form-group">
+                                    <label class="crawler-form-label">Search URL Pattern</label>
+                                    <input type="text" value="https://novelsite-b.com/search?q={query}&page={page}" class="crawler-input form-input w-full">
+                                    <p class="crawler-form-help">Use {query} and {page} as placeholders</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Tab -->
+                <div id="advanced" class="tab-content">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="crawler-card p-6">
+                            <h3 class="text-lg font-semibold mb-4 text-foreground">Advanced Settings</h3>
+                            <div class="space-y-4">
+                                <div class="crawler-form-group">
+                                    <label class="crawler-form-label">Custom Headers</label>
+                                    <textarea class="crawler-input form-input w-full h-24" placeholder="User-Agent: CustomBot/1.0\nAccept-Language: en-US,en;q=0.9"></textarea>
+                                    <p class="crawler-form-help">Custom HTTP headers (one per line)</p>
+                                </div>
+                                <div class="crawler-form-group">
+                                    <label class="crawler-form-label">Cookie String</label>
+                                    <input type="text" placeholder="session=abc123; user=john" class="crawler-input form-input w-full">
+                                </div>
+                                <div class="crawler-form-group">
+                                    <label class="crawler-form-label">Proxy Settings</label>
+                                    <input type="text" placeholder="http://proxy:8080" class="crawler-input form-input w-full">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="crawler-card p-6">
+                            <h3 class="text-lg font-semibold mb-4 text-foreground">Data Processing</h3>
+                            <div class="space-y-4">
+                                <div class="crawler-form-group">
+                                    <label class="crawler-form-label">Content Filters</label>
+                                    <textarea class="crawler-input form-input w-full h-24" placeholder="Filter out content containing these words (one per line)"></textarea>
+                                </div>
+                                <div class="crawler-form-group">
+                                    <label class="crawler-form-label">Image Quality</label>
+                                    <select class="crawler-input form-input w-full">
+                                        <option>Original</option>
+                                        <option>High</option>
+                                        <option>Medium</option>
+                                        <option>Low</option>
+                                    </select>
+                                </div>
+                                <div class="crawler-form-group">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" class="mr-2" checked>
+                                        <span class="text-sm">Auto-download images</span>
+                                    </label>
+                                </div>
+                                <div class="crawler-form-group">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" class="mr-2" checked>
+                                        <span class="text-sm">Convert to WebP format</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Book Library Mode -->
+            <div id="libraryContent" class="flex-1 overflow-y-auto" style="display: none;">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-semibold text-foreground">Book Library</h2>
+                        <div class="flex items-center space-x-3">
+                            <input type="text" placeholder="Search books..." class="crawler-input px-4 py-2">
+                            <select class="crawler-input px-3 py-2">
+                                <option>All Categories</option>
+                                <option>Novel</option>
+                                <option>Manga</option>
+                                <option>Comic</option>
+                            </select>
+                            <button class="crawler-button">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                </svg>
+                                Crawl New Books
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="book-grid">
+                        <!-- Sample Book Items -->
+                        <div class="book-item">
+                            <div class="book-cover">Book Cover</div>
+                            <h3 class="font-medium text-sm mb-1">Sample Book 1</h3>
+                            <p class="text-xs text-muted-foreground mb-2">Author Name</p>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-muted-foreground">156 chapters</span>
+                                <span class="crawler-status success text-xs px-2 py-1">Available</span>
+                            </div>
+                        </div>
+
+                        <div class="book-item">
+                            <div class="book-cover">Book Cover</div>
+                            <h3 class="font-medium text-sm mb-1">Sample Book 2</h3>
+                            <p class="text-xs text-muted-foreground mb-2">Author Name</p>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-muted-foreground">89 chapters</span>
+                                <span class="crawler-status success text-xs px-2 py-1">Available</span>
+                            </div>
+                        </div>
+
+                        <div class="book-item">
+                            <div class="book-cover">Book Cover</div>
+                            <h3 class="font-medium text-sm mb-1">Sample Book 3</h3>
+                            <p class="text-xs text-muted-foreground mb-2">Author Name</p>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-muted-foreground">234 chapters</span>
+                                <span class="crawler-status warning text-xs px-2 py-1">Updating</span>
+                            </div>
+                        </div>
+
+                        <div class="book-item">
+                            <div class="book-cover">Book Cover</div>
+                            <h3 class="font-medium text-sm mb-1">Sample Book 4</h3>
+                            <p class="text-xs text-muted-foreground mb-2">Author Name</p>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-muted-foreground">67 chapters</span>
+                                <span class="crawler-status success text-xs px-2 py-1">Available</span>
+                            </div>
+                        </div>
+
+                        <div class="book-item">
+                            <div class="book-cover">Book Cover</div>
+                            <h3 class="font-medium text-sm mb-1">Sample Book 5</h3>
+                            <p class="text-xs text-muted-foreground mb-2">Author Name</p>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-muted-foreground">123 chapters</span>
+                                <span class="crawler-status error text-xs px-2 py-1">Error</span>
+                            </div>
+                        </div>
+
+                        <div class="book-item">
+                            <div class="book-cover">Book Cover</div>
+                            <h3 class="font-medium text-sm mb-1">Sample Book 6</h3>
+                            <p class="text-xs text-muted-foreground mb-2">Author Name</p>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-muted-foreground">45 chapters</span>
+                                <span class="crawler-status success text-xs px-2 py-1">Available</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentMode = 'browsing'; // 'browsing' or 'editing'
+        let currentSource = null;
+
+        function switchTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.crawler-tab');
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        function showModeIndicator(mode, sourceName = '') {
+            const indicator = document.getElementById('modeIndicator');
+            const modeText = document.getElementById('modeText');
+            
+            if (mode === 'editing') {
+                modeText.textContent = `Editing: ${sourceName}`;
+                indicator.className = 'mode-indicator show editing';
+            } else {
+                modeText.textContent = 'Browsing Mode';
+                indicator.className = 'mode-indicator show browsing';
+            }
+
+            // Hide after 3 seconds
+            setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 3000);
+        }
+
+        function navigateToLibrary(sourceName) {
+            currentMode = 'browsing';
+            currentSource = sourceName;
+            
+            // Hide edit mode elements
+            document.getElementById('editTabs').style.display = 'none';
+            document.getElementById('editContent').style.display = 'none';
+            
+            // Show library mode elements
+            document.getElementById('breadcrumb').style.display = 'flex';
+            document.getElementById('libraryContent').style.display = 'block';
+            document.getElementById('backButton').style.display = 'flex';
+            
+            // Update breadcrumb
+            document.getElementById('currentSource').textContent = sourceName;
+            
+            // Show mode indicator
+            showModeIndicator('browsing', sourceName);
+            
+            // Update sidebar active state
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.closest('.sidebar-item').classList.add('active');
+        }
+
+        function editSource(event, sourceName) {
+            event.stopPropagation(); // Prevent navigation
+            currentMode = 'editing';
+            currentSource = sourceName;
+            
+            // Hide library mode elements
+            document.getElementById('breadcrumb').style.display = 'none';
+            document.getElementById('libraryContent').style.display = 'none';
+            document.getElementById('backButton').style.display = 'none';
+            
+            // Show edit mode elements
+            document.getElementById('editTabs').style.display = 'block';
+            document.getElementById('editContent').style.display = 'block';
+            
+            // Show mode indicator
+            showModeIndicator('editing', sourceName);
+            
+            // Update sidebar active state
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.closest('.sidebar-item').classList.add('active');
+        }
+
+        function showSourceList() {
+            currentMode = 'browsing';
+            currentSource = null;
+            
+            // Hide both library and edit content
+            document.getElementById('breadcrumb').style.display = 'none';
+            document.getElementById('libraryContent').style.display = 'none';
+            document.getElementById('editTabs').style.display = 'none';
+            document.getElementById('editContent').style.display = 'none';
+            document.getElementById('backButton').style.display = 'none';
+            
+            // Clear sidebar active state
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+        }
+
+        function goBack() {
+            showSourceList();
+        }
+
+        function testConnection() {
+            // Simulate connection test
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<svg class="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>Testing...';
+            button.disabled = true;
+
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+                // Show success notification
+                showNotification('Connection test successful!', 'success');
+            }, 2000);
+        }
+
+        function saveSource() {
+            // Simulate save
+            showNotification('Source saved successfully!', 'success');
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Initialize with source list view
+        showSourceList();
+    </script>
+</body>
+</html>

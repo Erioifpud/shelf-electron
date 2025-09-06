@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="crawler-theme">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Crawler - Source Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.0.0/dist/flowbite.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="crawler_reader_theme.css">
+    <style>
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--background);
+            color: var(--foreground);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Split workspace layout */
+        .workspace-container {
+            display: flex;
+            height: calc(100vh - 80px);
+            position: relative;
+        }
+
+        .source-list-panel {
+            width: 400px;
+            background: hsl(var(--muted) / 0.3);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+
+        .detail-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        /* Enhanced source cards */
+        .source-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 12px 16px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .source-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--accent);
+        }
+
+        .source-card.active {
+            border-color: var(--primary);
+            background: hsl(var(--primary) / 0.1);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .source-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: transparent;
+            transition: background 0.3s ease;
+        }
+
+        .source-card.active::before {
+            background: var(--primary);
+        }
+
+        /* Rich card content */
+        .source-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .source-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--foreground);
+            margin-bottom: 4px;
+        }
+
+        .source-url {
+            font-size: 12px;
+            color: var(--muted-foreground);
+            font-family: var(--font-mono);
+        }
+
+        .source-stats {
+            display: flex;
+            gap: 16px;
+            margin: 12px 0;
+            padding: 12px;
+            background: hsl(var(--muted) / 0.5);
+            border-radius: 8px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--foreground);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--muted-foreground);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .source-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .source-action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            background: var(--background);
+            color: var(--foreground);
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .source-action-btn:hover {
+            background: var(--accent);
+            color: var(--accent-foreground);
+            border-color: var(--accent);
+            transform: translateY(-1px);
+        }
+
+        .source-action-btn.primary {
+            background: var(--primary);
+            color: var(--primary-foreground);
+            border-color: var(--primary);
+        }
+
+        /* Detail panel states */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .empty-state-icon {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 24px;
+            opacity: 0.3;
+        }
+
+        .empty-state-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--foreground);
+            margin-bottom: 8px;
+        }
+
+        .empty-state-description {
+            font-size: 14px;
+            color: var(--muted-foreground);
+            margin-bottom: 24px;
+            max-width: 400px;
+        }
+
+        /* Detail content */
+        .detail-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .detail-header {
+            margin-bottom: 24px;
+        }
+
+        .detail-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--foreground);
+            margin-bottom: 8px;
+        }
+
+        .detail-subtitle {
+            font-size: 16px;
+            color: var(--muted-foreground);
+        }
+
+        /* Quick stats cards */
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-card-icon {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 12px;
+            background: hsl(var(--accent) / 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+        }
+
+        /* Recent books grid */
+        .recent-books {
+            margin-top: 32px;
+        }
+
+        .recent-books-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .recent-books-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--foreground);
+        }
+
+        .books-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 16px;
+        }
+
+        .book-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .book-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+            border-color: var(--accent);
+        }
+
+        .book-cover {
+            width: 100%;
+            height: 180px;
+            background: hsl(var(--muted) / 0.5);
+            border-radius: 4px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted-foreground);
+            font-size: 12px;
+        }
+
+        .book-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--foreground);
+            margin-bottom: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .book-author {
+            font-size: 11px;
+            color: var(--muted-foreground);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Add button */
+        .add-source-btn {
+            margin: 16px;
+            padding: 16px;
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            background: transparent;
+            color: var(--muted-foreground);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .add-source-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: hsl(var(--accent) / 0.05);
+        }
+
+        /* Search bar */
+        .search-container {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px 12px 44px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--background);
+            color: var(--foreground);
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px hsl(var(--accent) / 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted-foreground);
+        }
+
+        .search-wrapper {
+            position: relative;
+        }
+
+        /* Action drawer */
+        .action-drawer {
+            position: fixed;
+            right: -400px;
+            top: 80px;
+            width: 400px;
+            height: calc(100vh - 80px);
+            background: var(--card);
+            border-left: 1px solid var(--border);
+            box-shadow: var(--shadow-xl);
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+        }
+
+        .action-drawer.open {
+            right: 0;
+        }
+
+        .drawer-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .drawer-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--foreground);
+        }
+
+        .drawer-close {
+            background: none;
+            border: none;
+            color: var(--muted-foreground);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .drawer-close:hover {
+            background: hsl(var(--muted) / 0.5);
+            color: var(--foreground);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--muted);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+
+        /* Status indicators */
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-active {
+            background: hsl(120 80% 90%);
+            color: hsl(120 80% 30%);
+        }
+
+        .status-warning {
+            background: hsl(45 80% 90%);
+            color: hsl(45 80% 30%);
+        }
+
+        .status-error {
+            background: hsl(0 80% 90%);
+            color: hsl(0 80% 30%);
+        }
+
+        .status-testing {
+            background: hsl(210 80% 90%);
+            color: hsl(210 80% 30%);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            .source-list-panel {
+                width: 320px;
+            }
+            
+            .action-drawer {
+                width: 320px;
+                right: -320px;
+            }
+        }
+    </style>
+</head>
+<body class="crawler-theme">
+    <!-- Header -->
+    <header class="crawler-card border-b px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <h1 class="text-2xl font-bold text-foreground">Web Crawler Studio</h1>
+                <span class="crawler-status info">
+                    <span class="w-2 h-2 bg-green-500 rounded-full status-indicator"></span>
+                    Ready
+                </span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button class="crawler-button crawler-button-secondary">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                    </svg>
+                    Export
+                </button>
+                <button class="crawler-button">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V2"></path>
+                    </svg>
+                    Save All
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="workspace-container">
+        <!-- Source List Panel -->
+        <div class="source-list-panel">
+            <!-- Search -->
+            <div class="search-container">
+                <div class="search-wrapper">
+                    <svg class="w-4 h-4 search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <input type="text" placeholder="Search sources..." class="search-input">
+                </div>
+            </div>
+
+            <!-- Source Cards -->
+            <div class="flex-1 overflow-y-auto">
+                <!-- Novel Site B -->
+                <div class="source-card" onclick="selectSource('Novel Site B')">
+                    <div class="source-header">
+                        <div>
+                            <h3 class="source-title">Novel Site B</h3>
+                            <p class="source-url">novelsite-b.com</p>
+                        </div>
+                        <span class="status-badge status-active">Active</span>
+                    </div>
+                    
+                    <div class="source-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">156</div>
+                            <div class="stat-label">Books</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">2h</div>
+                            <div class="stat-label">Updated</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">247ms</div>
+                            <div class="stat-label">Response</div>
+                        </div>
+                    </div>
+
+                    <div class="source-actions">
+                        <button class="source-action-btn primary" onclick="navigateToLibrary(event, 'Novel Site B')">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            Browse
+                        </button>
+                        <button class="source-action-btn" onclick="editSource(event, 'Novel Site B')">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                            Edit
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Manga Site A -->
+                <div class="source-card" onclick="selectSource('Manga Site A')">
+                    <div class="source-header">
+                        <div>
+                            <h3 class="source-title">Manga Site A</h3>
+                            <p class="source-url">mangasite-a.com</p>
+                        </div>
+                        <span class="status-badge status-warning">Needs Update</span>
+                    </div>
+                    
+                    <div class="source-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">89</div>
+                            <div class="stat-label">Chapters</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">1d</div>
+                            <div class="stat-label">Updated</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">189ms</div>
+                            <div class="stat-label">Response</div>
+                        </div>
+                    </div>
+
+                    <div class="source-actions">
+                        <button class="source-action-btn primary" onclick="navigateToLibrary(event, 'Manga Site A')">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            Browse
+                        </button>
+                        <button class="source-action-btn" onclick="editSource(event, 'Manga Site A')">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                            Edit
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Comic Hub -->
+                <div class="source-card" onclick="selectSource('Comic Hub')">
+                    <div class="source-header">
+                        <div>
+                            <h3 class="source-title">Comic Hub</h3>
+                            <p class="source-url">comichub.net</p>
+                        </div>
+                        <span class="status-badge status-error">Failed</span>
+                    </div>
+                    
+                    <div class="source-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">0</div>
+                            <div class="stat-label">Books</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">3h</div>
+                            <div class="stat-label">Attempt</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">—</div>
+                            <div class="stat-label">Response</div>
+                        </div>
+                    </div>
+
+                    <div class="source-actions">
+                        <button class="source-action-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            Browse
+                        </button>
+                        <button class="source-action-btn" onclick="editSource(event, 'Comic Hub')">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                            Fix
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Light Novel DB -->
+                <div class="source-card" onclick="selectSource('Light Novel DB')">
+                    <div class="source-header">
+                        <div>
+                            <h3 class="source-title">Light Novel DB</h3>
+                            <p class="source-url">lndb.com</p>
+                        </div>
+                        <span class="status-badge status-testing">Testing</span>
+                    </div>
+                    
+                    <div class="source-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">234</div>
+                            <div class="stat-label">Books</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">5h</div>
+                            <div class="stat-label">Updated</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">312ms</div>
+                            <div class="stat-label">Response</div>
+                        </div>
+                    </div>
+
+                    <div class="source-actions">
+                        <button class="source-action-btn primary" onclick="navigateToLibrary(event, 'Light Novel DB')">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            Browse
+                        </button>
+                        <button class="source-action-btn" onclick="editSource(event, 'Light Novel DB')">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                            Edit
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Add New Source -->
+                <div class="add-source-btn" onclick="addNewSource()">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    <span>Add New Source</span>
+                    <small class="text-xs">Configure a new website source</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detail Panel -->
+        <div class="detail-panel">
+            <!-- Empty State -->
+            <div id="emptyState" class="empty-state">
+                <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 15h6"></path>
+                </svg>
+                <h2 class="empty-state-title">Select a Source</h2>
+                <p class="empty-state-description">Choose a source from the left panel to view details, browse books, or edit configuration</p>
+            </div>
+
+            <!-- Source Detail Content -->
+            <div id="detailContent" class="detail-content" style="display: none;">
+                <div class="detail-header">
+                    <h2 id="detailTitle" class="detail-title"></h2>
+                    <p id="detailSubtitle" class="detail-subtitle"></p>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="quick-stats">
+                    <div class="stat-card">
+                        <div class="stat-card-icon">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-value" id="statBooks">0</div>
+                        <div class="text-sm text-muted-foreground">Books</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-card-icon">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-value" id="statLastUpdate">—</div>
+                        <div class="text-sm text-muted-foreground">Last Update</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-card-icon">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-value" id="statResponse">—</div>
+                        <div class="text-sm text-muted-foreground">Response Time</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-card-icon">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-value" id="statStatus">—</div>
+                        <div class="text-sm text-muted-foreground">Status</div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-3 mb-6">
+                    <button class="crawler-button flex-1" onclick="navigateToLibrary(null, currentSourceName)">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        Browse Library
+                    </button>
+                    <button class="crawler-button crawler-button-secondary" onclick="editSource(null, currentSourceName)">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                        Edit Configuration
+                    </button>
+                    <button class="crawler-button crawler-button-secondary" onclick="testConnection()">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Test Connection
+                    </button>
+                </div>
+
+                <!-- Recent Books -->
+                <div class="recent-books">
+                    <div class="recent-books-header">
+                        <h3 class="recent-books-title">Recent Books</h3>
+                        <button class="crawler-button text-sm" onclick="viewAllBooks()">
+                            View All
+                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="books-grid" id="recentBooksGrid">
+                        <!-- Books will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Configuration Drawer -->
+    <div id="editDrawer" class="action-drawer">
+        <div class="drawer-header">
+            <h3 class="drawer-title">Edit Source Configuration</h3>
+            <button class="drawer-close" onclick="closeEditDrawer()">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="p-6">
+            <!-- Configuration tabs would go here -->
+            <div class="space-y-4">
+                <div class="crawler-form-group">
+                    <label class="crawler-form-label">Source Name</label>
+                    <input type="text" id="editSourceName" class="crawler-input w-full">
+                </div>
+                <div class="crawler-form-group">
+                    <label class="crawler-form-label">Base URL</label>
+                    <input type="url" id="editSourceUrl" class="crawler-input w-full">
+                </div>
+                <div class="crawler-form-group">
+                    <label class="crawler-form-label">Source Type</label>
+                    <select id="editSourceType" class="crawler-input w-full">
+                        <option>Novel</option>
+                        <option>Manga</option>
+                        <option>Comic</option>
+                        <option>Manhwa</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mt-6 flex gap-3">
+                <button class="crawler-button flex-1" onclick="saveSource()">
+                    Save Changes
+                </button>
+                <button class="crawler-button crawler-button-secondary flex-1" onclick="closeEditDrawer()">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSource = null;
+        let currentSourceName = '';
+        let currentMode = 'overview'; // 'overview', 'library', 'editing'
+
+        // Sample data for different sources
+        const sourceData = {
+            'Novel Site B': {
+                title: 'Novel Site B',
+                url: 'novelsite-b.com',
+                status: 'Active',
+                books: 156,
+                lastUpdate: '2h',
+                response: '247ms',
+                recentBooks: [
+                    { title: 'Martial God Asura', author: 'Kindhearted Bee' },
+                    { title: 'Perfect World', author: 'Chen Dong' },
+                    { title: 'Renegade Immortal', author: 'Er Gen' },
+                    { title: 'I Shall Seal the Heavens', author: 'Er Gen' },
+                    { title: 'Desolate Era', author: 'I Eat Tomatoes' },
+                    { title: 'Coiling Dragon', author: 'I Eat Tomatoes' }
+                ]
+            },
+            'Manga Site A': {
+                title: 'Manga Site A',
+                url: 'mangasite-a.com',
+                status: 'Needs Update',
+                books: 89,
+                lastUpdate: '1d',
+                response: '189ms',
+                recentBooks: [
+                    { title: 'One Piece', author: 'Eiichiro Oda' },
+                    { title: 'Naruto', author: 'Masashi Kishimoto' },
+                    { title: 'Attack on Titan', author: 'Hajime Isayama' },
+                    { title: 'Demon Slayer', author: 'Koyoharu Gotouge' },
+                    { title: 'My Hero Academia', author: 'Kohei Horikoshi' }
+                ]
+            },
+            'Comic Hub': {
+                title: 'Comic Hub',
+                url: 'comichub.net',
+                status: 'Failed',
+                books: 0,
+                lastUpdate: '3h',
+                response: '—',
+                recentBooks: []
+            },
+            'Light Novel DB': {
+                title: 'Light Novel DB',
+                url: 'lndb.com',
+                status: 'Testing',
+                books: 234,
+                lastUpdate: '5h',
+                response: '312ms',
+                recentBooks: [
+                    { title: 'Sword Art Online', author: 'Reki Kawahara' },
+                    { title: 'Overlord', author: 'Kugane Maruyama' },
+                    { title: 'Re:Zero', author: 'Tappei Nagatsuki' },
+                    { title: 'Konosuba', author: 'Natsume Akatsuki' },
+                    { title: 'Shield Hero', author: 'Aneko Yusagi' }
+                ]
+            }
+        };
+
+        function selectSource(sourceName) {
+            currentSource = sourceName;
+            currentSourceName = sourceName;
+            currentMode = 'overview';
+            
+            // Update active state in source list
+            document.querySelectorAll('.source-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            // Show detail content
+            showDetailContent(sourceName);
+        }
+
+        function showDetailContent(sourceName) {
+            const data = sourceData[sourceName];
+            if (!data) return;
+
+            // Hide empty state
+            document.getElementById('emptyState').style.display = 'none';
+            
+            // Show detail content
+            document.getElementById('detailContent').style.display = 'block';
+            
+            // Update content
+            document.getElementById('detailTitle').textContent = data.title;
+            document.getElementById('detailSubtitle').textContent = data.url;
+            document.getElementById('statBooks').textContent = data.books;
+            document.getElementById('statLastUpdate').textContent = data.lastUpdate;
+            document.getElementById('statResponse').textContent = data.response;
+            document.getElementById('statStatus').textContent = data.status;
+            
+            // Update recent books
+            const booksGrid = document.getElementById('recentBooksGrid');
+            booksGrid.innerHTML = '';
+            
+            data.recentBooks.forEach(book => {
+                const bookCard = document.createElement('div');
+                bookCard.className = 'book-card';
+                bookCard.innerHTML = `
+                    <div class="book-cover">Book Cover</div>
+                    <h4 class="book-title">${book.title}</h4>
+                    <p class="book-author">${book.author}</p>
+                `;
+                bookCard.onclick = () => openBookDetail(book.title);
+                booksGrid.appendChild(bookCard);
+            });
+        }
+
+        function navigateToLibrary(event, sourceName) {
+            if (event) event.stopPropagation();
+            
+            currentMode = 'library';
+            currentSourceName = sourceName;
+            
+            // In a real app, this would navigate to the book library
+            showNotification(`Opening library for ${sourceName}...`, 'info');
+            
+            // Simulate navigation
+            setTimeout(() => {
+                showNotification(`Library for ${sourceName} opened!`, 'success');
+            }, 1000);
+        }
+
+        function editSource(event, sourceName) {
+            if (event) event.stopPropagation();
+            
+            currentMode = 'editing';
+            currentSourceName = sourceName;
+            
+            const data = sourceData[sourceName];
+            if (!data) return;
+            
+            // Populate edit form
+            document.getElementById('editSourceName').value = data.title;
+            document.getElementById('editSourceUrl').value = data.url;
+            
+            // Open edit drawer
+            document.getElementById('editDrawer').classList.add('open');
+        }
+
+        function closeEditDrawer() {
+            document.getElementById('editDrawer').classList.remove('open');
+            currentMode = 'overview';
+        }
+
+        function addNewSource() {
+            showNotification('Add new source functionality would open here', 'info');
+        }
+
+        function viewAllBooks() {
+            navigateToLibrary(null, currentSourceName);
+        }
+
+        function openBookDetail(bookTitle) {
+            showNotification(`Opening book: ${bookTitle}`, 'info');
+        }
+
+        function testConnection() {
+            const button = event.target.closest('button');
+            const originalHTML = button.innerHTML;
+            
+            button.innerHTML = `
+                <svg class="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Testing...
+            `;
+            button.disabled = true;
+            
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.disabled = false;
+                showNotification('Connection test successful!', 'success');
+            }, 2000);
+        }
+
+        function saveSource() {
+            showNotification('Source configuration saved!', 'success');
+            closeEditDrawer();
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            } text-white`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Search functionality
+        document.querySelector('.search-input').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const sourceCards = document.querySelectorAll('.source-card');
+            
+            sourceCards.forEach(card => {
+                const title = card.querySelector('.source-title').textContent.toLowerCase();
+                const url = card.querySelector('.source-url').textContent.toLowerCase();
+                
+                if (title.includes(searchTerm) || url.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+
+        // Initialize with empty state
+        showDetailContent = function(sourceName) {
+            const data = sourceData[sourceName];
+            if (!data) return;
+
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('detailContent').style.display = 'block';
+            
+            document.getElementById('detailTitle').textContent = data.title;
+            document.getElementById('detailSubtitle').textContent = data.url;
+            document.getElementById('statBooks').textContent = data.books;
+            document.getElementById('statLastUpdate').textContent = data.lastUpdate;
+            document.getElementById('statResponse').textContent = data.response;
+            document.getElementById('statStatus').textContent = data.status;
+            
+            const booksGrid = document.getElementById('recentBooksGrid');
+            booksGrid.innerHTML = '';
+            
+            data.recentBooks.forEach(book => {
+                const bookCard = document.createElement('div');
+                bookCard.className = 'book-card';
+                bookCard.innerHTML = `
+                    <div class="book-cover">Book Cover</div>
+                    <h4 class="book-title">${book.title}</h4>
+                    <p class="book-author">${book.author}</p>
+                `;
+                bookCard.onclick = () => openBookDetail(book.title);
+                booksGrid.appendChild(bookCard);
+            });
+        };
+    </script>
+</body>
+</html>
