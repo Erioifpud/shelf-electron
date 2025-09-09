@@ -128,6 +128,7 @@ export interface DetailRule {
 
 export interface Site {
   id: string;
+  namespace: string;
   version: number;
 
   common: {
