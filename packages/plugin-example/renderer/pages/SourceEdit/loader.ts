@@ -1,4 +1,5 @@
 import useRuleStore from "@/store/rule"
+import { redirect } from "react-router";
 
 export function sourceEditLoader({ params }) {
   const ruleState = useRuleStore.getState()
@@ -13,4 +14,12 @@ export async function sourceEditAction({ request, params }) {
   ruleState.updateSite(params.sourceId, updates);
 
   return { ok: true }; 
+}
+
+export async function sourceRemoveAction({ request, params }) {
+  const ruleState = useRuleStore.getState()
+
+  ruleState.removeSite(params.sourceId);
+
+  return redirect(`/sources`);
 }

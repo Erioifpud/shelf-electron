@@ -9,7 +9,7 @@ import { booksLoader } from "./BookList/loader";
 import { bookDetailLoader } from "./BookDetail/loader";
 import { chapterDetailLoader } from "./ChapterDetail/loader";
 import SelectSourceHint from "./SourceList/components/SelectSourceHint";
-import { sourceEditAction, sourceEditLoader } from "./SourceEdit/loader";
+import { sourceEditAction, sourceEditLoader, sourceRemoveAction } from "./SourceEdit/loader";
 import SourceEdit from "./SourceEdit";
 
 const ErrorPage = () => {
@@ -53,6 +53,16 @@ export const router = createHashRouter([
             action: sourceEditAction,
             loader: sourceEditLoader,
             element: <SourceEdit />
+          },
+          {
+            id: 'source-remove',
+            path: "destroy/:sourceId",
+            action: sourceRemoveAction,
+          },
+          {
+            id: 'source-create',
+            path: "edit/:/crea",
+            action: sourceRemoveAction,
           }
         ]
       },

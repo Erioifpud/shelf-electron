@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Toaster } from "@/components/ui/sonner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import useRuleStore from "@/store/rule";
 import { Site } from "@/store/rule/type";
 import { EditIcon, PlusIcon, SearchIcon, ViewIcon } from "lucide-react";
@@ -40,31 +41,40 @@ const Source = memo(() => {
         <div className="grow h-full flex flex-col overflow-auto gap-3 p-3">
           {sites.map(site => {
             return (
-              <div className="rounded-lg border border-gray-300 p-4 bg-gray-50 flex flex-col" key={site.id}>
-                {/* 标题和状态 */}
-                <div className="flex flex-nowrap gap-2 items-center">
-                  <div className="grow truncate text-sm">
-                    {site.common.siteName}
+              <Tooltip key={site.id}>
+                <TooltipTrigger asChild>
+                  <div className="rounded-lg border border-gray-300 p-4 bg-gray-50 flex flex-col">
+                    {/* 标题和状态 */}
+                    <div className="flex flex-nowrap gap-2 items-center">
+                      <div className="grow truncate text-sm">
+                        {site.common.siteName}
+                      </div>
+                      <div className="bg-green-100 text-green-600 font-semibold text-xs flex items-center px-2 py-2 rounded-sm">
+                        {site.common.version}
+                      </div>
+                    </div>
+                    {/* 网址 */}
+                    <div className="text-xs text-gray-400">
+                      {site.common.siteUrl}
+                    </div>
+                    {/* 三栏状态，如果有 */}
+                    {/* 工具栏 */}
+                    <div className="flex gap-2 mt-4">
+                      <Button size="sm" variant="default" className="grow">
+                        <ViewIcon className="h-4 w-4" /> Preview
+                      </Button>
+                      <Button size="sm" variant="outline" className="grow" onClick={() => toEditPage(site)}>
+                        <EditIcon className="h-4 w-4" /> Edit
+                      </Button>
+                    </div>
                   </div>
-                  <div className="bg-green-100 text-green-600 font-semibold text-xs flex items-center px-2 py-2 rounded-sm">
-                    {site.common.version}
-                  </div>
-                </div>
-                {/* 网址 */}
-                <div className="text-xs text-gray-400">
-                  {site.common.siteUrl}
-                </div>
-                {/* 三栏状态，如果有 */}
-                {/* 工具栏 */}
-                <div className="flex gap-2 mt-4">
-                  <Button size="sm" variant="default" className="grow">
-                    <ViewIcon className="h-4 w-4" /> Preview
-                  </Button>
-                  <Button size="sm" variant="outline" className="grow" onClick={() => toEditPage(site)}>
-                    <EditIcon className="h-4 w-4" /> Edit
-                  </Button>
-                </div>
-              </div>
+                </TooltipTrigger>
+                {!!site.common.description.trim() && (
+                  <TooltipContent>
+                    <p>{site.common.description.trim()}</p>
+                  </TooltipContent>
+                )}
+              </Tooltip> 
             )
           })}
         </div>

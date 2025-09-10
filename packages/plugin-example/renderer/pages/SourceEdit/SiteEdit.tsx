@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useFetcher, useLoaderData } from "react-router";
 import { cloneDeep } from "lodash-es";
 import { toast } from "sonner";
+import { useModals } from "@/components/ModalManager";
  
 const formSchema = z.object({
   dataVersion: z.number().min(1),
@@ -39,6 +40,8 @@ const SiteEdit = memo(() => {
   const initialData = useLoaderData();
   const fetcher = useFetcher();
 
+  const modals = useModals()
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -48,7 +51,7 @@ const SiteEdit = memo(() => {
 
   const isSubmitting = useMemo(() => fetcher.state === "submitting", [fetcher])
   
-  const onSubmit = useCallback((values: z.infer<typeof formSchema>) => {
+  const handleSubmit = useCallback((values: z.infer<typeof formSchema>) => {
     fetcher.submit(values, {
       method: "post",
       encType: 'application/json'
@@ -56,10 +59,30 @@ const SiteEdit = memo(() => {
     toast.success('保存成功')
   }, [fetcher])
 
-  const onReset = useCallback(() => {
+  const handleReset = useCallback(() => {
     form.reset()
     toast.success('重置成功')
   }, [fetcher])
+
+  const handleRemove = useCallback(() => {
+    modals.openConfirmModal({
+      title: '删除确认',
+      children: (
+        <div className="">确定要删除该站点规则吗？删除后将无法找回</div>
+      ),
+      labels: {
+        confirm: '确认',
+        cancel: '取消'
+      },
+      onConfirm() {
+        fetcher.submit(null, {
+          method: 'post',
+          action: `/sources/destroy/${initialData.id}`
+        })
+        toast.success('删除成功')
+      },
+    })
+  }, [modals])
 
   useEffect(() => {
     form.reset(initialData)
@@ -68,7 +91,7 @@ const SiteEdit = memo(() => {
   return (
     <div className="overflow-auto p-3 pb-5 h-full">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
           <FormField
             control={form.control}
             name="namespace"
@@ -261,8 +284,10 @@ const SiteEdit = memo(() => {
               </FormItem>
             )}
           />
-          <div className="flex justify-between">
-            <Button variant="destructive" type="reset" onClick={onReset}>重置</Button>
+          <div className="flex gap-2">
+            <Button variant="destructive" type="reset" onClick={handleReset}>重置</Button>
+            <Button variant="destructive" type="button" onClick={handleRemove}>删除</Button>
+            <div className="grow"></div>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "保存中..." : "保存"}
             </Button>
