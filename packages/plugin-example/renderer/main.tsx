@@ -3,9 +3,12 @@ import { createRoot } from 'react-dom/client'
 import './style.css'
 import { RouterProvider } from "react-router"
 import { router } from './pages/route'
+import { ModalProvider } from './components/ModalManager'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <ModalProvider>
+      <RouterProvider router={router} />
+    </ModalProvider>
   </StrictMode>,
 )
