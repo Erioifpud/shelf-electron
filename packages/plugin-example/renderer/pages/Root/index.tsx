@@ -27,22 +27,17 @@ function Breadcrumbs() {
 
 
 export default function Root() {
-  const navigation = useNavigation();
+  // const navigation = useNavigation();
 
   return (
-    <div>
-      <header style={{ padding: '1rem', borderBottom: '1px solid #ccc', background: '#f8f9fa' }}>
-        <h1>My Awesome App</h1>
-        <Breadcrumbs /> {/* 动态面包屑组件 */}
+    <div className="h-full flex flex-col">
+      <header className="p-4 border-b border-gray-300 bg-gray-100 shrink-0 flex items-center select-none">
+        <h1 className="text-xl font-bold">My Awesome App</h1>
+        {/* <Breadcrumbs /> 动态面包屑组件 */}
       </header>
-      <main style={{ padding: '1rem', position: 'relative' }}>
-        {/* 加载指示器 */}
-        {navigation.state === 'loading' && (
-          <div style={{ position: 'absolute', top: 5, right: 5 }}>Loading...</div>
-        )}
+      <main className="grow h-full">
         {/* 子路由将在这里全屏渲染 */}
         <Outlet />
-        <NavLink to="/sources/1123">Go to Home</NavLink>
       </main>
     </div>
   );
