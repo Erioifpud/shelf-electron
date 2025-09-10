@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useFetcher, useLoaderData } from "react-router";
 import { cloneDeep } from "lodash-es";
+import { toast } from "sonner";
  
 const formSchema = z.object({
   dataVersion: z.number().min(1),
@@ -52,6 +53,12 @@ const SiteEdit = memo(() => {
       method: "post",
       encType: 'application/json'
     });
+    toast.success('保存成功')
+  }, [fetcher])
+
+  const onReset = useCallback(() => {
+    form.reset()
+    toast.success('重置成功')
   }, [fetcher])
 
   useEffect(() => {
@@ -255,7 +262,7 @@ const SiteEdit = memo(() => {
             )}
           />
           <div className="flex justify-between">
-            <Button variant="destructive" type="reset" onClick={() => form.reset()}>重置</Button>
+            <Button variant="destructive" type="reset" onClick={onReset}>重置</Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "保存中..." : "保存"}
             </Button>

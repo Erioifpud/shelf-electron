@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Toaster } from "@/components/ui/sonner";
 import useRuleStore from "@/store/rule";
 import { Site } from "@/store/rule/type";
 import { EditIcon, PlusIcon, SearchIcon, ViewIcon } from "lucide-react";
@@ -71,6 +72,7 @@ const Source = memo(() => {
       <div className="grow h-full outline-hidden relative">
         <Outlet />
       </div>
+      <Toaster position="top-right" richColors />
     </div>
   )
 })
