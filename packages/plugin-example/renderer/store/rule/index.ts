@@ -18,11 +18,9 @@ const useRuleStore = create<RuleStore>()(
         sites: [
           {
             id: '1',
-            name: '示例源',
-            version: 1,
+            dataVersion: 1,
             namespace: 'example',
             common: {
-              baseUrl: 'https://www.example.com',
               author: '佚名',
               cookie: '',
               description: '这是一个示例源',

@@ -46,12 +46,12 @@ const Source = memo(() => {
                     {site.common.siteName}
                   </div>
                   <div className="bg-green-100 text-green-600 font-semibold text-xs flex items-center px-2 py-2 rounded-sm">
-                    ACTIVED
+                    {site.common.version}
                   </div>
                 </div>
                 {/* 网址 */}
                 <div className="text-xs text-gray-400">
-                  {site.common.baseUrl}
+                  {site.common.siteUrl}
                 </div>
                 {/* 三栏状态，如果有 */}
                 {/* 工具栏 */}

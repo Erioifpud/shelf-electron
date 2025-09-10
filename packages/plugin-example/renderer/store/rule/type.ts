@@ -129,12 +129,12 @@ export interface DetailRule {
 export interface Site {
   id: string;
   namespace: string;
-  version: number;
+  dataVersion: number;
 
   common: {
-    baseUrl: string
     siteName: string
     siteIcon: string
+    siteUrl: string
     author: string
     version: string
     description: string
