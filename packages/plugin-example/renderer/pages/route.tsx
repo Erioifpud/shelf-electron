@@ -9,7 +9,7 @@ import { booksLoader } from "./BookList/loader";
 import { bookDetailLoader } from "./BookDetail/loader";
 import { chapterDetailLoader } from "./ChapterDetail/loader";
 import SelectSourceHint from "./SourceList/components/SelectSourceHint";
-import { sourceEditLoader } from "./SourceEdit/loader";
+import { sourceEditAction, sourceEditLoader } from "./SourceEdit/loader";
 import SourceEdit from "./SourceEdit";
 
 const ErrorPage = () => {
@@ -50,6 +50,7 @@ export const router = createHashRouter([
           {
             id: 'source-edit',
             path: "edit/:sourceId",
+            action: sourceEditAction,
             loader: sourceEditLoader,
             element: <SourceEdit />
           }
