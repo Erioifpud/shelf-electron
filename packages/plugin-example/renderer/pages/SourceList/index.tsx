@@ -5,20 +5,30 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import useRuleStore from "@/store/rule";
 import { Site } from "@/store/rule/type";
 import { EditIcon, PlusIcon, SearchIcon, ViewIcon } from "lucide-react";
-import { memo, useCallback, useState } from "react";
-import { Outlet, useNavigate } from "react-router";
+import { memo, useCallback, useMemo, useState } from "react";
+import { Outlet, useFetcher, useNavigate } from "react-router";
 
 // 新建站点等同于创建一个空配置放入 store，再选中他的 id
 const Source = memo(() => {
   const sites = useRuleStore(state => state.sites)
 
   const navigate = useNavigate()
+  const fetcher = useFetcher()
 
   const toEditPage = useCallback((site: Site) => {
     navigate({
       pathname: `/sources/edit/${site.id}`
     })
   }, [navigate])
+
+  const handleCreate = useCallback(() => {
+    fetcher.submit(null, {
+      method: 'post',
+      action: '/sources/create'
+    })
+  }, [fetcher])
+
+  const isCreating = useMemo(() => fetcher.state === 'submitting', [fetcher])
 
   return (
     <div className="flex h-full relative">
@@ -29,8 +39,9 @@ const Source = memo(() => {
           <div className="flex flex-col gap-2">
             <div className="flex justify-between items-center">
               <div className="">Sources</div>
-              <Button size="sm" variant="default">
-                <PlusIcon className="h-4 w-4" /> New
+              <Button size="sm" variant="default" onClick={handleCreate} disabled={isCreating}>
+                <PlusIcon className="h-4 w-4" />
+                {isCreating ? '创建中...' : '新建'}
               </Button>
             </div>
             {/* 搜索 */}

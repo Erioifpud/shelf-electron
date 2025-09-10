@@ -6,7 +6,7 @@ import { produce } from 'immer'
 
 interface RuleStore {
   sites: Site[]
-  addSite: (site: Omit<Site, 'id'>) => void
+  addSite: (site: Omit<Site, 'id'>) => string
   removeSite: (id: string) =>  void
   updateSite: (id: string, site: Partial<Site>) => void
 }
@@ -36,13 +36,16 @@ const useRuleStore = create<RuleStore>()(
             pages: [],
           },
         ],
-        addSite: (site) => set(produce(state => {
+        addSite: (site) => {
           const id = nanoid()
-          state.sites.push({
-            id,
-            ...site,
-          })
-        })),
+          set(produce(state => {
+            state.sites.push({
+              id,
+              ...site,
+            })
+          }))
+          return id
+        },
         removeSite: (id) => set(produce(state => {
           const index = state.sites.findIndex(s => s.id === id)
           if (index !== -1) {
