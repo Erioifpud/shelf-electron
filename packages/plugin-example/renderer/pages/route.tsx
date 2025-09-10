@@ -8,6 +8,9 @@ import { sourcesLoader } from "./SourceList/loader";
 import { booksLoader } from "./BookList/loader";
 import { bookDetailLoader } from "./BookDetail/loader";
 import { chapterDetailLoader } from "./ChapterDetail/loader";
+import SelectSourceHint from "./SourceList/components/SelectSourceHint";
+import { sourceEditLoader } from "./SourceEdit/loader";
+import SourceEdit from "./SourceEdit";
 
 const ErrorPage = () => {
   return (
@@ -28,39 +31,51 @@ export const router = createHashRouter([
     },
     children: [
       {
-        // 当 URL 路径与父路径完全相同时，此路由会匹配
         index: true,
-        // element 将会渲染一个执行重定向的组件
         element: <Navigate to="/sources" replace />,
       },
       {
-        // 第一层: SourceList 列表
+        id: 'source-list',
         path: 'sources',
         element: <SourceList />,
-        loader: sourcesLoader, // 关联 loader
+        loader: sourcesLoader,
         handle: {
           crumb: () => <span>Sources</span>,
         },
+        children: [
+          {
+            index: true, 
+            element: <SelectSourceHint /> 
+          },
+          {
+            id: 'source-edit',
+            path: "edit/:sourceId",
+            loader: sourceEditLoader,
+            element: <SourceEdit />
+          }
+        ]
       },
       {
-        // 第一层: SourceList 列表
-        path: 'sources/:id',
+        id: 'book-list',
+        path: 'sources/:sourceId',
         element: <BookList />,
-        loader: booksLoader, // 关联 loader
+        loader: booksLoader,
         handle: {
           crumb: () => <span>Books</span>,
         },
         children: [
           {
-            path: 'detail/:bid',
+            id: 'book-detail',
+            path: 'detail/:bookId',
             element: <BookDetail />,
-            loader: bookDetailLoader, // 关联 loader
+            loader: bookDetailLoader,
             handle: {
               crumb: () => <span>BookDetail</span>,
             },
             children: [
               {
-                path: 'chapter/:cid',
+                id: 'reader',
+                path: 'chapter/:chapterId',
                 element: <ChapterDetail />,
                 loader: chapterDetailLoader,
                 handle: {

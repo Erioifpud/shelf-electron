@@ -1,11 +1,22 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import useRuleStore from "@/store/rule";
+import { Site } from "@/store/rule/type";
 import { EditIcon, PlusIcon, SearchIcon, ViewIcon } from "lucide-react";
-import { memo } from "react";
+import { memo, useCallback, useState } from "react";
+import { Outlet, useNavigate } from "react-router";
 
+// 新建站点等同于创建一个空配置放入 store，再选中他的 id
 const Source = memo(() => {
   const sites = useRuleStore(state => state.sites)
+
+  const navigate = useNavigate()
+
+  const toEditPage = useCallback((site: Site) => {
+    navigate({
+      pathname: `/sources/edit/${site.id}`
+    })
+  }, [navigate])
 
   return (
     <div className="flex h-full relative">
@@ -48,7 +59,7 @@ const Source = memo(() => {
                   <Button size="sm" variant="default" className="grow">
                     <ViewIcon className="h-4 w-4" /> Preview
                   </Button>
-                  <Button size="sm" variant="outline" className="grow">
+                  <Button size="sm" variant="outline" className="grow" onClick={() => toEditPage(site)}>
                     <EditIcon className="h-4 w-4" /> Edit
                   </Button>
                 </div>
@@ -57,8 +68,8 @@ const Source = memo(() => {
           })}
         </div>
       </div>
-      <div className="grow h-full outline-hidden">
-        
+      <div className="grow h-full outline-hidden relative">
+        <Outlet />
       </div>
     </div>
   )
