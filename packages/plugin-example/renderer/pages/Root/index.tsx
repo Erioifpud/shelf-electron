@@ -35,7 +35,7 @@ export default function Root() {
         <h1 className="text-xl font-bold">My Awesome App</h1>
         {/* <Breadcrumbs /> 动态面包屑组件 */}
       </header>
-      <main className="grow h-full">
+      <main className="grow h-full overflow-hidden">
         {/* 子路由将在这里全屏渲染 */}
         <Outlet />
       </main>
