@@ -6,9 +6,7 @@ import { router } from './pages/route'
 import { ModalProvider } from './components/ModalManager'
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ModalProvider>
-      <RouterProvider router={router} />
-    </ModalProvider>
-  </StrictMode>,
+  <ModalProvider>
+    <RouterProvider router={router} />
+  </ModalProvider>,
 )
