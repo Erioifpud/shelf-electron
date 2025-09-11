@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { Site } from './type'
+import { Page, Site } from './type'
 import { nanoid } from 'nanoid'
 import { produce } from 'immer'
 
@@ -9,6 +9,8 @@ interface RuleStore {
   addSite: (site: Omit<Site, 'id'>) => string
   removeSite: (id: string) =>  void
   updateSite: (id: string, site: Partial<Site>) => void
+  addPage: (siteId: string, page: Omit<Page, 'id'>) => string
+  sortPages: (activeId: string, overId: string) => void
 }
 
 const useRuleStore = create<RuleStore>()(
@@ -60,6 +62,32 @@ const useRuleStore = create<RuleStore>()(
               ...site,
             }
           }
+        })),
+        addPage: (siteId, page) => {
+          const id = nanoid()
+          set(produce(state => {
+            const site = state.sites.find(s => s.id === siteId)
+            if (!site) {
+              throw new Error('Site not found')
+            }
+            site.pages.push({
+              id,
+              ...page,
+            })
+          }))
+          return id
+        },
+        sortPages: (activeId, overId) => set(produce(state => {
+          const site = state.sites.find(s => s.pages.find(p => p.id === activeId))
+          if (!site) {
+            throw new Error('Site not found for sorting pages')
+          }
+          const pages = site.pages || []
+          const oldIndex = pages.findIndex(p => p.id === activeId)
+          const newIndex = pages.findIndex(p => p.id === overId)
+          if (oldIndex === -1 || newIndex === -1) return
+          const [movedPage] = pages.splice(oldIndex, 1)
+          pages.splice(newIndex, 0, movedPage)
         })),
       }
     },
