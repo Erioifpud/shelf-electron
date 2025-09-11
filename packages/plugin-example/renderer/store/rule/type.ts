@@ -159,6 +159,7 @@ export interface Site {
 export interface Page {
   id: string; // e.g., "romance_category"
   title: string; // e.g., "恋爱" - 用于在UI Tab上显示
+  enabled: boolean; // 是否启用该 Page，默认启用
 
   common: {
     baseUrl: string

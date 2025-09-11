@@ -1,4 +1,4 @@
-import { Site } from "./type";
+import { Page, Site } from "./type";
 
 export function getDefaultSite(): Omit<Site, 'id'> {
   return {
@@ -18,5 +18,31 @@ export function getDefaultSite(): Omit<Site, 'id'> {
     },
     rules: {},
     pages: [],
+  }
+}
+
+export function getDefaultPage(): Omit<Page, 'id'> {
+  return {
+    title: '新页面',
+    enabled: true,
+    common: {
+      baseUrl: '',
+      flags: '',
+    },
+    listView: {
+      ruleId: '',
+      urlTemplate: '',
+      displayMode: 'card',
+    },
+    detailView: {
+      ruleId: '',
+    },
+    previewView: {
+      ruleId: '',
+    },
+    searchView: {
+      ruleId: '',
+      urlTemplate: '',
+    },
   }
 }
