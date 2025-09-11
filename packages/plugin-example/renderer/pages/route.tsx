@@ -11,6 +11,8 @@ import { chapterDetailLoader } from "./ChapterDetail/loader";
 import SelectSourceHint from "./SourceList/components/SelectSourceHint";
 import { sourceCreateAction, sourceEditAction, sourceEditLoader, sourceRemoveAction } from "./SourceEdit/loader";
 import SourceEdit from "./SourceEdit";
+import PageList from "./SourceEdit/PageList";
+import SiteEdit from "./SourceEdit/SiteEdit";
 
 const ErrorPage = () => {
   return (
@@ -48,22 +50,40 @@ export const router = createHashRouter([
             element: <SelectSourceHint /> 
           },
           {
-            id: 'source-edit',
-            path: "edit/:sourceId",
-            action: sourceEditAction,
-            loader: sourceEditLoader,
-            element: <SourceEdit />
+            path: ":sourceId",
+            element: <SourceEdit />,
+            children: [
+              // 站点编辑相关
+              {
+                id: 'source-edit',
+                path: "edit",
+                action: sourceEditAction,
+                loader: sourceEditLoader,
+                element: <SiteEdit />,
+                children: [
+                  {
+                    id: 'source-remove',
+                    path: "destroy",
+                    action: sourceRemoveAction,
+                  },
+                  {
+                    id: 'source-create',
+                    path: "create",
+                    action: sourceCreateAction,
+                  },
+                ]
+              },
+              // 页面编辑相关
+              {
+                id: 'page-list',
+                path: "pages",
+                // action: pageList,
+                element: <PageList />
+              },
+            ]
           },
-          {
-            id: 'source-remove',
-            path: "destroy/:sourceId",
-            action: sourceRemoveAction,
-          },
-          {
-            id: 'source-create',
-            path: "create",
-            action: sourceCreateAction,
-          }
+          
+          
         ]
       },
       {

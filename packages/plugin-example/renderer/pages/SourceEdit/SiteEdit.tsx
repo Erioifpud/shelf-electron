@@ -77,7 +77,7 @@ const SiteEdit = memo(() => {
       onConfirm() {
         fetcher.submit(null, {
           method: 'post',
-          action: `/sources/destroy/${initialData.id}`
+          action: `/sources/${initialData.id}/edit/destroy`
         })
         toast.success('删除成功')
       },

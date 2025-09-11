@@ -30,5 +30,5 @@ export async function sourceCreateAction({ request, params }) {
 
   const id = ruleState.addSite(getDefaultSite());
 
-  return redirect(`/sources/edit/${id}`);
+  return redirect(`/sources/${id}/edit`);
 }

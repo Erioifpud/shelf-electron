@@ -70,7 +70,7 @@ const Source = memo(() => {
 
   const toEditPage = useCallback((site: Site) => {
     navigate({
-      pathname: `/sources/edit/${site.id}`
+      pathname: `/sources/${site.id}/edit`
     })
   }, [navigate])
 
