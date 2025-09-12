@@ -11,6 +11,7 @@ interface RuleStore {
   updateSite: (id: string, site: Partial<Site>) => void
   addPage: (siteId: string, page: Omit<Page, 'id'>) => string
   sortPages: (activeId: string, overId: string) => void
+  updatePage: (siteId: string, pageId: string, page: Page) => void
 }
 
 const useRuleStore = create<RuleStore>()(
@@ -40,7 +41,7 @@ const useRuleStore = create<RuleStore>()(
         ],
         addSite: (site) => {
           const id = nanoid()
-          set(produce(state => {
+          set(produce((state: RuleStore) => {
             state.sites.push({
               id,
               ...site,
@@ -48,13 +49,13 @@ const useRuleStore = create<RuleStore>()(
           }))
           return id
         },
-        removeSite: (id) => set(produce(state => {
+        removeSite: (id) => set(produce((state: RuleStore) => {
           const index = state.sites.findIndex(s => s.id === id)
           if (index !== -1) {
             state.sites.splice(index, 1)
           }
         })),
-        updateSite: (id, site) => set(produce(state => {
+        updateSite: (id, site) => set(produce((state: RuleStore) => {
           const index = state.sites.findIndex(s => s.id === id)
           if (index !== -1) {
             state.sites[index] = {
@@ -65,7 +66,7 @@ const useRuleStore = create<RuleStore>()(
         })),
         addPage: (siteId, page) => {
           const id = nanoid()
-          set(produce(state => {
+          set(produce((state: RuleStore) => {
             const site = state.sites.find(s => s.id === siteId)
             if (!site) {
               throw new Error('Site not found')
@@ -77,7 +78,7 @@ const useRuleStore = create<RuleStore>()(
           }))
           return id
         },
-        sortPages: (activeId, overId) => set(produce(state => {
+        sortPages: (activeId, overId) => set(produce((state: RuleStore) => {
           const site = state.sites.find(s => s.pages.find(p => p.id === activeId))
           if (!site) {
             throw new Error('Site not found for sorting pages')
@@ -89,6 +90,21 @@ const useRuleStore = create<RuleStore>()(
           const [movedPage] = pages.splice(oldIndex, 1)
           pages.splice(newIndex, 0, movedPage)
         })),
+        updatePage: (siteId, pageId, page) => set(produce((state: RuleStore) => {
+          const site = state.sites.find(site => site.id === siteId)
+          if (!site) {
+            throw new Error('Site not found for updating pages')
+          }
+          const pages = site.pages || []
+          const index = pages.findIndex(page => page.id === pageId)
+          if (index === -1) {
+            throw new Error('Page not found for updating pages')
+          }
+          site.pages[index] = {
+            ...site.pages[index],
+            ...page,
+          }
+        }))
       }
     },
     {

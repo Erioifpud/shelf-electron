@@ -9,7 +9,7 @@ import { booksLoader } from "./BookList/loader";
 import { bookDetailLoader } from "./BookDetail/loader";
 import { chapterDetailLoader } from "./ChapterDetail/loader";
 import SelectSourceHint from "./SourceList/components/SelectSourceHint";
-import { pageCreateAction, pageEditLoader, pageListLoader, pageSortAction, sourceCreateAction, sourceEditAction, sourceEditLoader, sourceRemoveAction } from "./SourceEdit/loader";
+import { pageCreateAction, pageEditAction, pageEditLoader, pageListLoader, pageRemoveAction, pageSortAction, sourceCreateAction, sourceEditAction, sourceEditLoader, sourceRemoveAction } from "./SourceEdit/loader";
 import SourceEdit from "./SourceEdit";
 import PageList from "./SourceEdit/PageList";
 import SiteEdit from "./SourceEdit/SiteEdit";
@@ -90,8 +90,15 @@ export const router = createHashRouter([
                     id: 'page-edit',
                     path: ':pageId/edit',
                     loader: pageEditLoader,
-                    // action: pageSortAction,
-                    element: <PageEdit />
+                    action: pageEditAction,
+                    element: <PageEdit />,
+                    children: [
+                      {
+                        id: 'page-remove',
+                        path: 'destroy',
+                        action: pageRemoveAction,
+                      },
+                    ]
                   }
                 ]
               },

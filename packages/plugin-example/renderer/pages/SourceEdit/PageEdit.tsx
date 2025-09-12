@@ -1,7 +1,7 @@
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { CollectionRule, DetailRule, Page, PreviewRule } from "@/store/rule/type";
-import { memo, useCallback, useEffect, useState } from "react";
-import { useLoaderData, useNavigate } from "react-router";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useFetcher, useLoaderData, useNavigate } from "react-router";
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -18,7 +18,11 @@ import { cloneDeep } from "lodash-es";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import KeyValueInput from "@/components/KeyValueInput";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { useModals } from "@/components/ModalManager";
 
 const ANIMATION_DURATION = 500;
 
@@ -46,7 +50,10 @@ const formSchema = z.object({
     ruleId: z.string().optional(),
     url: z.string().optional(),
   }),
-  headers: z.record(z.string(), z.string()),
+  headers: z.array(z.object({
+    key: z.string(),
+    value: z.string(),
+  })),
 })
 
 interface LoaderData {
@@ -62,14 +69,20 @@ interface LoaderData {
 const PageEdit = memo(() => {
   const navigate = useNavigate();
   const { page: initialPage, detailRules, collectionRules, previewRules } = useLoaderData<LoaderData>();
+  const fetcher = useFetcher()
+  const modals = useModals()
+
   const [isOpen, setIsOpen] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      ...cloneDeep(initialPage)
+      ...cloneDeep(initialPage),
+      headers: Object.entries(initialPage.headers || {}).map(([key, value]) => ({ key, value })),
     },
   })
+
+  const isSubmitting = useMemo(() => fetcher.state === "submitting", [fetcher])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -87,9 +100,38 @@ const PageEdit = memo(() => {
   }, [])
 
   const handleSubmit = useCallback((values: z.infer<typeof formSchema>) => {
-    console.log(values)
-  }, [])
+    fetcher.submit(values, {
+      method: "post",
+      encType: 'application/json'
+    });
+    toast.success('保存成功')
+  }, [fetcher])
   
+  const handleReset = useCallback(() => {
+    form.reset()
+    toast.success('重置成功')
+  }, [form])
+
+  const handleRemove = useCallback(() => {
+    modals.openConfirmModal({
+      title: '删除确认',
+      children: (
+        <div className="">确定要删除该站点规则吗？删除后将无法找回</div>
+      ),
+      labels: {
+        confirm: '确认',
+        cancel: '取消'
+      },
+      onConfirm() {
+        fetcher.submit(null, {
+          method: 'post',
+          action: `/sources/${initialPage.id}/edit/destroy`
+        })
+        toast.success('删除成功')
+      },
+    })
+  }, [])
+
   return (
     <Drawer
       direction="right"
@@ -99,6 +141,7 @@ const PageEdit = memo(() => {
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>{initialPage.title}</DrawerTitle>
+          <DrawerDescription>编辑页面信息</DrawerDescription>
         </DrawerHeader>
         <div className="p-4 overflow-y-auto">
           <Form {...form}>
@@ -166,7 +209,7 @@ const PageEdit = memo(() => {
                   <FormItem>
                     <FormLabel>列表页规则</FormLabel>
                     <FormControl>
-                      <Select { ...field }>
+                      <Select { ...field } value={field.value} onValueChange={ev => form.setValue(field.name, ev)}>
                         <SelectTrigger className="">
                           <SelectValue placeholder="列表页规则" />
                         </SelectTrigger>
@@ -209,7 +252,7 @@ const PageEdit = memo(() => {
                   <FormItem>
                     <FormLabel>布局</FormLabel>
                     <FormControl>
-                      <Select { ...field }>
+                      <Select { ...field } value={field.value} onValueChange={ev => form.setValue(field.name, ev)}>
                         <SelectTrigger className="">
                           <SelectValue placeholder="Theme" />
                         </SelectTrigger>
@@ -239,7 +282,7 @@ const PageEdit = memo(() => {
                   <FormItem>
                     <FormLabel>详情页规则</FormLabel>
                     <FormControl>
-                      <Select { ...field }>
+                      <Select { ...field } value={field.value} onValueChange={ev => form.setValue(field.name, ev)}>
                         <SelectTrigger className="">
                           <SelectValue placeholder="详情页规则" />
                         </SelectTrigger>
@@ -285,7 +328,7 @@ const PageEdit = memo(() => {
                   <FormItem>
                     <FormLabel>浏览页规则</FormLabel>
                     <FormControl>
-                      <Select { ...field }>
+                      <Select { ...field } value={field.value} onValueChange={ev => form.setValue(field.name, ev)}>
                         <SelectTrigger className="">
                           <SelectValue placeholder="浏览页规则" />
                         </SelectTrigger>
@@ -331,7 +374,7 @@ const PageEdit = memo(() => {
                   <FormItem>
                     <FormLabel>搜索页规则</FormLabel>
                     <FormControl>
-                      <Select { ...field }>
+                      <Select { ...field } value={field.value} onValueChange={ev => form.setValue(field.name, ev)}>
                         <SelectTrigger className="">
                           <SelectValue placeholder="搜索页规则" />
                         </SelectTrigger>
@@ -370,7 +413,31 @@ const PageEdit = memo(() => {
 
               {/* HTTP 头 */}
               <Separator />
+              <FormField
+                control={form.control}
+                name="headers"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>HTTP 头</FormLabel>
+                    <FormControl>
+                      <KeyValueInput name="headers" control={form.control} />
+                    </FormControl>
+                    <FormDescription>
+                      请求时会带上这些 HTTP 头
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
+            <div className="flex gap-2">
+              <Button variant="destructive" type="reset" onClick={handleReset}>重置</Button>
+              <Button variant="destructive" type="button" onClick={handleRemove}>删除</Button>
+              <div className="grow"></div>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "保存中..." : "保存"}
+              </Button>
+            </div>
             </form>
           </Form>
         </div>

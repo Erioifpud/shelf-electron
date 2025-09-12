@@ -62,7 +62,7 @@ const SiteEdit = memo(() => {
   const handleReset = useCallback(() => {
     form.reset()
     toast.success('重置成功')
-  }, [fetcher])
+  }, [form])
 
   const handleRemove = useCallback(() => {
     modals.openConfirmModal({

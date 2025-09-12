@@ -90,3 +90,16 @@ export async function pageSortAction({ params, request }) {
   ruleState.sortPages(payload.activeId, payload.overId);
   return { ok: true };
 }
+
+export async function pageEditAction({ request, params }) {
+  const ruleState = useRuleStore.getState()
+  const updates = await request.json();
+  ruleState.updatePage(params.sourceId, params.pageId, updates);
+  return { ok: true }; 
+}
+
+export async function pageRemoveAction({ request, params }) {
+  const { sourceId, pageId } = params;
+
+  return redirect(`/sources/${sourceId}/pages`);
+}
