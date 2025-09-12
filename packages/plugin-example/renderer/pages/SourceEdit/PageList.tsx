@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo } from "react";
-import { useFetcher, useLoaderData } from "react-router";
+import { Link, Outlet, useFetcher, useLoaderData } from "react-router";
 import { SortableContext, sortableKeyboardCoordinates, useSortable} from '@dnd-kit/sortable'
 import { closestCenter, DndContext, DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Page } from "@/store/rule/type";
@@ -45,8 +45,10 @@ const PageCard = memo(({ page }: PageCardProps) => {
         !page.enabled && 'line-through text-gray-400'
       )}>{page.title}</div>
       <div className="shrink-0">
-        <Button variant="outline" size="sm">
-          <EditIcon className="size-3" />
+        <Button variant="outline" size="sm" asChild>
+          <Link to={`./${page.id}/edit`}>
+            <EditIcon className="size-3" />
+          </Link>
         </Button>
       </div>
     </div>
@@ -112,7 +114,7 @@ const PageList = memo(() => {
               )
             })}
           </div>
-          
+          <Outlet />
         </div>
       </SortableContext>
     </DndContext>

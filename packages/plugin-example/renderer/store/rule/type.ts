@@ -51,7 +51,8 @@ export interface Extractor {
 export interface CollectionRule {
   id: string;
   name: string;
-  
+  type: 'collection';
+
   // 新增：数据获取模式
   fetchMode: 'html' | 'json' | 'headless';
 
@@ -85,16 +86,52 @@ export interface CollectionRule {
   };
 
   // 分页规则
-  pager?: {
-    prevPage: Extractor; // 通常提取的是 URL
+  pager: {
+    // prevPage: Extractor; // 通常提取的是 URL
     nextPage: Extractor; // 通常提取的是 URL
   };
+
+  headers?: { [key: string]: string };
 }
 
-// 详情页规则 (整合了 DetailRule 和 PreviewRule 的核心)
+export interface PreviewRule {
+  id: string;
+  name: string;
+  type: 'preview';
+  fetchMode: 'html' | 'json' | 'headless';
+
+  // 直接提取详情字段
+  fields: {
+    pages: Extractor; // 总页数
+    totalPictures: Extractor; // 总图片数
+  };
+
+  // 分页规则
+  pager: {
+    // prevPage: Extractor; // 通常提取的是 URL
+    nextPage: Extractor; // 通常提取的是 URL
+  };
+
+  // 嵌套的列表/集合规则
+  pictures: {
+    item: Extractor;
+    url: Extractor;
+  }
+  videos: {
+    item: Extractor;
+    title: Extractor;
+    cover: Extractor;
+    url: Extractor;
+  }
+
+  headers?: { [key: string]: string };
+}
+
+// 详情页规则
 export interface DetailRule {
   id: string;
   name: string;
+  type: 'detail';
   fetchMode: 'html' | 'json' | 'headless';
 
   // 直接提取详情字段
@@ -102,28 +139,62 @@ export interface DetailRule {
     title: Extractor;
     description: Extractor;
     cover: Extractor;
-    coverWidth: Extractor;
-    coverHeight: Extractor;
-    largeImage: Extractor;
-    video: Extractor;
     category: Extractor;
+    rating: Extractor;
+    totalPictures: Extractor;
+    // coverWidth: Extractor;
+    // coverHeight: Extractor;
+    // largeImage: Extractor;
+    // video: Extractor;
     author: Extractor;
     uploader: Extractor;
     publishDate: Extractor;
     updateDate: Extractor;
-    rating: Extractor;
-    duration: Extractor;
     likes: Extractor;
     views: Extractor;
-    totalPictures: Extractor;
+  };
+
+  // 分页规则
+  pager: {
+    // prevPage: Extractor; // 通常提取的是 URL
+    nextPage: Extractor; // 通常提取的是 URL
   };
 
   // 嵌套的列表/集合规则
-  tags?: CollectionRule;      // 提取标签列表
-  chapters?: CollectionRule;  // 提取章节列表
-  pictures?: CollectionRule;  // 提取图片/预览列表
-  videos?: CollectionRule;    // 提取视频列表
-  comments?: CollectionRule;  // 提取评论列表
+  tags: {
+    item: Extractor;
+    name: Extractor;
+    url: Extractor;
+  }
+  chapters: {
+    item: Extractor;
+    idCode: Extractor;
+    title: Extractor;
+    url: Extractor;
+    updateDate: Extractor;
+  }
+  pictures: {
+    item: Extractor;
+    thumbnail: Extractor;
+    url: Extractor;
+    pageUrl: Extractor;
+  }
+  videos: {
+    item: Extractor;
+    title: Extractor;
+    cover: Extractor;
+    url: Extractor;
+  }
+  comments: {
+    item: Extractor;
+    avatar: Extractor;
+    username: Extractor;
+    content: Extractor;
+    date: Extractor;
+    likes: Extractor;
+  }
+
+  headers?: { [key: string]: string };
 }
 
 export interface Site {
@@ -149,7 +220,7 @@ export interface Site {
 
   // 将所有规则统一存储，按ID索引，方便引用和管理
   rules: {
-    [ruleId: string]: CollectionRule | DetailRule;
+    [ruleId: string]: CollectionRule | DetailRule | PreviewRule;
   };
 
   // 页面定义
@@ -162,7 +233,7 @@ export interface Page {
   enabled: boolean; // 是否启用该 Page，默认启用
 
   common: {
-    baseUrl: string
+    siteUrl: string
     flags: string
   }
   
@@ -171,8 +242,8 @@ export interface Page {
   listView: {
     // 引用 Site.rules 中的一个 CollectionRule ID
     ruleId: string; 
-    // 该列表页的 URL 模板
-    urlTemplate: string; 
+    // 该列表页的 URL
+    url: string;
     // UI 展示模式
     displayMode: DisplayMode;
   };
@@ -182,6 +253,7 @@ export interface Page {
   detailView: {
     // 引用 Site.rules 中的一个 DetailRule ID
     ruleId: string;
+    url: string;
     // 注意：详情页的URL通常不是固定的模板，
     // 而是由 listView 的规则从列表项中提取出来的 (即我们定义的 `detailUrl` 字段)。
     // 所以这里不需要 urlTemplate。
@@ -190,6 +262,7 @@ export interface Page {
   // --- 预览/阅读视图定义 ---
   previewView?: {
     ruleId: string; // 引用一个 PreviewRule (或者也可是DetailRule的变种)
+    url: string;
   };
 
   // --- （可选）该 Page 专属的搜索功能 ---
@@ -197,8 +270,8 @@ export interface Page {
   searchView?: {
     // 引用 Site.rules 中的一个 CollectionRule ID，用于解析搜索结果
     ruleId: string;
-    // 搜索请求的 URL 模板
-    urlTemplate: string;
+    // 搜索请求的 URL
+    url: string;
   };
 
   // ... 其他页面元数据

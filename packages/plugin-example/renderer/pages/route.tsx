@@ -9,10 +9,11 @@ import { booksLoader } from "./BookList/loader";
 import { bookDetailLoader } from "./BookDetail/loader";
 import { chapterDetailLoader } from "./ChapterDetail/loader";
 import SelectSourceHint from "./SourceList/components/SelectSourceHint";
-import { pageCreateAction, pageListLoader, pageSortAction, sourceCreateAction, sourceEditAction, sourceEditLoader, sourceRemoveAction } from "./SourceEdit/loader";
+import { pageCreateAction, pageEditLoader, pageListLoader, pageSortAction, sourceCreateAction, sourceEditAction, sourceEditLoader, sourceRemoveAction } from "./SourceEdit/loader";
 import SourceEdit from "./SourceEdit";
 import PageList from "./SourceEdit/PageList";
 import SiteEdit from "./SourceEdit/SiteEdit";
+import PageEdit from "./SourceEdit/PageEdit";
 
 const ErrorPage = () => {
   return (
@@ -84,6 +85,13 @@ export const router = createHashRouter([
                     id: 'page-sort',
                     path: 'sort',
                     action: pageSortAction,
+                  },
+                  {
+                    id: 'page-edit',
+                    path: ':pageId/edit',
+                    loader: pageEditLoader,
+                    // action: pageSortAction,
+                    element: <PageEdit />
                   }
                 ]
               },

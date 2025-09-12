@@ -50,6 +50,26 @@ export function pageListLoader({ params }) {
   return site.pages;
 }
 
+export function pageEditLoader({ params }) {
+  const ruleState = useRuleStore.getState()
+  const site = ruleState.sites.find(site => site.id === params.sourceId)
+  if (!site) {
+    throw new Error('Site not found');
+  }
+  const page = site.pages.find(page => page.id === params.pageId)
+  if (!page) {
+    throw new Error('Page not found');
+  }
+  const rules = site.rules;
+  return {
+    page,
+    rules,
+    detailRules: Object.values(rules).filter(r => r.type === 'detail'),
+    collectionRules: Object.values(rules).filter(r => r.type === 'collection'),
+    previewRules: Object.values(rules).filter(r => r.type === 'preview'),
+  };
+}
+
 export function pageCreateAction({ params }) {
   const sourceId = params.sourceId
   if (!sourceId) {

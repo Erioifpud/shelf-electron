@@ -26,7 +26,7 @@ export function getDefaultPage(): Omit<Page, 'id'> {
     title: '新页面',
     enabled: true,
     common: {
-      baseUrl: '',
+      siteUrl: '',
       flags: '',
     },
     listView: {
