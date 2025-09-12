@@ -99,7 +99,7 @@ export async function pageEditAction({ request, params }) {
 }
 
 export async function pageRemoveAction({ request, params }) {
-  const { sourceId, pageId } = params;
-
-  return redirect(`/sources/${sourceId}/pages`);
+  const ruleState = useRuleStore.getState()
+  ruleState.removePage(params.sourceId, params.pageId);
+  return redirect(`/sources/${params.sourceId}/pages`);
 }

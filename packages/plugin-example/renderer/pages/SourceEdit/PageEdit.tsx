@@ -116,7 +116,7 @@ const PageEdit = memo(() => {
     modals.openConfirmModal({
       title: '删除确认',
       children: (
-        <div className="">确定要删除该站点规则吗？删除后将无法找回</div>
+        <div className="">确定要删除该页面规则吗？删除后将无法找回</div>
       ),
       labels: {
         confirm: '确认',
@@ -125,12 +125,12 @@ const PageEdit = memo(() => {
       onConfirm() {
         fetcher.submit(null, {
           method: 'post',
-          action: `/sources/${initialPage.id}/edit/destroy`
+          action: `./destroy`
         })
         toast.success('删除成功')
       },
     })
-  }, [])
+  }, [fetcher])
 
   return (
     <Drawer

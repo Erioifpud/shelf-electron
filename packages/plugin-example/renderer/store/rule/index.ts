@@ -12,6 +12,7 @@ interface RuleStore {
   addPage: (siteId: string, page: Omit<Page, 'id'>) => string
   sortPages: (activeId: string, overId: string) => void
   updatePage: (siteId: string, pageId: string, page: Page) => void
+  removePage: (siteId: string, pageId: string) => void
 }
 
 const useRuleStore = create<RuleStore>()(
@@ -104,6 +105,18 @@ const useRuleStore = create<RuleStore>()(
             ...site.pages[index],
             ...page,
           }
+        })),
+        removePage: (siteId, pageId) => set(produce((state: RuleStore) => {
+          const site = state.sites.find(site => site.id === siteId)
+          if (!site) {
+            throw new Error('Site not found for remove page')
+          }
+          const pages = site.pages || []
+          const index = pages.findIndex(page => page.id === pageId)
+          if (index === -1) {
+            throw new Error('Page not found for remove page')
+          }
+          pages.splice(index, 1)
         }))
       }
     },
