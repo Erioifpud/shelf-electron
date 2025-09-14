@@ -18,7 +18,8 @@ import { useFetcher, useLoaderData } from "react-router";
 import { cloneDeep } from "lodash-es";
 import { toast } from "sonner";
 import { useModals } from "@/components/ModalManager";
- 
+import { Checkbox } from "@/components/ui/checkbox";
+
 const formSchema = z.object({
   dataVersion: z.number().min(1),
   namespace: z.string().min(1, { message: "命名空间不能为空" }),
@@ -33,6 +34,7 @@ const formSchema = z.object({
     siteUrl: z.string().optional(),
     token: z.string().optional(),
     version: z.string().optional(),
+    headless: z.boolean().optional(),
   })
 })
 
@@ -263,6 +265,27 @@ const SiteEdit = memo(() => {
                 </FormControl>
                 <FormDescription>
                   当前站点的登录地址
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="common.headless"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>无头模式</FormLabel>
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={(checked) => {
+                      return field.onChange(checked)
+                    }}
+                  />
+                </FormControl>
+                <FormDescription>
+                  使用无头浏览器代替 AJAX，此时 JSON 标记会失效，按 HTML 模式解析
                 </FormDescription>
                 <FormMessage />
               </FormItem>
