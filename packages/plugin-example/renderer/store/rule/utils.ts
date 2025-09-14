@@ -15,6 +15,7 @@ export function getDefaultSite(): Omit<Site, 'id'> {
       siteUrl: 'https://www.example.com',
       token: '',
       version: '1.0.0',
+      headless: false,
     },
     rules: {},
     pages: [],
@@ -31,18 +32,20 @@ export function getDefaultPage(): Omit<Page, 'id'> {
     },
     listView: {
       ruleId: '',
-      urlTemplate: '',
+      url: '',
       displayMode: 'card',
     },
     detailView: {
       ruleId: '',
+      url: '',
     },
     previewView: {
       ruleId: '',
+      url: '',
     },
     searchView: {
       ruleId: '',
-      urlTemplate: '',
+      url: '',
     },
   }
 }
