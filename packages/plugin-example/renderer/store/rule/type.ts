@@ -54,7 +54,7 @@ export interface CollectionRule {
   type: 'collection';
 
   // 新增：数据获取模式
-  fetchMode: 'html' | 'json' | 'headless';
+  fetchMode: 'html' | 'json';
 
   // 列表项的根选择器/路径
   item: Extractor;
@@ -98,7 +98,7 @@ export interface PreviewRule {
   id: string;
   name: string;
   type: 'preview';
-  fetchMode: 'html' | 'json' | 'headless';
+  fetchMode: 'html' | 'json';
 
   // 直接提取详情字段
   fields: {
@@ -132,7 +132,7 @@ export interface DetailRule {
   id: string;
   name: string;
   type: 'detail';
-  fetchMode: 'html' | 'json' | 'headless';
+  fetchMode: 'html' | 'json';
 
   // 直接提取详情字段
   fields: {
@@ -209,12 +209,13 @@ export interface Site {
     author: string
     version: string
     description: string
-
+    
     // 需要登录时打开这个页面登录
     loginUrl: string
     cookie: string
     token: string
-
+    
+    headless: boolean; // 无头浏览器模式，启用后 fetchMode 失效，默认使用 html 解析
     flags: string
   };
 
