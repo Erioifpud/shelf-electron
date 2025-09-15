@@ -1,4 +1,4 @@
-import { Page, Site } from "./type";
+import { CollectionRule, DetailRule, Extractor, Page, PreviewRule, Site } from "./type";
 
 export function getDefaultSite(): Omit<Site, 'id'> {
   return {
@@ -17,7 +17,9 @@ export function getDefaultSite(): Omit<Site, 'id'> {
       version: '1.0.0',
       headless: false,
     },
-    rules: {},
+    detailRuleMap: {},
+    collectionRuleMap: {},
+    previewRuleMap: {},
     pages: [],
   }
 }
@@ -47,5 +49,131 @@ export function getDefaultPage(): Omit<Page, 'id'> {
       ruleId: '',
       url: '',
     },
+  }
+}
+
+function extractor(): Extractor {
+  return {
+    selector: '',
+    from: 'text',
+    processors: [],
+  }
+}
+
+export function getDefaultCollectionRule(): Omit<CollectionRule, 'id'> {
+  return {
+    name: '新建列表规则',
+    type: 'collection',
+    fetchMode: 'html',
+    item: extractor(),
+    fields: {
+      idCode: extractor(),
+      title: extractor(),
+      description: extractor(),
+      cover: extractor(),
+      coverWidth: extractor(),
+      coverHeight: extractor(),
+      largeImage: extractor(),
+      video: extractor(),
+      category: extractor(),
+      author: extractor(),
+      uploader: extractor(),
+      publishDate: extractor(),
+      updateDate: extractor(),
+      rating: extractor(),
+      duration: extractor(),
+      likes: extractor(),
+      views: extractor(),
+      totalPictures: extractor(),
+      detailUrl: extractor(),
+    },
+    pager: {
+      nextPage: extractor(),
+    },
+    headers: {},
+  }
+}
+
+export function getDefaultDetailRule(): Omit<DetailRule, 'id'> {
+  return {
+    name: '新建详情规则',
+    type: 'detail',
+    fetchMode: 'html',
+    fields: {
+      title: extractor(),
+      description: extractor(),
+      cover: extractor(),
+      category: extractor(),
+      rating: extractor(),
+      totalPictures: extractor(),
+      author: extractor(),
+      uploader: extractor(),
+      publishDate: extractor(),
+      updateDate: extractor(),
+      likes: extractor(),
+      views: extractor(),
+    },
+    pager: {
+      nextPage: extractor(),
+    },
+    headers: {},
+    tags: {
+      item: extractor(),
+      name: extractor(),
+      url: extractor(),
+    },
+    chapters: {
+      item: extractor(),
+      url: extractor(),
+      title: extractor(),
+      idCode: extractor(),
+      updateDate: extractor(),
+    },
+    pictures: {
+      item: extractor(),
+      url: extractor(),
+      thumbnail: extractor(),
+      pageUrl: extractor(),
+    },
+    videos: {
+      item: extractor(),
+      url: extractor(),
+      cover: extractor(),
+      title: extractor(),
+    },
+    comments: {
+      item: extractor(),
+      avatar: extractor(),
+      content: extractor(),
+      username: extractor(),
+      date: extractor(),
+      likes: extractor(),
+    }
+  }
+}
+
+export function getDefaultPreviewRule(): Omit<PreviewRule, 'id'> {
+  return {
+    name: '新建预览规则',
+    type: 'preview',
+    fetchMode: 'html',
+    fields: {
+      pages: extractor(),
+      totalPictures: extractor(),
+    },
+    headers: {},
+    pager: {
+      nextPage: extractor(),
+    },
+    pictures: {
+      item: extractor(),
+      url: extractor(),
+    },
+    videos: {
+      item: extractor(),
+      url: extractor(),
+      cover: extractor(),
+      title: extractor(),
+    }
   }
 }

@@ -60,13 +60,11 @@ export function pageEditLoader({ params }) {
   if (!page) {
     throw new Error('Page not found');
   }
-  const rules = site.rules;
   return {
     page,
-    rules,
-    detailRules: Object.values(rules).filter(r => r.type === 'detail'),
-    collectionRules: Object.values(rules).filter(r => r.type === 'collection'),
-    previewRules: Object.values(rules).filter(r => r.type === 'preview'),
+    detailRules: Object.values(site.detailRuleMap),
+    collectionRules: Object.values(site.collectionRuleMap),
+    previewRules: Object.values(site.previewRuleMap),
   };
 }
 
@@ -102,4 +100,30 @@ export async function pageRemoveAction({ request, params }) {
   const ruleState = useRuleStore.getState()
   ruleState.removePage(params.sourceId, params.pageId);
   return redirect(`/sources/${params.sourceId}/pages`);
+}
+
+// 规则相关
+
+export function ruleListLoader({ params }) {
+  const ruleState = useRuleStore.getState()
+  const site = ruleState.sites.find(site => site.id === params.sourceId)
+  if (!site) {
+    throw new Error('Site not found');
+  }
+  return {
+    detailRules: Object.values(site.detailRuleMap),
+    collectionRules: Object.values(site.collectionRuleMap),
+    previewRules: Object.values(site.previewRuleMap),
+  };
+}
+
+export async function ruleCreateAction({ params, request }) {
+  const sourceId = params.sourceId
+  if (!sourceId) {
+    throw new Error('Missing sourceId in params');
+  }
+  const ruleState = useRuleStore.getState()
+  const payload = await request.json();
+  ruleState.addRule(sourceId, payload);
+  return { ok: true };
 }

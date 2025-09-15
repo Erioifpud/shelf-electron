@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { Page, Site } from './type'
+import { CollectionRule, DetailRule, Page, PreviewRule, Rule, Site } from './type'
 import { nanoid } from 'nanoid'
 import { produce } from 'immer'
 
@@ -13,6 +13,7 @@ interface RuleStore {
   sortPages: (activeId: string, overId: string) => void
   updatePage: (siteId: string, pageId: string, page: Page) => void
   removePage: (siteId: string, pageId: string) => void
+  addRule: (siteId: string, page: Omit<Rule, 'id'>) => string
 }
 
 const useRuleStore = create<RuleStore>()(
@@ -25,6 +26,7 @@ const useRuleStore = create<RuleStore>()(
             dataVersion: 1,
             namespace: 'example',
             common: {
+              headless: false,
               author: '佚名',
               cookie: '',
               description: '这是一个示例源',
@@ -36,7 +38,9 @@ const useRuleStore = create<RuleStore>()(
               token: '',
               version: '1.0.0',
             },
-            rules: {},
+            detailRuleMap: {},
+            previewRuleMap: {},
+            collectionRuleMap: {},
             pages: [],
           },
         ],
@@ -117,7 +121,29 @@ const useRuleStore = create<RuleStore>()(
             throw new Error('Page not found for remove page')
           }
           pages.splice(index, 1)
-        }))
+        })),
+        addRule: (siteId, rule) => {
+          const id = nanoid()
+          set(produce((state: RuleStore) => {
+            const site = state.sites.find(s => s.id === siteId)
+            if (!site) {
+              throw new Error('Site not found')
+            }
+            const type = rule.type
+            const fullRule = {
+              ...rule,
+              id,
+            }
+            if (type === 'collection') {
+              site.collectionRuleMap[id] = fullRule as CollectionRule
+            } else if (type === 'detail') {
+              site.detailRuleMap[id] = fullRule as DetailRule
+            } else if (type === 'preview') {
+              site.previewRuleMap[id] = fullRule as PreviewRule
+            }
+          }))
+          return id
+        },
       }
     },
     {

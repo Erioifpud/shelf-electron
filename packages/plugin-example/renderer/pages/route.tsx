@@ -9,11 +9,12 @@ import { booksLoader } from "./BookList/loader";
 import { bookDetailLoader } from "./BookDetail/loader";
 import { chapterDetailLoader } from "./ChapterDetail/loader";
 import SelectSourceHint from "./SourceList/components/SelectSourceHint";
-import { pageCreateAction, pageEditAction, pageEditLoader, pageListLoader, pageRemoveAction, pageSortAction, sourceCreateAction, sourceEditAction, sourceEditLoader, sourceRemoveAction } from "./SourceEdit/loader";
+import { pageCreateAction, pageEditAction, pageEditLoader, pageListLoader, pageRemoveAction, pageSortAction, ruleCreateAction, ruleListLoader, sourceCreateAction, sourceEditAction, sourceEditLoader, sourceRemoveAction } from "./SourceEdit/loader";
 import SourceEdit from "./SourceEdit";
 import PageList from "./SourceEdit/PageList";
 import SiteEdit from "./SourceEdit/SiteEdit";
 import PageEdit from "./SourceEdit/PageEdit";
+import RuleList from "./SourceEdit/RuleList";
 
 const ErrorPage = () => {
   return (
@@ -102,6 +103,20 @@ export const router = createHashRouter([
                   }
                 ]
               },
+              // 规则编辑相关
+              {
+                id: 'rule-list',
+                path: "rules",
+                loader: ruleListLoader,
+                element: <RuleList />,
+                children: [
+                  {
+                    id: 'rule-create',
+                    path: 'create',
+                    action: ruleCreateAction,
+                  },
+                ]
+              }
             ]
           },
           {

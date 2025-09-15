@@ -219,14 +219,23 @@ export interface Site {
     flags: string
   };
 
-  // 将所有规则统一存储，按ID索引，方便引用和管理
-  rules: {
-    [ruleId: string]: CollectionRule | DetailRule | PreviewRule;
-  };
+  detailRuleMap: {
+    [ruleId: string]: DetailRule
+  }
+
+  collectionRuleMap: {
+    [ruleId: string]: CollectionRule
+  }
+
+  previewRuleMap: {
+    [ruleId: string]: PreviewRule
+  }
 
   // 页面定义
   pages: Page[];
 }
+
+export type Rule = CollectionRule | DetailRule | PreviewRule;
 
 export interface Page {
   id: string; // e.g., "romance_category"
@@ -241,7 +250,7 @@ export interface Page {
   // --- 列表视图定义 ---
   // 定义了当用户进入这个 Page 时，首先看到的列表页的行为
   listView: {
-    // 引用 Site.rules 中的一个 CollectionRule ID
+    // 引用 CollectionRule ID
     ruleId: string; 
     // 该列表页的 URL
     url: string;
@@ -252,7 +261,7 @@ export interface Page {
   // --- 详情视图定义 ---
   // 定义了当用户在上面的 listView 中点击一个项目后，如何加载详情页
   detailView: {
-    // 引用 Site.rules 中的一个 DetailRule ID
+    // 引用 DetailRule ID
     ruleId: string;
     url: string;
     // 注意：详情页的URL通常不是固定的模板，
