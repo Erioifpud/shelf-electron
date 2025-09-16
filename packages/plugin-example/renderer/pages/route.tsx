@@ -9,12 +9,13 @@ import { booksLoader } from "./BookList/loader";
 import { bookDetailLoader } from "./BookDetail/loader";
 import { chapterDetailLoader } from "./ChapterDetail/loader";
 import SelectSourceHint from "./SourceList/components/SelectSourceHint";
-import { pageCreateAction, pageEditAction, pageEditLoader, pageListLoader, pageRemoveAction, pageSortAction, ruleCreateAction, ruleListLoader, sourceCreateAction, sourceEditAction, sourceEditLoader, sourceRemoveAction } from "./SourceEdit/loader";
+import { pageCreateAction, pageEditAction, pageEditLoader, pageListLoader, pageRemoveAction, pageSortAction, ruleCreateAction, ruleEditAction, ruleEditLoader, ruleListLoader, sourceCreateAction, sourceEditAction, sourceEditLoader, sourceRemoveAction } from "./SourceEdit/loader";
 import SourceEdit from "./SourceEdit";
 import PageList from "./SourceEdit/PageList";
 import SiteEdit from "./SourceEdit/SiteEdit";
 import PageEdit from "./SourceEdit/PageEdit";
 import RuleList from "./SourceEdit/RuleList";
+import RuleEdit from "./SourceEdit/RuleEdit";
 
 const ErrorPage = () => {
   return (
@@ -115,6 +116,20 @@ export const router = createHashRouter([
                     path: 'create',
                     action: ruleCreateAction,
                   },
+                  {
+                    id: 'rule-edit',
+                    path: ':ruleId/edit',
+                    loader: ruleEditLoader,
+                    action: ruleEditAction,
+                    element: <RuleEdit />,
+                    children: [
+                      // {
+                      //   id: 'page-remove',
+                      //   path: 'destroy',
+                      //   action: pageRemoveAction,
+                      // },
+                    ]
+                  }
                 ]
               }
             ]

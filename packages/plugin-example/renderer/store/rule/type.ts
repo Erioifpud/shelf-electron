@@ -91,7 +91,7 @@ export interface CollectionRule {
     nextPage: Extractor; // 通常提取的是 URL
   };
 
-  headers?: { [key: string]: string };
+  headers?: { key: string, value: string }[];
 }
 
 export interface PreviewRule {
@@ -124,7 +124,7 @@ export interface PreviewRule {
     url: Extractor;
   }
 
-  headers?: { [key: string]: string };
+  headers?: { key: string, value: string }[];
 }
 
 // 详情页规则
@@ -194,7 +194,7 @@ export interface DetailRule {
     likes: Extractor;
   }
 
-  headers?: { [key: string]: string };
+  headers?: { key: string, value: string }[];
 }
 
 export interface Site {
@@ -285,5 +285,5 @@ export interface Page {
   };
 
   // ... 其他页面元数据
-  headers?: { [key: string]: string };
+  headers?: { key: string, value: string }[];
 }

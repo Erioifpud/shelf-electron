@@ -78,7 +78,6 @@ const PageEdit = memo(() => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       ...cloneDeep(initialPage),
-      headers: Object.entries(initialPage.headers || {}).map(([key, value]) => ({ key, value })),
     },
   })
 

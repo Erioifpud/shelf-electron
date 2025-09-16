@@ -1,4 +1,4 @@
-import { CollectionRule, DetailRule, Extractor, Page, PreviewRule, Site } from "./type";
+import { CollectionRule, DetailRule, Extractor, Page, PreviewRule, Rule, Site } from "./type";
 
 export function getDefaultSite(): Omit<Site, 'id'> {
   return {
@@ -90,7 +90,7 @@ export function getDefaultCollectionRule(): Omit<CollectionRule, 'id'> {
     pager: {
       nextPage: extractor(),
     },
-    headers: {},
+    headers: [],
   }
 }
 
@@ -116,7 +116,7 @@ export function getDefaultDetailRule(): Omit<DetailRule, 'id'> {
     pager: {
       nextPage: extractor(),
     },
-    headers: {},
+    headers: [],
     tags: {
       item: extractor(),
       name: extractor(),
@@ -161,7 +161,7 @@ export function getDefaultPreviewRule(): Omit<PreviewRule, 'id'> {
       pages: extractor(),
       totalPictures: extractor(),
     },
-    headers: {},
+    headers: [],
     pager: {
       nextPage: extractor(),
     },
@@ -176,4 +176,16 @@ export function getDefaultPreviewRule(): Omit<PreviewRule, 'id'> {
       title: extractor(),
     }
   }
+}
+
+export function findRuleById(ruleId: string, site: Site): Rule {
+  const store = new Map<string, Rule>([
+    ...Object.entries({
+      ...site.detailRuleMap,
+      ...site.previewRuleMap,
+      ...site.collectionRuleMap,
+    }),
+  ]);
+
+  return store.get(ruleId)
 }

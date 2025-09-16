@@ -1,7 +1,7 @@
 import { memo, useCallback } from "react";
-import { useFetcher, useLoaderData } from "react-router";
+import { Link, Outlet, useFetcher, useLoaderData } from "react-router";
 import { CollectionRule, DetailRule, PreviewRule, Rule } from "@/store/rule/type";
-import { PlusIcon } from "lucide-react";
+import { EditIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getDefaultCollectionRule, getDefaultDetailRule, getDefaultPreviewRule } from "@/store/rule/utils";
 
@@ -51,18 +51,21 @@ const Col = memo((props: ColProps) => {
 
       <ul className="flex-1 overflow-y-auto p-3 space-y-2">
         {props.rules
-          .map((r) => (
+          .map((rule) => (
             <li
-              key={r.id}
-              className="group relative bg-gray-50 p-3 rounded border hover:shadow"
+              key={rule.id}
+              className="group relative bg-gray-50 px-3 py-2 rounded border border-gray-300 flex items-center gap-2"
             >
-              <p className="text-sm text-gray-800 pr-8">{r.name}</p>
-              <button
-                className="absolute top-2 right-2 hidden group-hover:block text-xs text-gray-500 hover:text-gray-800"
-                onClick={() => props.onEdit(r.id, r.type)}
+              <p className="text-sm text-gray-800 grow">{rule.name}</p>
+              <Button
+                size="sm"
+                variant="outline"
+                asChild
               >
-                ✏️
-              </button>
+                <Link to={`./${rule.id}/edit`}>
+                  <EditIcon className="size-3" />
+                </Link>
+              </Button>
             </li>
           ))}
       </ul>
@@ -83,6 +86,7 @@ const RuleList = memo(() => {
       <Col rules={detailRules} type="detail" onEdit={handleEdit} />
       <Col rules={collectionRules} type="collection" onEdit={handleEdit} />
       <Col rules={previewRules} type="preview" onEdit={handleEdit} />
+      <Outlet />
     </div>
   )
 })

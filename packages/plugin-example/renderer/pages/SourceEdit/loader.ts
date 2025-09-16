@@ -1,5 +1,5 @@
 import useRuleStore from "@/store/rule"
-import { getDefaultPage, getDefaultSite } from "@/store/rule/utils";
+import { findRuleById, getDefaultPage, getDefaultSite } from "@/store/rule/utils";
 import { redirect } from "react-router";
 
 // 站点相关
@@ -126,4 +126,25 @@ export async function ruleCreateAction({ params, request }) {
   const payload = await request.json();
   ruleState.addRule(sourceId, payload);
   return { ok: true };
+}
+
+export function ruleEditLoader({ params }) {
+  const ruleState = useRuleStore.getState()
+  const site = ruleState.sites.find(site => site.id === params.sourceId)
+  if (!site) {
+    throw new Error('Site not found');
+  }
+
+  const rule = findRuleById(params.ruleId, site)
+  return {
+    rule,
+    type: rule.type,
+  };
+}
+
+export async function ruleEditAction({ request, params }) {
+  const ruleState = useRuleStore.getState()
+  const updates = await request.json();
+  ruleState.updatePage(params.sourceId, params.pageId, updates);
+  return { ok: true }; 
 }
