@@ -1,12 +1,16 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useFetcher, useLoaderData, useNavigate } from "react-router";
+import Collection from "./Collection";
 import Detail from "./Detail";
+import Preview from "./Preview";
 import { DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, Drawer } from "@/components/ui/drawer";
 import { Rule } from "@/store/rule/type";
 import { toast } from "sonner";
 
-const DIALOG_MAP = {
+const FORM_MAP = {
   detail: Detail,
+  collection: Collection,
+  preview: Preview,
 }
 
 const ANIMATION_DURATION = 500;
@@ -19,7 +23,7 @@ const RuleEdit = memo(() => {
   const [isOpen, setIsOpen] = useState(false);
 
   const isSubmitting = useMemo(() => fetcher.state === "submitting", [fetcher])
-  const Component = useMemo(() => DIALOG_MAP[type], [type])
+  const Component = useMemo(() => FORM_MAP[type], [type])
 
   useEffect(() => {
     const timer = setTimeout(() => {
