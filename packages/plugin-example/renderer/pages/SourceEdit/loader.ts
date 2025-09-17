@@ -145,6 +145,12 @@ export function ruleEditLoader({ params }) {
 export async function ruleEditAction({ request, params }) {
   const ruleState = useRuleStore.getState()
   const updates = await request.json();
-  ruleState.updatePage(params.sourceId, params.pageId, updates);
+  ruleState.updateRule(params.sourceId, params.ruleId, updates);
   return { ok: true }; 
+}
+
+export async function ruleRemoveAction({ request, params }) {
+  const ruleState = useRuleStore.getState()
+  ruleState.removeRule(params.sourceId, params.ruleId);
+  return redirect(`/sources/${params.sourceId}/rules/`)
 }

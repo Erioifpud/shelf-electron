@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import { CollectionRule, DetailRule, Page, PreviewRule, Rule, Site } from './type'
 import { nanoid } from 'nanoid'
 import { produce } from 'immer'
+import { findRuleById } from './utils'
 
 interface RuleStore {
   sites: Site[]
@@ -14,6 +15,8 @@ interface RuleStore {
   updatePage: (siteId: string, pageId: string, page: Page) => void
   removePage: (siteId: string, pageId: string) => void
   addRule: (siteId: string, page: Omit<Rule, 'id'>) => string
+  updateRule: (siteId: string, ruleId: string, rule: Rule) => void
+  removeRule: (siteId: string, ruleId: string) => void
 }
 
 const useRuleStore = create<RuleStore>()(
@@ -144,6 +147,41 @@ const useRuleStore = create<RuleStore>()(
           }))
           return id
         },
+        updateRule: (siteId, ruleId, rule) => set(produce((state: RuleStore) => {
+          const site = state.sites.find(s => s.id === siteId)
+          if (!site) {
+            throw new Error('Site not found')
+          }
+          const type = rule.type
+          const fullRule = {
+            ...rule,
+            id: ruleId,
+          }
+          if (type === 'collection') {
+            site.collectionRuleMap[ruleId] = fullRule as CollectionRule
+          } else if (type === 'detail') {
+            site.detailRuleMap[ruleId] = fullRule as DetailRule
+          } else if (type === 'preview') {
+            site.previewRuleMap[ruleId] = fullRule as PreviewRule
+          }
+        })),
+        removeRule: (siteId, ruleId) => set(produce((state: RuleStore) => {
+          const site = state.sites.find(s => s.id === siteId)
+          if (!site) {
+            throw new Error('Site not found')
+          }
+          const rule = findRuleById(ruleId, site)
+          if (!rule) {
+            throw new Error('Rule not found')
+          }
+          if (rule.type === 'collection') {
+            delete site.collectionRuleMap[ruleId]
+          } else if (rule.type === 'detail') {
+            delete site.detailRuleMap[ruleId]
+          } else if (rule.type === 'preview') {
+            delete site.previewRuleMap[ruleId]
+          }
+        }))
       }
     },
     {

@@ -24,7 +24,7 @@ const ExtractorInput = memo(({ name }: ExtractorInputProps) => {
         name={`${name}.selector`}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Selector</FormLabel>
+            <FormLabel>元素选择器</FormLabel>
             <FormControl>
               <Input placeholder="CSS Selector or JSONPath" {...field} />
             </FormControl>
@@ -37,7 +37,7 @@ const ExtractorInput = memo(({ name }: ExtractorInputProps) => {
         name={`${name}.from`}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>From</FormLabel>
+            <FormLabel>值选择器</FormLabel>
             <FormControl>
               <Input placeholder="text, html, @href, etc." {...field} />
             </FormControl>
@@ -50,7 +50,7 @@ const ExtractorInput = memo(({ name }: ExtractorInputProps) => {
         name={`${name}.processors`}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Processors</FormLabel>
+            <FormLabel>后处理</FormLabel>
             <FormControl>
               <ProcessorInput name={field.name} />
             </FormControl>

@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { DetailRule } from "@/store/rule/type";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cloneDeep } from "lodash-es";
-import { memo, useCallback } from "react";
+import { memo, useCallback, useMemo } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { z } from "zod";
 import { extractorSchema } from "./utils";
@@ -26,6 +26,35 @@ import ExtractorInput from "@/components/ExtractorInput";
 import KeyValueInput from "@/components/KeyValueInput";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { useModals } from "@/components/ModalManager";
+import { useFetcher } from "react-router";
+import { toast } from "sonner";
+
+const LABEL_MAP = {
+  title: "作品标题",
+  description: "作品描述",
+  cover: "封面",
+  category: "分类",
+  rating: "评分",
+  totalPictures: "总图片数",
+  author: "作者",
+  uploader: "上传者",
+  publishDate: "发布日期",
+  updateDate: "更新日期",
+  likes: "点赞数",
+  views: "浏览数",
+  nextPage: "下一页",
+  tags: "标签",
+  chapters: "章节",
+  pictures: "图片",
+  videos: "视频",
+  comments: "评论",
+  item: "项目",
+  idCode: "作品 ID",
+  url: "URL",
+  thumbnail: "缩略图",
+  pageUrl: "页面 URL",
+}
 
 const formSchema = z.object({
   name: z.string().min(1, { message: "规则名称不能为空" }),
@@ -89,9 +118,14 @@ const formSchema = z.object({
 
 interface Props {
   rule: DetailRule;
+  onSubmit: (rule: DetailRule) => void;
+  onRemove: (type: string) => void;
+  isSubmitting: boolean;
 }
 
-const Detail = memo(({ rule }: Props) => {
+const Detail = memo((props: Props) => {
+  const { rule, onRemove, onSubmit, isSubmitting } = props;
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -99,13 +133,19 @@ const Detail = memo(({ rule }: Props) => {
     },
   });
 
-  const handleSubmit = useCallback((data: z.infer<typeof formSchema>) => {
-    console.log(data);
-  }, []);
-
   const handleReset = useCallback(() => {
     form.reset();
   }, [form]);
+
+  const handleSubmit = useCallback((values: z.infer<typeof formSchema>) => {
+    const fullRule = {
+      ...values,
+      id: rule.id,
+      type: rule.type,
+    }
+    // @ts-expect-error 表单验证过了
+    onSubmit(fullRule);
+  }, [onSubmit, rule.id, rule.type]);
 
   return (
     <Form {...form}>
@@ -115,9 +155,9 @@ const Detail = memo(({ rule }: Props) => {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Rule Name</FormLabel>
+              <FormLabel>规则名称</FormLabel>
               <FormControl>
-                <Input placeholder="Rule Name" {...field} />
+                <Input placeholder="规则名称" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -128,18 +168,21 @@ const Detail = memo(({ rule }: Props) => {
           name="fetchMode"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Fetch Mode</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
+              <FormLabel>爬取模式</FormLabel>
+              <FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a fetch mode" />
+                    <SelectValue placeholder="选择爬取模式" />
                   </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="html">HTML</SelectItem>
-                  <SelectItem value="json">JSON</SelectItem>
-                </SelectContent>
-              </Select>
+                  <SelectContent>
+                    <SelectItem value="html">HTML</SelectItem>
+                    <SelectItem value="json">JSON</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              <FormDescription>
+                通常使用 HTML 模式即可，如果需要爬取 JSON 数据，请选择 JSON 模式，影响后续字段 Extractor 的解析方式
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -149,10 +192,10 @@ const Detail = memo(({ rule }: Props) => {
         
         {/* Fields */}
         <div className="space-y-4">
-          <h3 className="text-lg font-medium">Fields</h3>
+          <h3 className="text-lg font-medium">字段</h3>
           {Object.keys(form.getValues().fields).map((fieldName) => (
             <FormItem key={fieldName}>
-              <FormLabel>{fieldName}</FormLabel>
+              <FormLabel>{LABEL_MAP[fieldName]}</FormLabel>
               <ExtractorInput name={`fields.${fieldName}`} />
             </FormItem>
           ))}
@@ -162,9 +205,9 @@ const Detail = memo(({ rule }: Props) => {
         
         {/* Pager */}
         <div className="space-y-4">
-          <h3 className="text-lg font-medium">Pager</h3>
+          <h3 className="text-lg font-medium">分页</h3>
           <FormItem>
-              <FormLabel>nextPage</FormLabel>
+              <FormLabel>{LABEL_MAP["nextPage"]}</FormLabel>
               <ExtractorInput name="pager.nextPage" />
           </FormItem>
         </div>
@@ -173,15 +216,15 @@ const Detail = memo(({ rule }: Props) => {
 
         {/* Tags, Chapters, etc. */}
         {["tags", "chapters", "pictures", "videos", "comments"].map((section) => (
-            <div className="space-y-4" key={section}>
-                <h3 className="text-lg font-medium">{section}</h3>
-                {Object.keys(form.getValues()[section]).map((fieldName) => (
-                    <FormItem key={`${section}.${fieldName}`}>
-                        <FormLabel>{fieldName}</FormLabel>
-                        <ExtractorInput name={`${section}.${fieldName}`} />
-                    </FormItem>
-                ))}
-            </div>
+          <div className="space-y-4" key={section}>
+            <h3 className="text-lg font-medium">{LABEL_MAP[section]}</h3>
+            {Object.keys(form.getValues()[section]).map((fieldName) => (
+              <FormItem key={`${section}.${fieldName}`}>
+                <FormLabel>{LABEL_MAP[fieldName]}</FormLabel>
+                <ExtractorInput name={`${section}.${fieldName}`} />
+              </FormItem>
+            ))}
+          </div>
         ))}
 
 
@@ -192,12 +235,12 @@ const Detail = memo(({ rule }: Props) => {
           name="headers"
           render={() => (
             <FormItem>
-              <FormLabel>HTTP Headers</FormLabel>
+              <FormLabel>HTTP 头</FormLabel>
               <FormControl>
                 <KeyValueInput name="headers" control={form.control} />
               </FormControl>
               <FormDescription>
-                These headers will be sent with requests.
+                优先级最高，会覆盖 Page 和 Site 配置
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -205,9 +248,12 @@ const Detail = memo(({ rule }: Props) => {
         />
 
         <div className="flex gap-2">
-            <Button variant="destructive" type="reset" onClick={handleReset}>Reset</Button>
-            <div className="grow"></div>
-            <Button type="submit">Save</Button>
+          <Button variant="destructive" type="reset" onClick={handleReset}>重置</Button>
+          <Button variant="destructive" type="button" onClick={() => onRemove(rule.type)}>删除</Button>
+          <div className="grow"></div>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "保存中..." : "保存"}
+          </Button>
         </div>
       </form>
     </Form>

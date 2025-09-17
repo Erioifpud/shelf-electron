@@ -38,7 +38,7 @@ const ProcessorInput = memo(({ name }: ProcessorInputProps) => {
                   name={`${name}.${index}.type`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Type</FormLabel>
+                      <FormLabel>类型</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -46,10 +46,10 @@ const ProcessorInput = memo(({ name }: ProcessorInputProps) => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="regex">Regex</SelectItem>
-                          <SelectItem value="replace">Replace</SelectItem>
-                          <SelectItem value="prepend">Prepend</SelectItem>
-                          <SelectItem value="append">Append</SelectItem>
+                          <SelectItem value="regex">正则</SelectItem>
+                          <SelectItem value="replace">替换</SelectItem>
+                          <SelectItem value="prepend">开头新增</SelectItem>
+                          <SelectItem value="append">末尾新增</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormItem>
@@ -66,12 +66,12 @@ const ProcessorInput = memo(({ name }: ProcessorInputProps) => {
                 <Controller
                   control={control}
                   name={`${name}.${index}.match`}
-                  render={({ field }) => <FormItem><FormLabel>Match</FormLabel><FormControl><Input placeholder="Regex pattern" {...field} /></FormControl></FormItem>}
+                  render={({ field }) => <FormItem><FormLabel>匹配</FormLabel><FormControl><Input placeholder="正则表达式" {...field} /></FormControl></FormItem>}
                 />
                 <Controller
                   control={control}
                   name={`${name}.${index}.group`}
-                  render={({ field }) => <FormItem><FormLabel>Group</FormLabel><FormControl><Input type="number" placeholder="Capture group index" {...field} /></FormControl></FormItem>}
+                  render={({ field }) => <FormItem><FormLabel>分组</FormLabel><FormControl><Input type="number" placeholder="捕获分组的索引" {...field} /></FormControl></FormItem>}
                 />
               </>
             )}
@@ -81,12 +81,12 @@ const ProcessorInput = memo(({ name }: ProcessorInputProps) => {
                 <Controller
                   control={control}
                   name={`${name}.${index}.find`}
-                  render={({ field }) => <FormItem><FormLabel>Find</FormLabel><FormControl><Input placeholder="String to find" {...field} /></FormControl></FormItem>}
+                  render={({ field }) => <FormItem><FormLabel>查找</FormLabel><FormControl><Input placeholder="要找的内容" {...field} /></FormControl></FormItem>}
                 />
                 <Controller
                   control={control}
                   name={`${name}.${index}.with`}
-                  render={({ field }) => <FormItem><FormLabel>With</FormLabel><FormControl><Input placeholder="Replacement string" {...field} /></FormControl></FormItem>}
+                  render={({ field }) => <FormItem><FormLabel>替换</FormLabel><FormControl><Input placeholder="替换为的内容" {...field} /></FormControl></FormItem>}
                 />
               </>
             )}
@@ -95,7 +95,7 @@ const ProcessorInput = memo(({ name }: ProcessorInputProps) => {
               <Controller
                 control={control}
                 name={`${name}.${index}.value`}
-                render={({ field }) => <FormItem><FormLabel>Value</FormLabel><FormControl><Input placeholder="Value to add" {...field} /></FormControl></FormItem>}
+                render={({ field }) => <FormItem><FormLabel>内容</FormLabel><FormControl><Input placeholder="新增的内容" {...field} /></FormControl></FormItem>}
               />
             )}
           </div>

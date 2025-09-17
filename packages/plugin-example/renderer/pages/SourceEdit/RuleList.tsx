@@ -1,6 +1,6 @@
 import { memo, useCallback } from "react";
 import { Link, Outlet, useFetcher, useLoaderData } from "react-router";
-import { CollectionRule, DetailRule, PreviewRule, Rule } from "@/store/rule/type";
+import { Rule } from "@/store/rule/type";
 import { EditIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getDefaultCollectionRule, getDefaultDetailRule, getDefaultPreviewRule } from "@/store/rule/utils";
@@ -8,7 +8,6 @@ import { getDefaultCollectionRule, getDefaultDetailRule, getDefaultPreviewRule }
 interface ColProps {
   rules: Rule[]
   type: string
-  onEdit: (id: string, type: string) => void
 }
 
 const NAME_MAP = {
@@ -37,7 +36,7 @@ const Col = memo((props: ColProps) => {
       encType: 'application/json',
       action: './create'
     })
-  }, [])
+  }, [fetcher, props.type])
 
   return (
     <section className="rounded-md flex flex-col border border-gray-300 bg-white">
@@ -75,17 +74,12 @@ const Col = memo((props: ColProps) => {
 
 const RuleList = memo(() => {
   const { previewRules, collectionRules, detailRules } = useLoaderData()
-  const fetcher = useFetcher()
-
-  const handleEdit = useCallback((id: string, type: string) => {
-    console.log(id, type)
-  }, [])
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-3">
-      <Col rules={detailRules} type="detail" onEdit={handleEdit} />
-      <Col rules={collectionRules} type="collection" onEdit={handleEdit} />
-      <Col rules={previewRules} type="preview" onEdit={handleEdit} />
+      <Col rules={detailRules} type="detail" />
+      <Col rules={collectionRules} type="collection" />
+      <Col rules={previewRules} type="preview" />
       <Outlet />
     </div>
   )
