@@ -189,3 +189,32 @@ export function findRuleById(ruleId: string, site: Site): Rule {
 
   return store.get(ruleId)
 }
+
+interface RecheckResult {
+  success: boolean,
+  message: string,
+}
+
+// 检查 Site 的内容是否合法，比如 Page 链接的 Rule 是否存在
+export function recheckSite(site: Site): RecheckResult {
+  const pages = site.pages
+  for (const page of pages) {
+    const { listView, detailView, previewView, searchView } = page
+    const rules = [listView, detailView, previewView, searchView]
+    for (const rule of rules) {
+      if (!rule) continue
+      const ruleId = rule.ruleId
+      if (!ruleId) continue
+      if (!findRuleById(ruleId, site)) {
+        return {
+          success: false,
+          message: `Page ${page.title} 中引用的 Rule ${ruleId} 不存在`,
+        }
+      }
+    }
+  }
+  return {
+    success: true,
+    message: '检查通过',
+  }
+}
