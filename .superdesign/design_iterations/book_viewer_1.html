@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="./theme_1.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <style>
+        body { background-color: #000; }
+        .viewer-ui { 
+            position: fixed; 
+            left: 0;
+            width: 100%;
+            padding: 1rem 2rem;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            color: white;
+            opacity: 1;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .viewer-ui.top {
+            top: 0;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+        }
+        .viewer-ui.bottom { bottom: 0; }
+        .viewer-ui.hidden { opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body class="overflow-hidden">
+
+    <div id="viewer-content" class="w-full h-screen flex items-center justify-center">
+        <!-- Image would be loaded here -->
+        <img src="https://placehold.co/800x1200/1a1a1a/ffffff?text=Page+1" class="max-w-full max-h-full object-contain">
+    </div>
+    
+    <!-- Top UI Overlay -->
+    <div id="ui-top" class="viewer-ui top flex justify-between items-center">
+        <div class="flex items-center gap-4">
+            <button><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
+            <span class="font-semibold">Chapter 1: The Beginning</span>
+        </div>
+        <div class="flex items-center gap-6">
+            <span>1 / 20</span>
+            <button><i data-lucide="settings-2" class="w-6 h-6"></i></button>
+        </div>
+    </div>
+
+    <!-- Bottom UI Overlay -->
+    <div id="ui-bottom" class="viewer-ui bottom flex items-center justify-center gap-8">
+        <button><i data-lucide="chevron-left" class="w-6 h-6"></i> Prev</button>
+        <input type="range" min="1" max="20" value="1" class="w-1/2">
+        <button>Next <i data-lucide="chevron-right" class="w-6 h-6"></i></button>
+    </div>
+    
+    <script>
+        lucide.createIcons();
+        const content = document.getElementById('viewer-content');
+        const topUi = document.getElementById('ui-top');
+        const bottomUi = document.getElementById('ui-bottom');
+        let hideTimeout;
+
+        function showUi() {
+            topUi.classList.remove('hidden');
+            bottomUi.classList.remove('hidden');
+            clearTimeout(hideTimeout);
+            hideTimeout = setTimeout(() => {
+                topUi.classList.add('hidden');
+                bottomUi.classList.add('hidden');
+            }, 3000);
+        }
+
+        content.addEventListener('click', showUi);
+        showUi(); // Show on load
+    </script>
+</body>
+</html>

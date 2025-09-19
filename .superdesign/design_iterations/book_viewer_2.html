@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Viewer - Sidebar Layout</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="./theme_1.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <style>
+        body { background-color: var(--background); color: var(--foreground); font-family: var(--font-sans); }
+        .sidebar { background-color: var(--secondary); border-right: 1px solid var(--border); }
+        .viewer-container { background-color: #000; }
+        .viewer-ui { 
+            position: fixed; 
+            left: 16rem; /* Sidebar width */
+            width: calc(100% - 16rem); /* Full width minus sidebar */
+            padding: 1rem 2rem;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            color: white;
+            opacity: 1;
+            transition: opacity 0.3s ease-in-out;
+            z-index: 50;
+        }
+        .viewer-ui.top { top: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); }
+        .viewer-ui.bottom { bottom: 0; }
+        .viewer-ui.hidden { opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body class="flex h-screen">
+
+    <!-- Sidebar is still present but could be optionally collapsed -->
+    <aside class="sidebar w-64 flex-shrink-0">
+        <!-- Sidebar content -->
+    </aside>
+
+    <!-- Viewer Main Content -->
+    <div class="flex-1 flex flex-col overflow-hidden viewer-container">
+        <div id="viewer-content" class="w-full h-full flex items-center justify-center">
+            <img src="https://placehold.co/800x1200/1a1a1a/ffffff?text=Page+1" class="max-w-full max-h-full object-contain">
+        </div>
+    </div>
+    
+    <!-- UI Overlays (adjusted for sidebar) -->
+    <div id="ui-top" class="viewer-ui top flex justify-between items-center">
+        <div class="flex items-center gap-4">
+            <button><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
+            <span class="font-semibold">Chapter 1: The Beginning</span>
+        </div>
+        <div class="flex items-center gap-6">
+            <span>1 / 20</span>
+            <button><i data-lucide="settings-2" class="w-6 h-6"></i></button>
+        </div>
+    </div>
+    <div id="ui-bottom" class="viewer-ui bottom flex items-center justify-center gap-8">
+        <!-- Bottom controls -->
+    </div>
+    
+    <script>
+        lucide.createIcons();
+        // Same UI hiding script as before
+    </script>
+</body>
+</html>

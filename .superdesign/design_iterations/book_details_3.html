@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Details - Sidebar Layout</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="./theme_1.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <style>
+        body { background-color: var(--background); color: var(--foreground); font-family: var(--font-sans); }
+        .sidebar { background-color: var(--secondary); border-right: 1px solid var(--border); }
+        .sidebar-link { color: var(--muted-foreground); }
+        .sidebar-link:hover { color: var(--foreground); background-color: var(--accent); }
+        .sidebar-link.active { color: var(--primary); background-color: var(--accent); }
+        /* Other styles from details page */
+        .section-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--border); }
+    </style>
+</head>
+<body class="flex h-screen">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar w-64 flex-shrink-0 flex flex-col p-4">
+        <div class="flex items-center gap-2 mb-8 px-2">
+            <i data-lucide="book-open" class="w-6 h-6 text-[var(--primary)]"></i>
+            <span class="text-xl font-bold">Web Crawler Reader</span>
+        </div>
+        <nav class="flex flex-col gap-2">
+            <a href="#" class="sidebar-link active flex items-center gap-3 px-3 py-2 rounded-md">
+                <i data-lucide="library" class="w-5 h-5"></i>
+                <span>Library</span>
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-md">
+                <i data-lucide="compass" class="w-5 h-5"></i>
+                <span>Discover</span>
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-md">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+                <span>Settings</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Contextual Toolbar -->
+        <header class="flex-shrink-0 flex justify-between items-center p-4 border-b border-[var(--border)]">
+            <div class="flex items-center gap-4">
+                <button class="p-2 rounded-md hover:bg-[var(--secondary)]"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+                <h1 class="text-lg font-semibold text-[var(--foreground)] truncate">Placeholder Book Title</h1>
+            </div>
+            <button class="p-2 rounded-md hover:bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-yellow-500">
+                <i data-lucide="star" class="w-5 h-5"></i>
+            </button>
+        </header>
+
+        <!-- Scrollable Content Area -->
+        <main class="flex-1 overflow-y-auto p-8">
+            <!-- Basic Info Section from book_details_1.html -->
+            <section class="flex flex-col md:flex-row gap-8">
+                 <div class="flex-shrink-0">
+                    <img src="https://placehold.co/250x350/e2e8f0/334155" alt="Book Cover" class="w-full md:w-64 h-auto object-cover rounded-lg shadow-lg">
+                </div>
+                <div class="flex-1">
+                    <!-- Details content here -->
+                </div>
+            </section>
+            <!-- Other sections (Tags, Chapters, etc.) would follow -->
+        </main>
+    </div>
+    
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

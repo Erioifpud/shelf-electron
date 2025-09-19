@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book List - Sidebar Layout</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="./theme_1.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <style>
+        :root { --layout-card: block; --layout-tag: none; --layout-text: none; }
+        .layout-card { display: var(--layout-card); }
+        .layout-tag { display: var(--layout-tag); }
+        .layout-text { display: var(--layout-text); }
+        body { background-color: var(--background); color: var(--foreground); font-family: var(--font-sans); }
+        .sidebar { background-color: var(--secondary); border-right: 1px solid var(--border); }
+        .sidebar-link { color: var(--muted-foreground); }
+        .sidebar-link:hover { color: var(--foreground); background-color: var(--accent); }
+        .sidebar-link.active { color: var(--primary); background-color: var(--accent); }
+    </style>
+</head>
+<body class="flex h-screen">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar w-64 flex-shrink-0 flex flex-col p-4">
+        <div class="flex items-center gap-2 mb-8 px-2">
+            <i data-lucide="book-open" class="w-6 h-6 text-[var(--primary)]"></i>
+            <span class="text-xl font-bold">Web Crawler Reader</span>
+        </div>
+        <nav class="flex flex-col gap-2">
+            <a href="#" class="sidebar-link active flex items-center gap-3 px-3 py-2 rounded-md">
+                <i data-lucide="library" class="w-5 h-5"></i>
+                <span>Library</span>
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-md">
+                <i data-lucide="compass" class="w-5 h-5"></i>
+                <span>Discover</span>
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-md">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+                <span>Settings</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Contextual Toolbar -->
+        <header class="flex-shrink-0 flex justify-between items-center p-4 border-b border-[var(--border)]">
+            <div class="flex items-center gap-4">
+                <button class="p-2 rounded-md hover:bg-[var(--secondary)]"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+                <div class="text-sm font-medium text-center text-gray-500">
+                    <ul class="flex flex-wrap -mb-5">
+                        <li class="mr-2"><a href="#" class="inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active">Category 1</a></li>
+                        <li class="mr-2"><a href="#" class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300">Category 2</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div id="layout-switcher" class="flex items-center gap-1 p-1 rounded-md bg-[var(--secondary)]">
+                    <button onclick="switchLayout('card')" class="p-1.5 rounded bg-[var(--background)]"><i data-lucide="layout-grid" class="w-5 h-5"></i></button>
+                    <button onclick="switchLayout('tag')" class="p-1.5 rounded"><i data-lucide="tag" class="w-5 h-5"></i></button>
+                    <button onclick="switchLayout('text')" class="p-1.5 rounded"><i data-lucide="list" class="w-5 h-5"></i></button>
+                </div>
+                <button class="p-2 rounded-md hover:bg-[var(--secondary)]"><i data-lucide="search" class="w-5 h-5"></i></button>
+            </div>
+        </header>
+
+        <!-- Scrollable Content Area -->
+        <main class="flex-1 overflow-y-auto p-8">
+            <!-- Card Layout -->
+            <div class="layout-card grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                 <a href="#" class="space-y-2 group">
+                    <img src="https://placehold.co/200x280/e2e8f0/334155" class="rounded-md object-cover w-full group-hover:shadow-lg transition-shadow">
+                    <p class="font-semibold text-sm truncate group-hover:text-[var(--primary)]">Book Title One</p>
+                </a>
+                 <a href="#" class="space-y-2 group"><img src="https://placehold.co/200x280/e2e8f0/334155" class="rounded-md object-cover w-full group-hover:shadow-lg transition-shadow"><p class="font-semibold text-sm truncate group-hover:text-[var(--primary)]">Book Title Two</p></a>
+            </div>
+            <!-- Other layouts remain the same -->
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const switcher = document.getElementById('layout-switcher');
+        const buttons = switcher.querySelectorAll('button');
+        function switchLayout(layout) {
+            document.documentElement.style.setProperty('--layout-card', layout === 'card' ? 'grid' : 'none');
+            // ... same script as before
+        }
+    </script>
+</body>
+</html>
