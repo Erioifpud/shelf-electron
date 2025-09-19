@@ -6,7 +6,7 @@ export default function Root() {
   // const navigation = useNavigation();
 
   return (
-    <div className="h-full flex">
+    <div className="h-full flex border-t border-gray-200">
       <header className="shrink-0 flex select-none">
         <NavDrawer />
       </header>
