@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Details UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./theme_1.css">
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.4.1/dist/flowbite.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <style>
+        body {
+            background-color: var(--background);
+            color: var(--foreground);
+            font-family: var(--font-sans);
+        }
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--foreground);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+        .card {
+            background-color: var(--card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            transition: all 0.2s ease-out;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.05);
+        }
+        .tag-item {
+            background-color: var(--secondary);
+            color: var(--secondary-foreground);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            transition: background-color 0.15s ease-out;
+        }
+        .tag-item:hover {
+            background-color: var(--accent);
+        }
+        ::-webkit-scrollbar {
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--secondary);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--muted-foreground);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+    </style>
+</head>
+<body class="p-8">
+
+    <div class="max-w-7xl mx-auto space-y-12">
+
+        <!-- Basic Info Section -->
+        <section class="flex flex-col md:flex-row gap-8">
+            <div class="flex-shrink-0">
+                <img src="https://placehold.co/250x350/e2e8f0/334155" alt="Book Cover" class="w-full md:w-64 h-auto object-cover rounded-lg shadow-lg">
+            </div>
+            <div class="flex-1 space-y-4">
+                <h1 class="text-4xl font-bold text-[var(--foreground)]">Placeholder Book Title</h1>
+                <div class="flex items-center text-lg text-[var(--muted-foreground)] gap-4">
+                    <span>Author: <span class="font-semibold text-[var(--foreground)]">John Doe</span></span>
+                    <span>Uploader: <span class="font-semibold text-[var(--foreground)]">AdminUser</span></span>
+                </div>
+                <div class="flex items-center gap-6 text-sm py-2">
+                    <div class="flex items-center gap-1 text-yellow-500">
+                        <i data-lucide="star" class="w-5 h-5"></i>
+                        <span class="font-bold text-lg text-[var(--foreground)]">4.5</span>
+                        <span class="text-[var(--muted-foreground)]">(Rating)</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <i data-lucide="heart" class="w-5 h-5 text-red-500"></i>
+                        <span class="font-bold text-lg text-[var(--foreground)]">1,200</span>
+                        <span class="text-[var(--muted-foreground)]">(Likes)</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <i data-lucide="eye" class="w-5 h-5 text-sky-500"></i>
+                        <span class="font-bold text-lg text-[var(--foreground)]">15,700</span>
+                        <span class="text-[var(--muted-foreground)]">(Views)</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm text-[var(--muted-foreground)] pt-2 border-t border-[var(--border)]">
+                    <p><strong>Category:</strong> <span class="text-[var(--foreground)]">Fantasy</span></p>
+                    <p><strong>Total Pictures:</strong> <span class="text-[var(--foreground)]">240</span></p>
+                    <p><strong>Publish Date:</strong> <span class="text-[var(--foreground)]">2023-01-15</span></p>
+                    <p><strong>Update Date:</strong> <span class="text-[var(--foreground)]">2023-09-10</span></p>
+                </div>
+                <p class="text-[var(--muted-foreground)] pt-2 leading-relaxed">
+                    <strong>Description:</strong> This is a placeholder description for the book. It gives a brief overview of the plot, characters, and setting. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                </p>
+            </div>
+        </section>
+
+        <!-- Tags Section -->
+        <section>
+            <h2 class="section-title">Tags</h2>
+            <div class="flex flex-wrap gap-2">
+                <a href="#" class="tag-item">Adventure</a>
+                <a href="#" class="tag-item">Magic</a>
+                <a href="#" class="tag-item">High Fantasy</a>
+                <a href="#" class="tag-item">Dragons</a>
+                <a href="#" class="tag-item">Epic</a>
+                <a href="#" class="tag-item">Long Story</a>
+                <a href="#" class="tag-item">Swords and Sorcery</a>
+            </div>
+        </section>
+
+        <!-- Chapters Section -->
+        <section>
+            <h2 class="section-title">Chapters</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <a href="#" class="card p-4 text-center">
+                    <p class="font-semibold truncate">Chapter 1: The Beginning</p>
+                    <p class="text-xs text-[var(--muted-foreground)] mt-1">2023-01-15</p>
+                </a>
+                <a href="#" class="card p-4 text-center">
+                    <p class="font-semibold truncate">Chapter 2: A New Journey</p>
+                    <p class="text-xs text-[var(--muted-foreground)] mt-1">2023-01-20</p>
+                </a>
+                <!-- Add more chapters as needed -->
+                <div class="card p-4 text-center bg-[var(--secondary)]"><p class="font-semibold truncate">Chapter 3</p><p class="text-xs text-[var(--muted-foreground)] mt-1">2023-01-25</p></div>
+                <div class="card p-4 text-center bg-[var(--secondary)]"><p class="font-semibold truncate">Chapter 4</p><p class="text-xs text-[var(--muted-foreground)] mt-1">2023-02-01</p></div>
+                <div class="card p-4 text-center bg-[var(--secondary)]"><p class="font-semibold truncate">Chapter 5</p><p class="text-xs text-[var(--muted-foreground)] mt-1">2023-02-05</p></div>
+            </div>
+        </section>
+
+        <!-- Pictures Section -->
+        <section>
+            <h2 class="section-title">Pictures</h2>
+            <div class="flex overflow-x-auto gap-4 pb-4">
+                <img src="https://placehold.co/200x120/a5b4fc/1e293b" alt="Preview 1" class="card w-48 h-auto object-cover rounded-lg flex-shrink-0">
+                <img src="https://placehold.co/200x120/99f6e4/1e293b" alt="Preview 2" class="card w-48 h-auto object-cover rounded-lg flex-shrink-0">
+                <img src="https://placehold.co/200x120/f9a8d4/1e293b" alt="Preview 3" class="card w-48 h-auto object-cover rounded-lg flex-shrink-0">
+                <img src="https://placehold.co/200x120/fde047/1e293b" alt="Preview 4" class="card w-48 h-auto object-cover rounded-lg flex-shrink-0">
+                <img src="https://placehold.co/200x120/a78bfa/1e293b" alt="Preview 5" class="card w-48 h-auto object-cover rounded-lg flex-shrink-0">
+            </div>
+        </section>
+
+        <!-- Videos Section -->
+        <section>
+            <h2 class="section-title">Videos</h2>
+            <div class="flex overflow-x-auto gap-4 pb-4">
+                 <a href="#" class="card flex-shrink-0 w-56 rounded-lg overflow-hidden">
+                    <img src="https://placehold.co/240x135/fca5a5/1e293b" alt="Video 1 Cover" class="w-full h-32 object-cover">
+                    <p class="p-2 font-medium text-sm truncate">Video Title 1</p>
+                </a>
+                 <a href="#" class="card flex-shrink-0 w-56 rounded-lg overflow-hidden">
+                    <img src="https://placehold.co/240x135/67e8f9/1e293b" alt="Video 2 Cover" class="w-full h-32 object-cover">
+                    <p class="p-2 font-medium text-sm truncate">Video Title 2: A very long title that might need to be truncated</p>
+                </a>
+            </div>
+        </section>
+        
+        <!-- Comments Section -->
+        <section>
+            <h2 class="section-title">Comments</h2>
+            <div class="space-y-6">
+                <div class="flex gap-4">
+                    <img src="https://placehold.co/48x48/7dd3fc/1e293b" alt="Avatar" class="w-12 h-12 rounded-full">
+                    <div class="flex-1 card p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-semibold text-[var(--foreground)]">Alice</span>
+                            <div class="flex items-center gap-4 text-xs text-[var(--muted-foreground)]">
+                                <span>2 days ago</span>
+                                <span class="flex items-center gap-1"><i data-lucide="thumbs-up" class="w-4 h-4"></i> 15</span>
+                            </div>
+                        </div>
+                        <p class="text-[var(--muted-foreground)]">This is a fantastic read! Highly recommended to anyone who loves the fantasy genre.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <img src="https://placehold.co/48x48/f472b6/1e293b" alt="Avatar" class="w-12 h-12 rounded-full">
+                    <div class="flex-1 card p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-semibold text-[var(--foreground)]">Bob</span>
+                             <div class="flex items-center gap-4 text-xs text-[var(--muted-foreground)]">
+                                <span>1 day ago</span>
+                                <span class="flex items-center gap-1"><i data-lucide="thumbs-up" class="w-4 h-4"></i> 8</span>
+                            </div>
+                        </div>
+                        <p class="text-[var(--muted-foreground)]">The plot twist in chapter 5 was amazing!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

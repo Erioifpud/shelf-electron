@@ -1,0 +1,30 @@
+:root {
+  --background: oklch(0.98 0.01 240);
+  --foreground: oklch(0.25 0.03 240);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.25 0.03 240);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.25 0.03 240);
+  --primary: oklch(0.6 0.15 260);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.95 0.02 240);
+  --secondary-foreground: oklch(0.4 0.03 240);
+  --muted: oklch(0.95 0.02 240);
+  --muted-foreground: oklch(0.55 0.03 240);
+  --accent: oklch(0.97 0.02 240);
+  --accent-foreground: oklch(0.2 0.03 240);
+  --destructive: oklch(0.6 0.2 25);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.92 0.015 240);
+  --input: oklch(0.92 0.015 240);
+  --ring: oklch(0.6 0.15 260);
+  --radius: 0.5rem;
+  --font-sans: 'Inter', 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+}
