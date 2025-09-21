@@ -16,6 +16,8 @@ import SiteEdit from "./SourceEdit/SiteEdit";
 import PageEdit from "./SourceEdit/PageEdit";
 import RuleList from "./SourceEdit/RuleList";
 import RuleEdit from "./SourceEdit/RuleEdit";
+import ReadRoot from "./ReadRoot";
+import { readRootLoader } from "./ReadRoot/loader";
 
 const ErrorPage = () => {
   return (
@@ -142,31 +144,30 @@ export const router = createHashRouter([
         ]
       },
       {
-        id: 'book-list',
-        path: 'sources/:sourceId',
-        element: <BookList />,
-        loader: booksLoader,
-        handle: {
-          crumb: () => <span>Books</span>,
-        },
+        id: 'read',
+        path: 'read/:sourceId',
+        loader: readRootLoader,
+        element: <ReadRoot />,
         children: [
           {
-            id: 'book-detail',
-            path: 'detail/:bookId',
-            element: <BookDetail />,
-            loader: bookDetailLoader,
-            handle: {
-              crumb: () => <span>BookDetail</span>,
-            },
+            id: 'read-list',
+            path: 'pages/:pageId',
+            element: <BookList />,
+            loader: booksLoader,
             children: [
               {
-                id: 'reader',
-                path: 'chapter/:chapterId',
-                element: <ChapterDetail />,
-                loader: chapterDetailLoader,
-                handle: {
-                  crumb: () => <span>ChapterDetail</span>,
-                },
+                id: 'read-detail',
+                path: 'detail/:detailId',
+                element: <BookDetail />,
+                loader: bookDetailLoader,
+                children: [
+                  {
+                    id: 'read-content',
+                    path: 'chapter/:chapterId',
+                    element: <ChapterDetail />,
+                    loader: chapterDetailLoader,
+                  }
+                ]
               }
             ]
           }

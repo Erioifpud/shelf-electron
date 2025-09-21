@@ -5,18 +5,21 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import useRuleStore from "@/store/rule";
 import { Site } from "@/store/rule/type";
+import { recheckSite } from "@/store/rule/utils";
 import { EditIcon, PlusIcon, SearchIcon, ViewIcon } from "lucide-react";
 import { memo, useCallback, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { Outlet, useFetcher, useNavigate } from "react-router";
+import { toast } from "sonner";
 
 interface SiteCardProps {
   site: Site
   onEditClick: (site: Site) => void
+  onPreviewClick: (site: Site) => void
   className?: HTMLDivElement['className']
 }
 
-const SiteCard = memo(({ site, className = '', onEditClick }: SiteCardProps) => {
+const SiteCard = memo(({ site, className = '', onEditClick, onPreviewClick }: SiteCardProps) => {
   return (
     <Tooltip key={site.id}>
       <TooltipTrigger asChild>
@@ -42,7 +45,7 @@ const SiteCard = memo(({ site, className = '', onEditClick }: SiteCardProps) => 
           {/* 三栏状态，如果有 */}
           {/* 工具栏 */}
           <div className="flex gap-2 mt-4">
-            <Button size="sm" variant="default" className="grow">
+            <Button size="sm" variant="default" className="grow" onClick={() => onPreviewClick(site)}>
               <ViewIcon className="h-4 w-4" /> Preview
             </Button>
             <Button size="sm" variant="outline" className="grow" onClick={() => onEditClick(site)}>
@@ -73,6 +76,17 @@ const Source = memo(() => {
       pathname: `/sources/${site.id}/edit`
     })
   }, [navigate])
+
+  const handlePreviewClick = useCallback((site: Site) => {
+    const result = recheckSite(site)
+    if (!result.success) {
+      toast.error(result.message)
+      return
+    }
+    navigate({
+      pathname: `/read/${site.id}/pages/${site.pages[0].id}`
+    })
+  }, [])
 
   const handleCreate = useCallback(() => {
     fetcher.submit(null, {
@@ -109,6 +123,7 @@ const Source = memo(() => {
                 key={site.id}
                 site={site}
                 onEditClick={toEditPage}
+                onPreviewClick={handlePreviewClick}
                 className={cn(
                   'transition-shadow',
                   params.sourceId === site.id && 'shadow shadow-primary/20'

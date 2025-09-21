@@ -198,6 +198,12 @@ interface RecheckResult {
 // 检查 Site 的内容是否合法，比如 Page 链接的 Rule 是否存在
 export function recheckSite(site: Site): RecheckResult {
   const pages = site.pages
+  if (!pages || pages.length === 0) {
+    return {
+      success: false,
+      message: '该站点配置没有页面',
+    }
+  }
   for (const page of pages) {
     const { listView, detailView, previewView, searchView } = page
     const rules = [listView, detailView, previewView, searchView]
