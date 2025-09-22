@@ -17,7 +17,7 @@ import "@eleplug/elep-boot/kernel";
 import { definePlugin, openWindow } from "@eleplug/elep/main";
 
 // Import our separated business logic (the API implementation).
-import { myPluginApi } from "./api";
+import { crawlerApi } from "./crawler/api";
 
 /**
  * The default export of this file must be a plugin definition.
@@ -63,7 +63,7 @@ export default definePlugin({
           webSecurity: false,
         },
       },
-      myPluginApi // This is our API object from `api.ts` being served to this window.
+      crawlerApi // This is our API object from `api.ts` being served to this window.
     );
 
     // STEP 3: Load the UI into the window.
