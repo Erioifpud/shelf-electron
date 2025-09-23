@@ -8,7 +8,7 @@ const BookList = memo(() => {
 
   useEffect(() => {
     getService<CrawlerApi>().then(async (service) => {
-      const ret = await service.crawl.run.ask({
+      const ret = await service.crawl.test.ask({
         site,
         page
       })
