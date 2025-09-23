@@ -3,14 +3,28 @@ import { JSDOM } from 'jsdom';
 import * as xpath from 'xpath';
 import { JSONPath } from 'jsonpath-plus';
 import type { IScrapingStrategy } from './IScrapingStrategy';
-import type { StrategyContext, ExtractionRule, FromRule } from '../type';
+import type { StrategyContext, ExtractionRule, FromRule, ScrapingConfig } from '../type';
 
 export class AjaxStrategy implements IScrapingStrategy {
-  async prepare(url: string, config: { subMode?: 'xpath' | 'json' }): Promise<StrategyContext> {
-    const { data } = await axios.get(url, { responseType: config.subMode === 'json' ? 'json' : 'text' });
+  async prepare(config: ScrapingConfig): Promise<StrategyContext> {
+    const { url, headers = {}, cookies = [], subMode } = config;
+
+    const requestHeaders: Record<string, string> = { ...headers };
+    if (cookies.length > 0) {
+      const cookieString = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+      // 如果已存在 Cookie header 则追加，否则新建
+      requestHeaders['Cookie'] = requestHeaders['Cookie'] 
+        ? `${requestHeaders['Cookie']}; ${cookieString}` 
+        : cookieString;
+    }
+
+    const { data } = await axios.get(url, {
+      responseType: subMode === 'json' ? 'json' : 'text',
+      headers: requestHeaders,
+    });
     let document: any;
 
-    if (config.subMode === 'xpath') {
+    if (subMode === 'xpath') {
       const dom = new JSDOM(data);
       document = dom.window.document;
     } else {

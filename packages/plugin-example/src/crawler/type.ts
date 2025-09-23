@@ -23,7 +23,13 @@ export interface ExtractionRule {
 
 export type FromRule = ExtractionRule['from']
 
-
+export interface CustomCookie {
+  name: string;
+  value: string;
+  domain?: string;
+  path?: string;
+  // secure, httpOnly 等其他属性也可以根据需要添加
+}
 
 export interface ScrapingConfig {
   url: string;
@@ -32,6 +38,9 @@ export interface ScrapingConfig {
   subMode?: 'xpath' | 'json';
   // 一个页面下的所有规则
   items: ExtractionRule[];
+
+  headers?: Record<string, string>;
+  cookies?: CustomCookie[];
 }
 
 export type ScrapingResult = Record<string, any>;

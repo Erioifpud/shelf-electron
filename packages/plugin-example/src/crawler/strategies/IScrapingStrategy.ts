@@ -1,4 +1,4 @@
-import type { StrategyContext, ExtractionRule, FromRule } from '../type';
+import type { StrategyContext, ExtractionRule, FromRule, ScrapingConfig } from '../type';
 
 /**
  * 爬取策略接口
@@ -10,7 +10,7 @@ export interface IScrapingStrategy {
    * @param url - 目标 URL
    * @param config - 爬取配置
    */
-  prepare(url: string, config: { subMode?: 'xpath' | 'json' }): Promise<StrategyContext>;
+  prepare(config: ScrapingConfig): Promise<StrategyContext>;
 
   /**
    * 从上下文中选择一个或多个元素/节点

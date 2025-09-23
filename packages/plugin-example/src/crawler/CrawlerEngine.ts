@@ -8,7 +8,7 @@ import type {
 export class CrawlerEngine {
   public async run(config: ScrapingConfig): Promise<ScrapingResult> {
     const strategy = createStrategy(config);
-    const context = await strategy.prepare(config.url, { subMode: config.subMode });
+    const context = await strategy.prepare(config);
     
     const result: ScrapingResult = {};
 

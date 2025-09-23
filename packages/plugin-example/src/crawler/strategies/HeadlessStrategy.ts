@@ -1,11 +1,35 @@
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, type LoadURLOptions } from 'electron';
 import type { IScrapingStrategy } from './IScrapingStrategy';
-import type { StrategyContext, ExtractionRule, FromRule } from '../type';
+import type { StrategyContext, ExtractionRule, FromRule, ScrapingConfig } from '../type';
 
 export class HeadlessStrategy implements IScrapingStrategy {
-  async prepare(url: string): Promise<StrategyContext> {
+  async prepare(config: ScrapingConfig): Promise<StrategyContext> {
+    const { url, headers = {}, cookies = [] } = config;
+
     const win = new BrowserWindow({ show: false, webPreferences: { contextIsolation: true } });
     
+    await Promise.all(
+      cookies.map(cookie => {
+        const electronCookie = {
+          url: url, // 关键：cookie 需要关联到一个 URL
+          name: cookie.name,
+          value: cookie.value,
+          domain: cookie.domain,
+          path: cookie.path,
+        };
+        return win.webContents.session.cookies.set(electronCookie);
+      })
+    );
+
+    const loadOptions: LoadURLOptions = {};
+    if (Object.keys(headers).length > 0) {
+      // extraHeaders 需要是一个用 \n 分隔的字符串
+      const extraHeaders = Object.entries(headers)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n');
+      loadOptions.extraHeaders = extraHeaders;
+    }
+
     await win.loadURL(url);
     // 等待页面完全加载，可以根据需要换成更复杂的等待条件
     await new Promise(resolve => win.webContents.on('did-finish-load', () => {
