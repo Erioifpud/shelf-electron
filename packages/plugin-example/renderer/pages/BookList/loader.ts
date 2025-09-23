@@ -11,6 +11,7 @@ export function booksLoader({ params }) {
   const page = pages.find(page => page.id === pageId)
 
   return {
-    books: []
+    page,
+    site,
   }
 }
