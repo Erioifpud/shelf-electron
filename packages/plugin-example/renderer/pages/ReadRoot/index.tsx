@@ -1,7 +1,7 @@
 import Tabs from "@/components/Tabs";
 import { Button } from "@/components/ui/button";
 import { FlattenSiteProvider } from "@/context/ReadContext";
-import { ViewRefConfig } from "@/context/ReadContext/context";
+import { pageViewConfig } from "@/context/ReadContext/hook";
 import { Page, Site } from "@/store/rule/type";
 import { ArrowLeftIcon } from "lucide-react";
 import { memo, useCallback, useMemo } from "react";
@@ -39,14 +39,14 @@ const BookListHeader = memo(() => {
 
 const ROUTE_ID_MAP = {
   'read-list': BookListHeader
-} as const
+}
 
 const Header = memo(() => {
   const matches = useMatches()
   
   const ToolbarComponent = useMemo(() => {
     const lastMatch = matches[matches.length - 1]
-    const Component = ROUTE_ID_MAP[lastMatch.id]
+    const Component = ROUTE_ID_MAP[lastMatch?.id as keyof typeof ROUTE_ID_MAP]
     if (!Component) return null
     return Component
   }, [matches])
@@ -59,22 +59,14 @@ const Header = memo(() => {
         </Button>
       </div>
       <div className="grow">
-        <ToolbarComponent />
+        {ToolbarComponent && <ToolbarComponent />}
       </div>
     </div>
   )
 })
 
-const pageViewConfig = {
-  listView: 'collectionRuleMap',
-  detailView: 'detailRuleMap',
-  previewView: 'previewRuleMap',
-  searchView: 'collectionRuleMap',
-} as const satisfies ViewRefConfig<Site, Page>;
-
 const ReadRoot = memo(() => {
   const { site } = useLoaderData<{ site: Site, page: Page }>()
-  
 
   return (
     <FlattenSiteProvider
