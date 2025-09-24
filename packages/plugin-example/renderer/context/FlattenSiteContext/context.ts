@@ -1,4 +1,3 @@
-import { Site } from "@/store/rule/type";
 import { createContext } from "react";
 
 type MapKeys<S> = {
@@ -30,6 +29,6 @@ export type FlattenSite<
   pages: Array<ResolvedPage<S['pages'][number], S, C>>;
 };
 
-export const ReadContext = createContext<unknown>({
+export const FlattenSiteContext = createContext<unknown>({
 
 })

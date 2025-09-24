@@ -1,7 +1,5 @@
 import Tabs from "@/components/Tabs";
 import { Button } from "@/components/ui/button";
-import { FlattenSiteProvider } from "@/context/ReadContext";
-import { pageViewConfig } from "@/context/ReadContext/hook";
 import { Page, Site } from "@/store/rule/type";
 import { ArrowLeftIcon } from "lucide-react";
 import { memo, useCallback, useMemo } from "react";
@@ -69,17 +67,12 @@ const ReadRoot = memo(() => {
   const { site } = useLoaderData<{ site: Site, page: Page }>()
 
   return (
-    <FlattenSiteProvider
-      site={site}
-      config={pageViewConfig}
-    >
-      <div className="flex flex-col h-full relative">
-        <Header />
-        <div className="grow relative h-full outline-hidden">
-          <Outlet />
-        </div>
+    <div className="flex flex-col h-full relative">
+      <Header />
+      <div className="grow relative h-full outline-hidden">
+        <Outlet />
       </div>
-    </FlattenSiteProvider>
+    </div>
   )
 })
 

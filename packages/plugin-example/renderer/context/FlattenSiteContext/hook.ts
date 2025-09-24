@@ -1,12 +1,12 @@
 import { useContext } from "react";
-import { FlattenSite, ReadContext, ViewRefConfig } from "./context";
+import { FlattenSite, FlattenSiteContext, ViewRefConfig } from "./context";
 import { Page, Site } from "@/store/rule/type";
 
 export function useFlattenSite<
   S extends { pages: any[] },
   C extends ViewRefConfig<S, S['pages'][number]>
 >() {
-  return useContext(ReadContext) as FlattenSite<S, C>;
+  return useContext(FlattenSiteContext) as FlattenSite<S, C>;
 }
 
 export const pageViewConfig = {

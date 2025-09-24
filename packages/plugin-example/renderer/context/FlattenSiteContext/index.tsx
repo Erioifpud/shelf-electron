@@ -1,5 +1,5 @@
 import { ReactNode, useMemo } from "react";
-import { FlattenSite, ReadContext, ViewRefConfig } from "./context";
+import { FlattenSite, FlattenSiteContext, ViewRefConfig } from "./context";
 
 type FlattenSiteProviderProps<
   S extends { pages: any[] },
@@ -60,8 +60,8 @@ export function FlattenSiteProvider<
   );
 
   return (
-    <ReadContext.Provider value={value}>
+    <FlattenSiteContext.Provider value={value}>
       {children}
-    </ReadContext.Provider>
+    </FlattenSiteContext.Provider>
   );
 }
