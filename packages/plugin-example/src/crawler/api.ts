@@ -1,10 +1,16 @@
 import { rpc } from "@eleplug/elep/main";
+import { CrawlerEngine } from "./CrawlerEngine";
+import type { ScrapingConfig } from "./type";
 
 export const crawlerApi = {
   crawl: {
     test: rpc.ask((_, payload) => {
       console.log("run crawler", payload);
       return 123;
+    }),
+    run: rpc.ask((_, config: any) => {
+      const engine = new CrawlerEngine();
+      return engine.run(config as ScrapingConfig);
     })
   }
 }
