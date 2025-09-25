@@ -19,6 +19,19 @@ export interface ExtractionRule {
 
   // 后处理器链：按顺序对提取出的字符串进行处理
   processors?: Array<Processor>;
+
+  /**
+   * 是否提取所有匹配的元素，结果将是一个数组。
+   * @default false
+   */
+  multiple?: boolean;
+
+  /**
+   * 嵌套规则，用于“列表-详情”模式。
+   * 如果定义了此字段，引擎将对当前规则选中的每个元素，
+   * 递归地应用这里的子规则进行提取。
+   */
+  items?: ExtractionRule[];
 }
 
 export type FromRule = ExtractionRule['from']
@@ -48,4 +61,5 @@ export type ScrapingResult = Record<string, any>;
 export interface StrategyContext {
   document: any;
   cleanup: () => Promise<void>; // 用于资源清理
+  extra: Record<string, any>;
 }

@@ -21,8 +21,9 @@ export interface IScrapingStrategy {
 
   /**
    * 从单个元素/节点中提取数据
+   * @param context - 由 prepare() 返回的上下文
    * @param element - 由 select() 返回的单个元素
    * @param from - 提取方式
    */
-  extract(element: any, from: FromRule): Promise<string | null>;
+  extract(context: StrategyContext, element: any, from: FromRule): Promise<string | null>;
 }

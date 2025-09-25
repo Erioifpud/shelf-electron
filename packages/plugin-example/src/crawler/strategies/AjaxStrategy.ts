@@ -1,6 +1,5 @@
 import axios from 'axios';
-import { JSDOM } from 'jsdom';
-import * as xpath from 'xpath';
+import * as cheerio from 'cheerio';
 import { JSONPath } from 'jsonpath-plus';
 import type { IScrapingStrategy } from './IScrapingStrategy';
 import type { StrategyContext, ExtractionRule, FromRule, ScrapingConfig } from '../type';
@@ -23,21 +22,31 @@ export class AjaxStrategy implements IScrapingStrategy {
       headers: requestHeaders,
     });
     let document: any;
+    let extra: any = {};
 
     if (subMode === 'xpath') {
-      const dom = new JSDOM(data);
-      document = dom.window.document;
+      document = cheerio.load(data)
+      extra = { $: document }
     } else {
       document = data;
     }
 
-    return { document, cleanup: async () => {} }; // Ajax模式不需要特殊清理
+    return { document, cleanup: async () => {}, extra }; // Ajax模式不需要特殊清理
   }
 
   async select(context: StrategyContext, rule: ExtractionRule): Promise<any[]> {
     if (rule.type === 'xpath') {
-      // JSDOM 的 XPath 需要一个 resolver
-      const nodes = xpath.select(rule.selector, context.document);
+      if (!rule.selector) {
+        return [];
+      }
+      const $ = context.extra.$;
+      let nodes: any[] = []
+      if (typeof context.document !== 'function') {
+        // 表示当前的是 Element
+        nodes = $(context.document).find(rule.selector)
+      } else {
+        nodes = $(rule.selector)
+      }
       return nodes as any[];
     } else if (rule.type === 'json') {
       return JSONPath({ path: rule.selector, json: context.document });
@@ -45,28 +54,28 @@ export class AjaxStrategy implements IScrapingStrategy {
     return [];
   }
 
-  async extract(element: any, from: FromRule): Promise<string | null> {
+  async extract(context: StrategyContext, element: any, from: FromRule): Promise<string | null> {
     // 如果是 JSON Path 返回的直接就是值
     if (typeof element !== 'object' || element === null) {
       return String(element);
     }
-    
+    const $ = context.extra.$;
     // 处理 XPath 节点 (DOM Node)
     if (from === 'text') {
-      return element.textContent || null;
+      return $(element)?.text?.() || null;
     }
     if (from === 'html') {
-      return element.innerHTML || null;
+      return $(element)?.html?.() || null;
     }
     if (from === 'outerHTML') {
-      return element.outerHTML || null;
+      return $(element)?.html?.().prop?.('outerHTML') || null;
     }
     if (from === 'value') {
-      return element.value || null;
+      return $(element)?.val?.() || null;
     }
     if (from?.startsWith('@')) {
       const attr = from.slice(1);
-      return element.getAttribute ? element.getAttribute(attr) : null;
+      return $(element)?.attr?.(attr) || null;
     }
     return null;
   }

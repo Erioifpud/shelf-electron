@@ -1,40 +1,79 @@
+import { map } from 'lodash-es';
+import { IScrapingStrategy } from './strategies/IScrapingStrategy';
 import { createStrategy } from './strategyFactory';
 import type {
   ScrapingConfig,
   ScrapingResult,
   Processor,
+  ExtractionRule,
 } from './type';
 
 export class CrawlerEngine {
   public async run(config: ScrapingConfig): Promise<ScrapingResult> {
     const strategy = createStrategy(config);
     const context = await strategy.prepare(config);
-    
-    const result: ScrapingResult = {};
+    let result: ScrapingResult = {};
 
     try {
-      for (const item of config.items) {
-        // 根据配置的子模式修正规则类型
-        const rule = { ...item, type: config.subMode || item.type };
-
-        const elements = await strategy.select(context, rule);
-        if (elements.length > 0) {
-          // 简单起见，我们先只取第一个元素
-          const rawValue = await strategy.extract(elements[0], rule.from);
-          result[rule.name] = this.applyProcessors(rawValue, rule.processors);
-        } else {
-          result[rule.name] = null;
-        }
-      }
+      // 初始调用，使用整个文档作为作用域 (scope)
+      result = await this.processNode(config.items, context, strategy, config);
     } catch (error) {
       console.error('Scraping failed:', error);
-      throw error; // 向上抛出异常
+      throw error;
     } finally {
-      // 确保资源被清理
       await context.cleanup();
     }
-
+    
     return result;
+  }
+
+  private async processNode(
+    rules: ExtractionRule[],
+    context: any,
+    strategy: IScrapingStrategy,
+    config: ScrapingConfig
+  ): Promise<ScrapingResult> {
+    const nodeResult: ScrapingResult = {};
+
+    for (const rule of rules) {
+      const currentRule = { ...rule, type: rule.type || config.subMode };
+      
+      // 在当前作用域内选择元素
+      const elements = await strategy.select(context, currentRule);
+
+      if (!elements || elements.length === 0) {
+        nodeResult[rule.name] = rule.multiple ? [] : null;
+        continue;
+      }
+
+      // --- 核心逻辑分支 ---
+
+      if (rule.items && rule.items.length > 0) {
+        // 1. 列表-详情模式 (有嵌套 items)
+        const childResults = await Promise.all(
+          map(elements, (element) => {
+            return this.processNode(rule.items!, { ...context, document: element }, strategy, config)
+          })
+        );
+
+        nodeResult[rule.name] = childResults;
+      } else if (rule.multiple) {
+        // 2. 提取列表数据模式 (multiple: true)
+        const values = await Promise.all(
+          elements.map(async (element) => {
+            const rawValue = await strategy.extract(context, element, rule.from);
+            return this.applyProcessors(rawValue, rule.processors);
+          })
+        );
+        nodeResult[rule.name] = values;
+      } else {
+        // 3. 提取单个数据模式 (默认)
+        const rawValue = await strategy.extract(context, elements[0], rule.from);
+        nodeResult[rule.name] = this.applyProcessors(rawValue, rule.processors);
+      }
+    }
+
+    return nodeResult;
   }
 
   private applyProcessors(value: string | null, processors?: Processor[]): any {
