@@ -25,12 +25,15 @@ export class AjaxStrategy implements IScrapingStrategy {
     let extra: any = {};
 
     if (subMode === 'xpath') {
-      document = cheerio.load(data)
-      extra = { $: document }
+      // 表示文档，不存 selector
+      // cheerio 比较特殊，selector 使用 html 代码构建，只需要建立一个实例，后续查找使用同一个 selector 即可
+      document = null
+      const selector = cheerio.load(data)
+      extra = { $: selector }
     } else {
       document = data;
     }
-
+    // document 是要进行处理的文档，extra 是一些额外的信息，比如 cheerio 的 $
     return { document, cleanup: async () => {}, extra }; // Ajax模式不需要特殊清理
   }
 
@@ -41,7 +44,7 @@ export class AjaxStrategy implements IScrapingStrategy {
       }
       const $ = context.extra.$;
       let nodes: any[] = []
-      if (typeof context.document !== 'function') {
+      if (context.document !== null) {
         // 表示当前的是 Element
         nodes = $(context.document).find(rule.selector)
       } else {
@@ -49,6 +52,7 @@ export class AjaxStrategy implements IScrapingStrategy {
       }
       return nodes as any[];
     } else if (rule.type === 'json') {
+      // TODO: 待测试
       return JSONPath({ path: rule.selector, json: context.document });
     }
     return [];
