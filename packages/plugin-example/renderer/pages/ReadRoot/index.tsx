@@ -69,7 +69,7 @@ const ReadRoot = memo(() => {
   return (
     <div className="flex flex-col h-full relative">
       <Header />
-      <div className="grow relative h-full outline-hidden">
+      <div className="grow relative h-full overflow-hidden">
         <Outlet />
       </div>
     </div>

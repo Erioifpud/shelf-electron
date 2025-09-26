@@ -133,7 +133,7 @@ const Source = memo(() => {
           })}
         </div>
       </div>
-      <div className="grow h-full outline-hidden relative">
+      <div className="grow h-full overflow-hidden relative">
         <Outlet />
       </div>
       <Toaster position="top-right" richColors />
