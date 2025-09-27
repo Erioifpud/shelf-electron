@@ -291,6 +291,7 @@ function parseRuleFields<R extends Rule>(rule: R, scope: Record<string, Extracto
 
 function convertToExtractionRule(rule: Rule): ExtractionRule[] {
   const configs: ExtractionRule[] = []
+  // 处理带有嵌套字段的常见规则（item 字段在外部，fields 下的字段均为 item 子字段）
   if (rule.type === 'collection') {
     const itemRule: ExtractionRule = {
       name: 'item',
@@ -303,35 +304,52 @@ function convertToExtractionRule(rule: Rule): ExtractionRule[] {
     // collectionRule fields 的所有字段都是 item 的子字段
     itemRule.items = parseRuleFields(rule)
     configs.push(itemRule)
-    return configs
   }
 
+  // 以下处理带有嵌套字段的特殊规则（item 字段在某个字段内部，比如 videos.item，videos 下其他字段均为 item 的子字段）
   let nestedFieldNames: string[] = []
   if (rule.type === 'detail') {
-    nestedFieldNames = ['pager', 'tags', 'pictures', 'videos', 'chapters', 'comments'] as const
+    nestedFieldNames = ['tags', 'pictures', 'videos', 'chapters', 'comments'] as const
   } else if (rule.type === 'preview') {
-    nestedFieldNames = ['pager', 'pictures', 'videos'] as const
+    nestedFieldNames = ['pictures', 'videos'] as const
   }
 
-  // detailRule fields 的所有字段都是平铺的
-  configs.push(...parseRuleFields(rule))
-  // detailRule 的 items 存在部分嵌套对象中
-  nestedFieldNames.forEach((key) => {
+  if (nestedFieldNames.length) {
+    configs.push(...parseRuleFields(rule))
+    nestedFieldNames.forEach((key) => {
+      // @ts-expect-error
+      let fields = rule[key] as Record<string, Extractor> | null
+      if (!fields) {
+        return
+      }
+      const item: ExtractionRule = {
+        name: key,
+        selector: fields.item.selector,
+        type: rule.fetchMode === 'json' ? 'json' : 'xpath',
+        from: fields.item.from,
+        processors: fields.item.processors,
+        items: [],
+      }
+      item.items = parseRuleFields(rule, fields, ['item'])
+      configs.push(item)
+    })
+  }
+  
+  // 单独处理嵌套字段，但无 item 的情况，比如 pager，对象下只有一个 nextPageUrl，就处理成 pager.nextPageUrl
+  const individualFieldNames = ['pager']
+  individualFieldNames.forEach((key) => {
     // @ts-expect-error
-    let fields = rule[key] as Record<string, Extractor> | null
+    const fields = rule[key] as Record<string, Extractor>
     if (!fields) {
       return
     }
-    const item: ExtractionRule = {
-      name: key,
-      selector: fields.item.selector,
-      type: rule.fetchMode === 'json' ? 'json' : 'xpath',
-      from: fields.item.from,
-      processors: fields.item.processors,
-      items: [],
-    }
-    item.items = parseRuleFields(rule, fields, ['item'])
-    configs.push(item)
+    const rules = parseRuleFields(rule, fields, [])
+    configs.push(...rules.map((rule) => {
+      return {
+        ...rule,
+        name: `${key}.${rule.name}`,
+      }
+    }))
   })
   return configs
 }

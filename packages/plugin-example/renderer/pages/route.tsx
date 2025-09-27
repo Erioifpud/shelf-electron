@@ -5,7 +5,7 @@ import BookList from "./BookList";
 import BookDetail from "./BookDetail";
 import ChapterDetail from "./ChapterDetail";
 import { sourcesLoader } from "./SourceList/loader";
-import { booksLoader } from "./BookList/loader";
+import { booksLoader, booksNextPageLoader } from "./BookList/loader";
 import { bookDetailLoader } from "./BookDetail/loader";
 import { chapterDetailLoader } from "./ChapterDetail/loader";
 import SelectSourceHint from "./SourceList/components/SelectSourceHint";
@@ -155,6 +155,11 @@ export const router = createHashRouter([
             element: <BookList />,
             loader: booksLoader,
             children: [
+              {
+                id: 'read-list-next',
+                path: 'next',
+                loader: booksNextPageLoader,
+              },
               {
                 id: 'read-detail',
                 path: 'detail/:detailId',

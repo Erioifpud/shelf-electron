@@ -1,11 +1,12 @@
-import { memo, useEffect, useMemo } from "react";
-import { useLoaderData } from "react-router";
-import { getService } from "@eleplug/elep/renderer";
-import type { CrawlerApi } from "../../../src/crawler/api";
-import { genScrapingConfig } from "@/store/rule/utils";
-import { booksLoader } from "./loader";
+import { memo, useCallback, useEffect, useMemo } from "react";
+import { useFetcher, useLoaderData } from "react-router";
+import { Button } from "@/components/ui/button";
+import { usePageCacheStore } from "@/store/pageCacheStore";
+import { useParams } from "react-router";
+import { useShallow } from 'zustand/react/shallow'
+import { toast } from "sonner";
 
-interface Item {
+interface BookItem {
   author: string;
   category: string;
   cover: string;
@@ -27,13 +28,73 @@ interface Item {
   views: string;
 }
 
+interface Resp {
+  item: BookItem[];
+  'pager.nextPage': string
+}
+
 const BookList = memo(() => {
-  const { item: items } = useLoaderData<{ item: Item[] }>()
+  const res = useLoaderData<Resp>()
+  const { pageId } = useParams()
+  const fetcher = useFetcher()
+
+  const { cachedData, setPageData, appendPageItems } = usePageCacheStore(
+    useShallow((state) => ({
+      cachedData: state.cache[pageId!],
+      setPageData: state.setPageData,
+      appendPageItems: state.appendPageItems,
+    }))
+  );
+
+  // 初始化页面数据
+  useEffect(() => {
+    // 只有当 store 中没有此页面的缓存数据时，
+    // 才使用 loader 的初始数据来填充 store。
+    if (!cachedData) {
+      setPageData(pageId!, {
+        items: res.item,
+        nextPageUrl: res["pager.nextPage"],
+      });
+    }
+  }, [pageId, res, cachedData, setPageData]);
+
+  // 使用 load 后加载新数据，并更新 store
+  useEffect(() => {
+    const fetchedData = fetcher.data
+    if (fetchedData && fetcher.state === 'idle') {
+      if (!fetchedData) {
+        return
+      }
+      appendPageItems(pageId!, fetchedData.item, fetchedData["pager.nextPage"]);
+    }
+  }, [fetcher.data, fetcher.state, pageId, appendPageItems]);
+
+  const nextPageUrl = useMemo(() => {
+    return cachedData?.nextPageUrl || ''
+  }, [cachedData])
+
+    const handleNextPageLoad = useCallback(() => {
+    fetcher.load(`./next?page=${nextPageUrl}`, {})
+  }, [nextPageUrl])
+
+  useEffect(() => {
+    const state = fetcher.state
+    if (state === 'loading') {
+      toast.loading('下一页加载中...', {
+        toasterId: 'loading',
+        id: 'next-page-loading',
+        duration: Infinity,
+        dismissible: true,
+      })
+    } else {
+      toast.dismiss('next-page-loading')
+    }
+  }, [fetcher.state])
   
   return (
-    <div className="flex flex-col gap-4 overflow-auto h-full">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6 p-6">
-        {items.map(item => {
+    <div className="flex flex-col gap-4 overflow-auto h-full p-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+        {(cachedData?.items || []).map(item => {
           return (
             <div key={item.idCode} className="flex flex-col gap-2 group select-none cursor-pointer">
               <div
@@ -54,6 +115,17 @@ const BookList = memo(() => {
           )
         })}
       </div>
+      
+      <div className="w-full flex justify-center items-center">
+        <Button
+          variant="outline"
+          onClick={handleNextPageLoad}
+          disabled={!nextPageUrl || fetcher.state === 'loading'}
+        >
+          {nextPageUrl ? '加载下一页' : '没有更多了'}
+        </Button>
+      </div>
+      
     </div>
   )
 })

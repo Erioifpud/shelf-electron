@@ -1,10 +1,12 @@
 import Tabs from "@/components/Tabs";
 import { Button } from "@/components/ui/button";
+import { usePageCacheStore } from "@/store/pageCacheStore";
 import { Page, Site } from "@/store/rule/type";
 import { ArrowLeftIcon } from "lucide-react";
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback, useEffect, useMemo } from "react";
 import { useMatches } from "react-router";
 import { Outlet, useLoaderData, useNavigate } from "react-router";
+import { useShallow } from "zustand/react/shallow";
 
 const BookListHeader = memo(() => {
   const { site } = useLoaderData<{ site: Site }>()
@@ -22,6 +24,19 @@ const BookListHeader = memo(() => {
       replace: true,
     })
   }, [navigate, site])
+
+  const { clearAllPageCache } = usePageCacheStore(
+    useShallow((state) => ({
+      clearAllPageCache: state.clearAllPageCache,
+    }))
+  );
+
+  // 离开阅读页时清空所有缓存
+  useEffect(() => {
+    return () => {
+      clearAllPageCache()
+    }
+  }, [])
 
   return (
     <div className="flex relative gap-2 items-center">
