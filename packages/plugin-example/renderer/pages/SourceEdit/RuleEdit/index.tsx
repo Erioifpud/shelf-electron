@@ -47,7 +47,7 @@ const RuleEdit = memo(() => {
       method: "post",
       encType: 'application/json'
     });
-    toast.success('保存成功')
+    toast.success('保存成功', { toasterId: 'global' })
   }, [fetcher]);
 
   const handleRemove = useCallback((type: string) => {
@@ -65,14 +65,14 @@ const RuleEdit = memo(() => {
           method: 'post',
           action: `./destroy`
         })
-        toast.success('删除成功')
+        toast.success('删除成功', { toasterId: 'global' })
       },
     })
   }, [fetcher])
   
   if (!Component) {
     navigate(-1)
-    toast.error('无效的规则类型')
+    toast.error('无效的规则类型', { toasterId: 'global' })
     return null;
   }
 

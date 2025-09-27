@@ -58,12 +58,12 @@ const SiteEdit = memo(() => {
       method: "post",
       encType: 'application/json'
     });
-    toast.success('保存成功')
+    toast.success('保存成功', { toasterId: 'global' })
   }, [fetcher])
 
   const handleReset = useCallback(() => {
     form.reset()
-    toast.success('重置成功')
+    toast.success('重置成功', { toasterId: 'global' })
   }, [form])
 
   const handleRemove = useCallback(() => {
@@ -81,7 +81,7 @@ const SiteEdit = memo(() => {
           method: 'post',
           action: `/sources/${initialData.id}/edit/destroy`
         })
-        toast.success('删除成功')
+        toast.success('删除成功', { toasterId: 'global' })
       },
     })
   }, [modals])

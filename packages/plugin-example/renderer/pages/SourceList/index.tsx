@@ -1,13 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Toaster } from "@/components/ui/sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import useRuleStore from "@/store/rule";
 import { Site } from "@/store/rule/type";
 import { recheckSite } from "@/store/rule/utils";
 import { EditIcon, PlusIcon, SearchIcon, ViewIcon } from "lucide-react";
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo } from "react";
 import { useParams } from "react-router";
 import { Outlet, useFetcher, useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -80,7 +79,7 @@ const Source = memo(() => {
   const handlePreviewClick = useCallback((site: Site) => {
     const result = recheckSite(site)
     if (!result.success) {
-      toast.error(result.message)
+      toast.error(result.message, { toasterId: 'global' })
       return
     }
     navigate({
@@ -136,7 +135,6 @@ const Source = memo(() => {
       <div className="grow h-full overflow-hidden relative">
         <Outlet />
       </div>
-      <Toaster position="top-right" richColors />
     </div>
   )
 })
