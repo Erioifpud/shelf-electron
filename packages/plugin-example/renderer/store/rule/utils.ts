@@ -354,6 +354,48 @@ function convertToExtractionRule(rule: Rule): ExtractionRule[] {
   return configs
 }
 
+interface BuildUrlParams {
+  site?: Site;
+  page?: Page;
+  url: string;
+}
+
+export const buildUrl = ({ site, page, url }: BuildUrlParams): string => {
+  if (!url) {
+    // 如果 url 不存在，返回空字符串
+    return "";
+  }
+
+  const rawUrl = url;
+
+  // 检查 url 是否为绝对 URL
+  // 使用 URL 构造函数是检查
+  try {
+    // 如果 new URL() 不抛出错误，说明 rawUrl 是一个有效的绝对 URL
+    new URL(rawUrl);
+    return rawUrl;
+  } catch (error) {
+    // 如果抛出错误，说明 rawUrl 不是一个绝对 URL，需要和 baseUrl 拼接
+  }
+
+  // 确定 baseUrl，Page 优先级更高
+  const baseUrl = page?.common.siteUrl || site?.common.siteUrl;
+
+  // 如果 baseUrl 存在，进行拼接
+  if (baseUrl) {
+    // 移除 baseUrl 尾部的所有斜杠，例如 'http://a.com//' -> 'http://a.com'
+    const cleanedBase = baseUrl.replace(/\/+$/, '');
+    // 移除 rawUrl 头部的所有斜杠，例如 '//path/b' -> 'path/b'
+    const cleanedPath = rawUrl.replace(/^\/+/, '');
+    
+    // 用一个斜杠连接它们
+    return `${cleanedBase}/${cleanedPath}`;
+  }
+  
+  // 如果 baseUrl 不存在，直接返回 rule.url (此时它是一个相对路径)
+  return rawUrl;
+};
+
 export function genScrapingConfig(siteId: string, pageId: string, viewName: ViewName, options: ScrapingConfigOptions): ScrapingConfig | null {
   const { prevData } = options
 
@@ -373,7 +415,10 @@ export function genScrapingConfig(siteId: string, pageId: string, viewName: View
 
   const extractionRules = convertToExtractionRule(rule)
   return {
-    url: compileUrl(view.url, prevData || {}),
+    url: compileUrl(
+      buildUrl({ site, page, url: view.url }),
+      prevData || {}
+    ),
     mode: isHeadless ? 'headless' : 'ajax',
     // TODO: 可能得换一种格式，CustomCookie 构建比较复杂
     cookies: [],
