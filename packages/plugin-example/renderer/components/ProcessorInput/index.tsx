@@ -50,6 +50,7 @@ const ProcessorInput = memo(({ name }: ProcessorInputProps) => {
                           <SelectItem value="replace">替换</SelectItem>
                           <SelectItem value="prepend">开头新增</SelectItem>
                           <SelectItem value="append">末尾新增</SelectItem>
+                          <SelectItem value="resolve">组合完整 URL</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormItem>
@@ -97,6 +98,10 @@ const ProcessorInput = memo(({ name }: ProcessorInputProps) => {
                 name={`${name}.${index}.value`}
                 render={({ field }) => <FormItem><FormLabel>内容</FormLabel><FormControl><Input placeholder="新增的内容" {...field} /></FormControl></FormItem>}
               />
+            )}
+
+            {type === 'resolve' && (
+              <div className="text-xs text-gray-500">使用 siteUrl 作为 BaseURL 组合出绝对地址</div>
             )}
           </div>
         )

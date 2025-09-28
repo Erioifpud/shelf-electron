@@ -43,7 +43,8 @@ export interface Extractor {
     { type: 'regex', match: string, group?: number } | // 正则匹配，可选捕获组
     { type: 'replace', find: string, with: string } | // 字符串替换
     { type: 'prepend', value: string } | // 添加前缀
-    { type: 'append', value: string }   // 添加后缀
+    { type: 'append', value: string } |  // 添加后缀
+    { type: 'resolve' } // 解析 URL，将相对路径转为绝对路径
   >;
 }
 

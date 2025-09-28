@@ -3,6 +3,7 @@ export type Processor =
   | { type: 'replace', find: string, with: string } // 字符串替换
   | { type: 'prepend', value: string } // 添加前缀
   | { type: 'append', value: string } // 添加后缀
+  | { type: 'resolve' } // 去除首尾空白字符
 
 export interface ExtractionRule {
   name: string;
