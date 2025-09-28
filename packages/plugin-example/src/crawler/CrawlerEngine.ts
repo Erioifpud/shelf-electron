@@ -7,8 +7,19 @@ import type {
   Processor,
   ExtractionRule,
 } from './type';
+import { buildUrl } from '../../renderer/lib/utils';
+
+export interface CrawlerEngineOptions {
+  baseUrl?: string;
+}
 
 export class CrawlerEngine {
+  private baseUrl: string;
+
+  constructor(options: CrawlerEngineOptions) {
+    this.baseUrl = options.baseUrl || '';
+  }
+
   public async run(config: ScrapingConfig): Promise<ScrapingResult> {
     const strategy = createStrategy(config);
     const context = await strategy.prepare(config);
@@ -96,6 +107,9 @@ export class CrawlerEngine {
           break;
         case 'prepend':
           processedValue = processor.value + processedValue;
+          break;
+        case 'resolve':
+          processedValue = buildUrl(this.baseUrl, processedValue);
           break;
       }
     }
