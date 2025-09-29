@@ -4,6 +4,18 @@ import { reduce, template } from 'lodash-es'
 import useRuleStore from ".";
 import { buildUrl } from "@/lib/utils";
 
+export interface CollectionValue {
+  item: Record<string, string>[];
+  'pager.nextPage': string;
+}
+
+export function getEmptyCollectionValue(): CollectionValue {
+  return {
+    item: [],
+    'pager.nextPage': '',
+  }
+}
+
 export function getDefaultSite(): Omit<Site, 'id'> {
   return {
     dataVersion: 1,
