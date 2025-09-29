@@ -405,8 +405,11 @@ export function genScrapingConfig(siteId: string, pageId: string, viewName: View
 
   const extractionRules = convertToExtractionRule(rule)
   return {
+    // buildUrlBySitePage 用了 URL 去构建，所以会自动转义，需要手动 decodeURIComponent，否则 template ${} 标记会丢失
     url: compileUrl(
-      buildUrlBySitePage({ site, page, url: view.url }),
+      decodeURIComponent(
+        buildUrlBySitePage({ site, page, url: view.url })
+      ),
       prevData || {}
     ),
     mode: isHeadless ? 'headless' : 'ajax',

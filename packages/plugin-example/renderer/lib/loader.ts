@@ -2,6 +2,7 @@ import useRuleStore from "@/store/rule"
 import { genScrapingConfig, getBaseUrl } from "@/store/rule/utils"
 import { LoaderFunctionArgs } from "react-router"
 import { buildUrl } from "./utils"
+import { reduce } from "lodash-es"
 
 export function getScrapingConfig(params: LoaderFunctionArgs['params'], viewName: 'listView' | 'detailView' | 'searchView' | 'previewView' = 'listView') {
   const { sourceId, pageId } = params
@@ -16,7 +17,14 @@ export function getScrapingConfig(params: LoaderFunctionArgs['params'], viewName
     throw new Error(`Page not found for pageId ${pageId}`)
   }
 
-  const scrapingConfig = genScrapingConfig(site.id, page.id, viewName, {})
+  const scrapingConfig = genScrapingConfig(site.id, page.id, viewName, {
+    prevData: reduce(params, (acc, value, key) => {
+      return {
+        ...acc,
+        [key]: value || '',
+      }
+    }, {}),
+  })
   return {
     scrapingConfig,
     baseUrl: buildUrl(getBaseUrl(site, page), page[viewName]?.url || ''),
