@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo } from "react";
-import { useFetcher, useLoaderData } from "react-router";
+import { Link, Outlet, useFetcher, useLoaderData, useMatches } from "react-router";
 import { Button } from "@/components/ui/button";
 import { usePageCacheStore } from "@/store/pageCacheStore";
 import { useParams } from "react-router";
@@ -37,6 +37,11 @@ const BookList = memo(() => {
   const res = useLoaderData<Resp>()
   const { pageId } = useParams()
   const fetcher = useFetcher()
+  const matches = useMatches()
+
+  const latestMatch = useMemo(() => {
+    return matches[matches.length - 1]
+  }, [matches])
 
   const { cachedData, setPageData, appendPageItems } = usePageCacheStore(
     useShallow((state) => ({
@@ -90,28 +95,34 @@ const BookList = memo(() => {
       toast.dismiss('next-page-loading')
     }
   }, [fetcher.state])
+
+  if (latestMatch?.id !== 'read-list') {
+    return <Outlet />
+  }
   
   return (
     <div className="flex flex-col gap-4 overflow-auto h-full p-6">
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
         {(cachedData?.items || []).map(item => {
           return (
-            <div key={item.idCode} className="flex flex-col gap-2 group select-none cursor-pointer">
-              <div
-                className="aspect-3/4 bg-gray-200 rounded-md shadow-sm flex items-center justify-center transition group-hover:shadow-md"
-                style={{
-                  backgroundImage: `url(${item.cover})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundRepeat: 'no-repeat',
-                }}
-              >
+            <Link to={`./detail/${encodeURIComponent(item.idCode)}`} key={item.idCode}>
+              <div className="flex flex-col gap-2 group select-none cursor-pointer">
+                <div
+                  className="aspect-3/4 bg-gray-200 rounded-md shadow-sm flex items-center justify-center transition group-hover:shadow-md"
+                  style={{
+                    backgroundImage: `url(${item.cover})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                  }}
+                >
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-bold">{item.title}</span>
+                  <span className="text-sm text-gray-500">{item.author}</span>
+                </div>
               </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-sm font-bold">{item.title}</span>
-                <span className="text-sm text-gray-500">{item.author}</span>
-              </div>
-            </div>
+            </Link>
           )
         })}
       </div>
