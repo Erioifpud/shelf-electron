@@ -65,7 +65,7 @@ const Header = memo(() => {
   }, [matches])
 
   return (
-    <div className="flex relative shrink-0 gap-2 border-b border-gray-300 items-center p-2 select-none bg-gray-50">
+    <div className="flex relative shrink-0 gap-2 border-b border-gray-300 items-center p-2 select-none bg-gray-50 h-14">
       <div className="shrink-0">
         <Button variant="ghost" size="sm">
           <ArrowLeftIcon className="size-4" />
