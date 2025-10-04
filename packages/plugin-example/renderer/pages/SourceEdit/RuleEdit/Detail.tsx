@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { DetailRule } from "@/store/rule/type";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cloneDeep } from "lodash-es";
-import { memo, useCallback, useMemo } from "react";
-import { useForm, FormProvider } from "react-hook-form";
+import { memo, useCallback } from "react";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { extractorSchema } from "./utils";
 import {
@@ -26,9 +26,6 @@ import ExtractorInput from "@/components/ExtractorInput";
 import KeyValueInput from "@/components/KeyValueInput";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { useModals } from "@/components/ModalManager";
-import { useFetcher } from "react-router";
-import { toast } from "sonner";
 
 const LABEL_MAP = {
   title: "作品标题",
@@ -49,7 +46,7 @@ const LABEL_MAP = {
   pictures: "图片",
   videos: "视频",
   comments: "评论",
-  item: "项目",
+  $: "项目",
   idCode: "作品 ID",
   url: "URL",
   thumbnail: "缩略图",
@@ -77,31 +74,31 @@ const formSchema = z.object({
     nextPage: extractorSchema(),
   }),
   tags: z.object({
-    item: extractorSchema(),
+    $: extractorSchema(),
     name: extractorSchema(),
     url: extractorSchema(),
   }),
   chapters: z.object({
-    item: extractorSchema(),
+    $: extractorSchema(),
     idCode: extractorSchema(),
     title: extractorSchema(),
     url: extractorSchema(),
     updateDate: extractorSchema(),
   }),
   pictures: z.object({
-    item: extractorSchema(),
+    $: extractorSchema(),
     thumbnail: extractorSchema(),
     url: extractorSchema(),
     pageUrl: extractorSchema(),
   }),
   videos: z.object({
-    item: extractorSchema(),
+    $: extractorSchema(),
     title: extractorSchema(),
     cover: extractorSchema(),
     url: extractorSchema(),
   }),
   comments: z.object({
-    item: extractorSchema(),
+    $: extractorSchema(),
     avatar: extractorSchema(),
     username: extractorSchema(),
     content: extractorSchema(),

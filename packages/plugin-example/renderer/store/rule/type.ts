@@ -48,6 +48,25 @@ export interface Extractor {
   >;
 }
 
+/* 关于规则定义格式：
+  1. 平铺的结构表示**单一**提取器，如 idCode: Extractor
+  2. 嵌套的结构表示**列表**提取器，如 items: { $: Extractor, idCode: Extractor }
+    - 列表提取器必须包含一个 $ 提取器，表示元素自身，其余的提取器会应用到 $ 提取到的每一个元素上
+  3. 不存在对象提取器，要么单一数据，要么列表数据，如果实在要表达“组”的概念，可使用命名区分，如：pagerNext: Extractor, pagerPrev: Extractor
+  4. 不存在 [1, 2, 3] 这种简易的列表结构，如需列表，必须创建成对象列表的形式，参考 2
+  
+  基于以上四点，提取到的数据结构如下：
+  {
+    idCode: 'foo',
+    items: [
+      { idCode: 'bar' },
+      { idCode: 'xyz' },
+    ],
+    pagerNext: 'https://example.com/next',
+    pagerPrev: null,
+  }
+*/
+
 // 通用的“集合”或“列表”页面规则
 export interface CollectionRule {
   id: string;
@@ -57,12 +76,10 @@ export interface CollectionRule {
   // 新增：数据获取模式
   fetchMode: 'html' | 'json';
 
-  // 列表项的根选择器/路径
-  item: Extractor;
-
   // 应用在每个 item 上的字段提取规则
-  fields: {
+  items: {
     // 键是我们的标准字段名，值是提取器
+    $: Extractor;
     idCode: Extractor;
     title: Extractor;
     description: Extractor;
@@ -115,11 +132,11 @@ export interface PreviewRule {
 
   // 嵌套的列表/集合规则
   pictures: {
-    item: Extractor;
+    $: Extractor;
     url: Extractor;
   }
   videos: {
-    item: Extractor;
+    $: Extractor;
     title: Extractor;
     cover: Extractor;
     url: Extractor;
@@ -163,31 +180,31 @@ export interface DetailRule {
 
   // 嵌套的列表/集合规则
   tags: {
-    item: Extractor;
+    $: Extractor;
     name: Extractor;
     url: Extractor;
   }
   chapters: {
-    item: Extractor;
+    $: Extractor;
     idCode: Extractor;
     title: Extractor;
     url: Extractor;
     updateDate: Extractor;
   }
   pictures: {
-    item: Extractor;
+    $: Extractor;
     thumbnail: Extractor;
     url: Extractor;
     pageUrl: Extractor;
   }
   videos: {
-    item: Extractor;
+    $: Extractor;
     title: Extractor;
     cover: Extractor;
     url: Extractor;
   }
   comments: {
-    item: Extractor;
+    $: Extractor;
     avatar: Extractor;
     username: Extractor;
     content: Extractor;

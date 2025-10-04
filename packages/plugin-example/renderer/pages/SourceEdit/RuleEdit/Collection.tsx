@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { CollectionRule } from "@/store/rule/type";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cloneDeep } from "lodash-es";
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { extractorSchema } from "./utils";
@@ -26,9 +26,6 @@ import ExtractorInput from "@/components/ExtractorInput";
 import KeyValueInput from "@/components/KeyValueInput";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { useModals } from "@/components/ModalManager";
-import { useFetcher } from "react-router";
-import { toast } from "sonner";
 
 const LABEL_MAP = {
   idCode: "作品 ID",
@@ -48,6 +45,7 @@ const LABEL_MAP = {
   duration: "时长",
   likes: "点赞数",
   views: "浏览数",
+  $: "项目",
   totalPictures: "总图片数",
   detailUrl: "详情页 URL",
   nextPage: "下一页",
@@ -56,8 +54,8 @@ const LABEL_MAP = {
 const formSchema = z.object({
   name: z.string().min(1, { message: "规则名称不能为空" }),
   fetchMode: z.string(),
-  item: extractorSchema(),
-  fields: z.object({
+  items: z.object({
+    $: extractorSchema(),
     idCode: extractorSchema(),
     title: extractorSchema(),
     description: extractorSchema(),
@@ -165,7 +163,7 @@ const Collection = memo((props: Props) => {
         
         <div className="space-y-4">
           <h3 className="text-lg font-medium">项目</h3>
-          <ExtractorInput name="item" />
+          <ExtractorInput name="items.$" />
         </div>
 
         <Separator />
@@ -173,12 +171,15 @@ const Collection = memo((props: Props) => {
         {/* Fields */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium">字段</h3>
-          {Object.keys(form.getValues().fields).map((fieldName) => (
-            <FormItem key={fieldName}>
-              <FormLabel>{LABEL_MAP[fieldName]}</FormLabel>
-              <ExtractorInput name={`fields.${fieldName}`} />
-            </FormItem>
-          ))}
+          {Object.keys(form.getValues().items).map((fieldName) => {
+            if (fieldName === '$') return null;
+            return (
+              <FormItem key={fieldName}>
+                <FormLabel>{LABEL_MAP[fieldName]}</FormLabel>
+                <ExtractorInput name={`fields.${fieldName}`} />
+              </FormItem>
+            )
+          })}
         </div>
 
         <Separator />

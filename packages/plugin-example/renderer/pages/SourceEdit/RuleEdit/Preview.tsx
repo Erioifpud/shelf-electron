@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { PreviewRule } from "@/store/rule/type";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cloneDeep } from "lodash-es";
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { extractorSchema } from "./utils";
@@ -26,15 +26,12 @@ import ExtractorInput from "@/components/ExtractorInput";
 import KeyValueInput from "@/components/KeyValueInput";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { useFetcher } from "react-router";
-import { toast } from "sonner";
-import { useModals } from "@/components/ModalManager";
 
 const LABEL_MAP = {
   pages: "页数",
   totalPictures: "总图片数",
   nextPage: "下一页",
-  item: "项目",
+  $: "项目",
   url: "URL",
   title: "作品标题",
   cover: "封面",
@@ -53,11 +50,11 @@ const formSchema = z.object({
     nextPage: extractorSchema(),
   }),
   pictures: z.object({
-    item: extractorSchema(),
+    $: extractorSchema(),
     url: extractorSchema(),
   }),
   videos: z.object({
-    item: extractorSchema(),
+    $: extractorSchema(),
     title: extractorSchema(),
     cover: extractorSchema(),
     url: extractorSchema(),

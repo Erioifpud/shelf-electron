@@ -81,8 +81,8 @@ export function getDefaultCollectionRule(): Omit<CollectionRule, 'id'> {
     name: '新建列表规则',
     type: 'collection',
     fetchMode: 'html',
-    item: extractor(),
-    fields: {
+    items: {
+      $: extractor(),
       idCode: extractor(),
       title: extractor(),
       description: extractor(),
@@ -134,31 +134,31 @@ export function getDefaultDetailRule(): Omit<DetailRule, 'id'> {
     },
     headers: [],
     tags: {
-      item: extractor(),
+      $: extractor(),
       name: extractor(),
       url: extractor(),
     },
     chapters: {
-      item: extractor(),
+      $: extractor(),
       url: extractor(),
       title: extractor(),
       idCode: extractor(),
       updateDate: extractor(),
     },
     pictures: {
-      item: extractor(),
+      $: extractor(),
       url: extractor(),
       thumbnail: extractor(),
       pageUrl: extractor(),
     },
     videos: {
-      item: extractor(),
+      $: extractor(),
       url: extractor(),
       cover: extractor(),
       title: extractor(),
     },
     comments: {
-      item: extractor(),
+      $: extractor(),
       avatar: extractor(),
       content: extractor(),
       username: extractor(),
@@ -182,11 +182,11 @@ export function getDefaultPreviewRule(): Omit<PreviewRule, 'id'> {
       nextPage: extractor(),
     },
     pictures: {
-      item: extractor(),
+      $: extractor(),
       url: extractor(),
     },
     videos: {
-      item: extractor(),
+      $: extractor(),
       url: extractor(),
       cover: extractor(),
       title: extractor(),
@@ -287,7 +287,7 @@ function getHeaders(page: Page, rule: Rule) {
   return headers
 }
 
-function parseRuleFields<R extends Rule>(rule: R, scope: Record<string, Extractor> = rule.fields, blackList: string[] = []): ExtractionRule[] {
+function parseRuleFields<R extends Rule>(rule: R, scope: Record<string, Extractor>, blackList: string[] = []): ExtractionRule[] {
   const extractionRules = reduce<Record<string, Extractor>, ExtractionRule[]>(scope, (acc, extractor, key) => {
     if (blackList.includes(key)) return acc
     acc.push({
