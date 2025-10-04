@@ -146,7 +146,8 @@ const Preview = memo((props: Props) => {
           <h3 className="text-lg font-medium">字段</h3>
           {Object.keys(form.getValues().fields).map((fieldName) => (
             <FormItem key={fieldName}>
-              <FormLabel>{LABEL_MAP[fieldName]}</FormLabel>
+              {/* @ts-expect-error 没问题，找不到就显示原文 */}
+              <FormLabel>{LABEL_MAP[fieldName] || fieldName}</FormLabel>
               <ExtractorInput name={`fields.${fieldName}`} />
             </FormItem>
           ))}
@@ -166,12 +167,13 @@ const Preview = memo((props: Props) => {
         <Separator />
 
         {/* Pictures and Videos */}
-        {["pictures", "videos"].map((section) => (
+        {(["pictures", "videos"] as const).map((section) => (
           <div className="space-y-4" key={section}>
-            <h3 className="text-lg font-medium">{LABEL_MAP[section]}</h3>
+            <h3 className="text-lg font-medium">{LABEL_MAP[section] || section}</h3>
             {Object.keys(form.getValues()[section]).map((fieldName) => (
               <FormItem key={`${section}.${fieldName}`}>
-                <FormLabel>{LABEL_MAP[fieldName]}</FormLabel>
+                {/* @ts-expect-error 没问题，找不到就显示原文 */}
+                <FormLabel>{LABEL_MAP[fieldName] || fieldName}</FormLabel>
                 <ExtractorInput name={`${section}.${fieldName}`} />
               </FormItem>
             ))}

@@ -175,7 +175,8 @@ const Collection = memo((props: Props) => {
             if (fieldName === '$') return null;
             return (
               <FormItem key={fieldName}>
-                <FormLabel>{LABEL_MAP[fieldName]}</FormLabel>
+                {/* @ts-expect-error 没问题，找不到就显示原文 */}
+                <FormLabel>{LABEL_MAP[fieldName] || fieldName}</FormLabel>
                 <ExtractorInput name={`fields.${fieldName}`} />
               </FormItem>
             )
