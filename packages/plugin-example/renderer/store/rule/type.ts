@@ -52,7 +52,7 @@ export interface Extractor {
   1. 平铺的结构表示**单一**提取器，如 idCode: Extractor
   2. 嵌套的结构表示**列表**提取器，如 items: { $: Extractor, idCode: Extractor }
     - 列表提取器必须包含一个 $ 提取器，表示元素自身，其余的提取器会应用到 $ 提取到的每一个元素上
-  3. 不存在对象提取器，要么单一数据，要么列表数据，如果实在要表达“组”的概念，可使用命名区分，如：pagerNext: Extractor, pagerPrev: Extractor
+  3. 如果要表达“组”的概念，也可使用对象，只不过不要提供 $ 提取器，如 pager: { nextPage: Extractor }
   4. 不存在 [1, 2, 3] 这种简易的列表结构，如需列表，必须创建成对象列表的形式，参考 2
   
   基于以上四点，提取到的数据结构如下：
@@ -62,8 +62,7 @@ export interface Extractor {
       { idCode: 'bar' },
       { idCode: 'xyz' },
     ],
-    pagerNext: 'https://example.com/next',
-    pagerPrev: null,
+    pager: { nextPage: 'https://example.com/next' }
   }
 */
 

@@ -1,4 +1,4 @@
-import { map } from 'lodash-es';
+import { map, set } from 'lodash-es';
 import { IScrapingStrategy } from './strategies/IScrapingStrategy';
 import { createStrategy } from './strategyFactory';
 import type {
@@ -53,7 +53,7 @@ export class CrawlerEngine {
       const elements = await strategy.select(context, currentRule);
 
       if (!elements || elements.length === 0) {
-        nodeResult[rule.name] = rule.multiple ? [] : null;
+        set(nodeResult, rule.name, rule.multiple ? [] : null);
         continue;
       }
 
@@ -67,7 +67,7 @@ export class CrawlerEngine {
           })
         );
 
-        nodeResult[rule.name] = childResults;
+        set(nodeResult, rule.name, childResults);
       } else if (rule.multiple) {
         // 2. 提取列表数据模式 (multiple: true)
         const values = await Promise.all(
@@ -76,11 +76,11 @@ export class CrawlerEngine {
             return this.applyProcessors(rawValue, rule.processors);
           })
         );
-        nodeResult[rule.name] = values;
+        set(nodeResult, rule.name, values);
       } else {
         // 3. 提取单个数据模式 (默认)
         const rawValue = await strategy.extract(context, elements[0], rule.from);
-        nodeResult[rule.name] = this.applyProcessors(rawValue, rule.processors);
+        set(nodeResult, rule.name, this.applyProcessors(rawValue, rule.processors));
       }
     }
 

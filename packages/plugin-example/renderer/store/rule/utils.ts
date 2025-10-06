@@ -1,6 +1,6 @@
 import type { ExtractionRule, ScrapingConfig } from "../../../src/crawler/type";
 import type { CollectionRule, DetailRule, Extractor, Page, PreviewRule, Rule, Site } from "./type";
-import { reduce, template } from 'lodash-es'
+import { forEach, reduce, template } from 'lodash-es'
 import useRuleStore from ".";
 import { buildUrl } from "@/lib/utils";
 
@@ -302,67 +302,59 @@ function parseRuleFields<R extends Rule>(rule: R, scope: Record<string, Extracto
   return extractionRules
 }
 
-function convertToExtractionRule(rule: Rule): ExtractionRule[] {
+function isExtractor(possibleExtractor: any): possibleExtractor is Extractor {
+  if (!possibleExtractor) return false
+  const keys = Object.keys(possibleExtractor)
+  return keys.includes('selector') && keys.includes('from')
+}
+
+export function convertToExtractionRule(rule: Rule): ExtractionRule[] {
   const configs: ExtractionRule[] = []
-  // 处理带有嵌套字段的常见规则（item 字段在外部，fields 下的字段均为 item 子字段）
-  if (rule.type === 'collection') {
-    const itemRule: ExtractionRule = {
-      name: 'item',
-      selector: rule.item.selector,
-      type: rule.fetchMode === 'json' ? 'json' : 'xpath',
-      from: rule.item.from,
-      processors: rule.item.processors,
-      items: [],
-    }
-    // collectionRule fields 的所有字段都是 item 的子字段
-    itemRule.items = parseRuleFields(rule)
-    configs.push(itemRule)
-  }
-
-  // 以下处理带有嵌套字段的特殊规则（item 字段在某个字段内部，比如 videos.item，videos 下其他字段均为 item 的子字段）
-  let nestedFieldNames: string[] = []
-  if (rule.type === 'detail') {
-    nestedFieldNames = ['tags', 'pictures', 'videos', 'chapters', 'comments'] as const
-  } else if (rule.type === 'preview') {
-    nestedFieldNames = ['pictures', 'videos'] as const
-  }
-
-  if (nestedFieldNames.length) {
-    configs.push(...parseRuleFields(rule))
-    nestedFieldNames.forEach((key) => {
-      // @ts-expect-error
-      let fields = rule[key] as Record<string, Extractor> | null
-      if (!fields) {
-        return
-      }
-      const item: ExtractionRule = {
-        name: key,
-        selector: fields.item.selector,
-        type: rule.fetchMode === 'json' ? 'json' : 'xpath',
-        from: fields.item.from,
-        processors: fields.item.processors,
-        items: [],
-      }
-      item.items = parseRuleFields(rule, fields, ['item'])
-      configs.push(item)
-    })
-  }
-  
-  // 单独处理嵌套字段，但无 item 的情况，比如 pager，对象下只有一个 nextPageUrl，就处理成 pager.nextPageUrl
-  const individualFieldNames = ['pager']
-  individualFieldNames.forEach((key) => {
-    // @ts-expect-error
-    const fields = rule[key] as Record<string, Extractor>
-    if (!fields) {
+  forEach(rule, (value, key) => {
+    if (!value || typeof value !== 'object') {
       return
     }
-    const rules = parseRuleFields(rule, fields, [])
-    configs.push(...rules.map((rule) => {
-      return {
-        ...rule,
-        name: `${key}.${rule.name}`,
-      }
-    }))
+    // 处理平铺
+    if (isExtractor(value)) {
+      configs.push({
+        name: key,
+        selector: value.selector,
+        type: rule.fetchMode === 'json' ? 'json' : 'xpath',
+        from: value.from,
+        processors: value.processors,
+      })
+      return
+    }
+    // 必是对象，但要区分列表和非列表
+    // @ts-expect-error 前半段检查了 $ 必定存在 value 中
+    const isList = Object.keys(value).includes('$') && isExtractor(value.$)
+    // @ts-expect-error 同上
+    const $ = value.$ as Extractor
+    if (isList) {
+      configs.push({
+        name: key,
+        selector: $.selector,
+        type: rule.fetchMode === 'json' ? 'json' : 'xpath',
+        from: $.from,
+        processors: $.processors,
+        items: parseRuleFields(
+          rule,
+          value as Record<string, Extractor>,
+          ['$']
+        ),
+      })
+      return
+    }
+    // 非列表
+    const fields = parseRuleFields(
+      rule,
+      value as Record<string, Extractor>,
+    ).map((field) => {
+      // 会在 CrawlerEngine 中通过 lodash set 去处理成嵌套对象的形式
+      field.name = `${key}.${field.name}`
+      return field
+    })
+    configs.push(...fields)
   })
   return configs
 }
