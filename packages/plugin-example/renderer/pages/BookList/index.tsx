@@ -29,8 +29,10 @@ interface BookItem {
 }
 
 interface Resp {
-  item: BookItem[];
-  'pager.nextPage': string
+  items: BookItem[];
+  pager: {
+    nextPage: string;
+  }
 }
 
 const BookList = memo(() => {
@@ -56,10 +58,7 @@ const BookList = memo(() => {
     // 只有当 store 中没有此页面的缓存数据时，
     // 才使用 loader 的初始数据来填充 store。
     if (!cachedData) {
-      setPageData(pageId!, {
-        items: res.item,
-        nextPageUrl: res["pager.nextPage"],
-      });
+      setPageData(pageId!, res);
     }
   }, [pageId, res, cachedData, setPageData]);
 
@@ -70,12 +69,12 @@ const BookList = memo(() => {
       if (!fetchedData) {
         return
       }
-      appendPageItems(pageId!, fetchedData.item, fetchedData["pager.nextPage"]);
+      appendPageItems(pageId!,  fetchedData.items, fetchedData.pager?.nextPage || '');
     }
   }, [fetcher.data, fetcher.state, pageId, appendPageItems]);
 
   const nextPageUrl = useMemo(() => {
-    return cachedData?.nextPageUrl || ''
+    return cachedData?.pager?.nextPage || ''
   }, [cachedData])
 
     const handleNextPageLoad = useCallback(() => {

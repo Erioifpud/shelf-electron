@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 interface PageCacheStore {
-  cache: Record<string, { items: any[], nextPageUrl: string }>;
+  cache: Record<string, { items: any[], pager: { nextPage: string | null } }>;
   setPageData: (pageId: string, data: any) => void;
   appendPageItems: (pageId: string, newItems: any[], nextPageUrl: string) => void;
   clearPageCache: (pageId: string) => void;
@@ -31,7 +31,9 @@ export const usePageCacheStore = create<PageCacheStore>((set) => ({
         ...state.cache,
         [pageId]: {
           items: [...currentPageData.items, ...newItems],
-          nextPageUrl: nextPageUrl,
+          pager: {
+            nextPage: nextPageUrl,
+          },
         },
       },
     };
