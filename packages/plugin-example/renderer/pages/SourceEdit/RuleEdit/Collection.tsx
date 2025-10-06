@@ -109,6 +109,7 @@ const Collection = memo((props: Props) => {
   }, [form]);
 
   const handleSubmit = useCallback((values: z.infer<typeof formSchema>) => {
+    console.log('🚀 ~ values:', values)
     const fullRule = {
       ...values,
       id: rule.id,
@@ -177,7 +178,7 @@ const Collection = memo((props: Props) => {
               <FormItem key={fieldName}>
                 {/* @ts-expect-error 没问题，找不到就显示原文 */}
                 <FormLabel>{LABEL_MAP[fieldName] || fieldName}</FormLabel>
-                <ExtractorInput name={`fields.${fieldName}`} />
+                <ExtractorInput name={`items.${fieldName}`} />
               </FormItem>
             )
           })}
