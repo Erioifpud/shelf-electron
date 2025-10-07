@@ -45,6 +45,10 @@ export class AjaxStrategy implements IScrapingStrategy {
       const $ = context.extra.$;
       let nodes: any[] = []
       if (context.document !== null) {
+        // 表示选择自身
+        if ((rule.selector || '').trim().toLowerCase() === 'this') {
+          return $(context.document)
+        }
         // 表示当前的是 Element
         nodes = $(context.document).find(rule.selector)
       } else {
