@@ -53,7 +53,7 @@ export class CrawlerEngine {
       const elements = await strategy.select(context, currentRule);
 
       if (!elements || elements.length === 0) {
-        set(nodeResult, rule.name, rule.multiple ? [] : null);
+        set(nodeResult, rule.name, (rule.multiple || rule?.items?.length) ? [] : null);
         continue;
       }
 
@@ -66,8 +66,7 @@ export class CrawlerEngine {
             return this.processNode(rule.items!, { ...context, document: element }, strategy, config)
           })
         );
-
-        set(nodeResult, rule.name, childResults);
+        set(nodeResult, rule.name, childResults || []);
       } else if (rule.multiple) {
         // 2. 提取列表数据模式 (multiple: true)
         const values = await Promise.all(
