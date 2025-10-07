@@ -107,9 +107,9 @@ const BookList = memo(() => {
             <Link to={`./detail/${encodeURIComponent(item.idCode)}`} key={item.idCode}>
               <div className="flex flex-col gap-2 group select-none cursor-pointer">
                 <div
-                  className="aspect-3/4 bg-gray-200 rounded-md shadow-sm flex items-center justify-center transition group-hover:shadow-md"
+                  className="aspect-3/4 bg-white rounded-md shadow-sm flex items-center justify-center transition group-hover:shadow-md"
                   style={{
-                    backgroundImage: `url(${item.cover})`,
+                    backgroundImage: `url(${item.cover || 'https://placehold.co/320'})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     backgroundRepeat: 'no-repeat',
