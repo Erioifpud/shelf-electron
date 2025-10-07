@@ -8,30 +8,30 @@ interface Resp {
   tags: Array<{
     name: string
     url: string
-  }> | null
+  }>
   chapters: Array<{
     idCode: string
     title: string
     url: string
     updateDate: string
-  }> | null
+  }>
   comments: Array<{
     avatar: string
     username: string
     content: string
     date: string
     likes: number
-  }> | null
+  }>
   pictures: Array<{
     thumbnail: string
     url: string
     pageUrl: string
-  }> | null
+  }>
   videos: Array<{
     title: string
     cover: string
     url: string
-  }> | null
+  }>
   fields: {
     title: string;
     description: string;
@@ -228,9 +228,9 @@ const BookDetail = memo(() => {
           <Separator orientation="horizontal" className="my-3" />
           <div className="flex gap-3 overflow-y-auto overflow-x-hidden py-1 flex-col">
             {(info.comments || []).map((comment, index) => (
-              <div className="flex gap-4">
+              <div key={index} className="flex gap-4">
                 {/* 头像 */}
-                <div key={index} className="relative w-12 h-12 rounded-full overflow-hidden bg-gray-100">
+                <div className="relative w-12 h-12 rounded-full overflow-hidden bg-gray-100">
                   <object data={comment.avatar}>
                     <img src={`https://placehold.co/48`} alt="" />
                   </object>
